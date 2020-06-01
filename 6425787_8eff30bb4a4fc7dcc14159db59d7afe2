@@ -1,0 +1,274 @@
+Date: Thu, 27 Jul 2017 18:44:51 -0400 (CLT)
+From: NESTLE CHILE SA <nestlerecepcion@dte.custodium.com>
+To: TETRA PAK DE CHILE COMERCIAL LTDA <dte.tetrapak@tetrapak.com>
+Message-ID: <RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206@apps3.acepta.com>
+Subject: Acuse de Recibo de DTEs -
+ RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+ boundary="----=_Part_1024_1932985641.1501195491174"
+
+------=_Part_1024_1932985641.1501195491174
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
+
+<html>
+<head>
+	<title>Intercambio - Acuse de Recibo de DTEs</title>
+	<style type="text/css">
+		div.page {
+			margin: 0 10px;
+			padding: 0;
+			width: 640px;
+		}
+
+		div.left {
+			margin: 0;
+			padding: 0 20px 0 0;
+			width: 300px;
+			float: left;
+		}
+
+		div.right {
+			margin: 0;
+			padding: 0 0 0 20px;
+			width: 300px;
+			float: right;
+		}
+
+		div.both {
+			margin: 0;
+			padding: 0;
+			clear: both;
+		}
+
+		div.footer {
+			margin: 0;
+			padding: 10px 0;
+		}
+
+		p.copyright {
+			text-align: center;
+			font-size: 9px;
+		}
+
+		span.certification {
+			color: red;
+		}
+
+		body {
+			font-family: Geneva, Verdana, sans-serif;
+			font-size: 11px;
+			color: #000;
+			background-color: #fff;
+		}
+
+		h1 {
+			margin: 0;
+			padding: 5px 0;
+			font-size: 15px;
+			color: #999;
+			border-bottom: 1px solid #999;
+		}
+
+		h2 {
+			margin: 0;
+			padding: 10px 0 5px;
+			font-size: 13px;
+		}
+
+		p {
+			margin: 0;
+			padding: 1px 0;
+		}
+
+		table {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			text-align: right;
+			border-top: 1px solid #999;
+			border-bottom: 1px solid #999;
+		}
+
+		th {
+			margin: 0;
+			padding: 3px 5px;
+			border-bottom: 1px solid #999;
+			font-size: 11px;
+		}
+
+		td {
+			margin: 0;
+			padding: 2px 5px;
+			vertical-align: top;
+			font-size: 11px;
+		}
+
+		th.detalle, td.detalle {
+			text-align: left;
+		}
+
+		td.detalle {
+			vertical-align: middle;
+			font-size: 10px;
+		}
+
+		td.rut {
+			white-space: nowrap;
+		}
+	</style>
+</head>
+<body>
+<div class="page">
+	<h1>Producci&oacute;n
+		&middot; Intercambio &middot; Acuse de Recibo de DTEs</h1>
+
+	<div class="left">
+		<h2>Emite</h2>
+
+		<p>NESTLE CHILE SA</p>
+
+		<p>RUT 90703000-8</p>
+	</div>
+
+	<div class="right">
+		<h2>Recibe</h2>
+
+		<p>TETRA PAK DE CHILE COMERCIAL LTDA</p>
+
+		<p>RUT 85749900-K</p>
+	</div>
+
+		<div class="both">
+			<h2>Detalle</h2>
+
+			<div class="left">
+				<p><b>C&oacute;digo Env&iacute;o:</b> 0000940938</p>
+
+				<p><b>Fecha Recepci&oacute;n:</b> 27/07/2017</p>
+			</div>
+
+			<div class="right">
+				<p><b>Estado:</b> RECIBIDO</p>
+
+				<p><b>Glosa:</b> EnvioDTE Recibido</p>
+			</div>
+
+			<p>&nbsp;</p>
+
+			<table cellspacing="0" cellpadding="5">
+				<tr>
+					<th>Emisor</th>
+					<th>Tipo</th>
+					<th>Folio</th>
+					<th>Fecha</th>
+					<th>Monto</th>
+					<th>Estado</th>
+					<th class="detalle">Detalle</th>
+				</tr>
+							<tr>
+								<td class="rut">85749900-K</td>
+								<td>33</td>
+								<td>95531</td>
+								<td>09/09/2016</td>
+								<td>349.653</td>
+								<td>RECHAZADO</td>
+								<td class="detalle">DTE No Recibido - DTE Repetido</td>
+							</tr>
+							
+			</table>
+		</div>
+		
+
+	<div class="footer">
+		<p>Este correo adjunta un Acuse de Recibo (RespuestaDTE) para el emisor electr&oacute;nico de los Documentos
+			Tributarios Electr&oacute;nicos (DTEs) recibidos conforme al modelo de intercambio de Factura Electr&oacute;nica
+			del SII.</p>
+
+		<br/>
+
+		<p class="copyright">
+			Servicios de Facturaci&oacute;n Electr&oacute;nica de <a href="http://www.acepta.com">ACEPTA COM S A</a>
+		</p>
+	</div>
+</div>
+</body>
+</html>
+
+------=_Part_1024_1932985641.1501195491174
+Content-Type: application/octet-stream; 
+ name=RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206.xml
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; 
+ filename=RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206.xml
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<RespuestaDTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" xsi:schemaLocation="http://www.sii.cl/SiiDte RespuestaEnvioDTE_v10.xsd">
+<Resultado ID="RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206">
+<Caratula version="1.0">
+<RutResponde>90703000-8</RutResponde>
+<RutRecibe>85749900-K</RutRecibe>
+<IdRespuesta>840939</IdRespuesta>
+<NroDetalles>1</NroDetalles>
+<TmstFirmaResp>2017-07-27T18:44:51</TmstFirmaResp>
+</Caratula>
+<RecepcionEnvio>
+<NmbEnvio>dte33f95531.xml</NmbEnvio>
+<FchRecep>2017-07-27T18:44:51</FchRecep>
+<CodEnvio>940938</CodEnvio>
+<EnvioDTEID>SetDoc</EnvioDTEID>
+<Digest>X1tFdJXZt9fo/TfgGOfQhpMvQZk=</Digest>
+<RutEmisor>85749900-K</RutEmisor>
+<RutReceptor>90703000-8</RutReceptor>
+<EstadoRecepEnv>0</EstadoRecepEnv>
+cepEnvGlosa>
+<NroDTE>1</NroDTE>
+<RecepcionDTE>
+<TipoDTE>33</TipoDTE>
+<Folio>95531</Folio>
+<FchEmis>2016-09-09</FchEmis>
+<RUTEmisor>85749900-K</RUTEmisor>
+<RUTRecep>90703000-8</RUTRecep>
+<MntTotal>349653</MntTotal>
+<EstadoRecepDTE>4</EstadoRecepDTE>
+<RecepDTEGlosa>DTE No Recibido - DTE Repetido</RecepDTEGlosa>
+</RecepcionDTE>
+</RecepcionEnvio>
+</Resultado>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"></CanonicalizationMethod><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"></SignatureMethod><Reference URI="#RespuestaDTE-90703000-8-85749900-K-20170727-184451-0D304206"><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"></DigestMethod><DigestValue>znTTJ6l8DbGPNtCYOzi5sHXR0Yg=</DigestValue></Reference></SignedInfo><SignatureValue>heZ4VlUHRTTXXRlBREdu6ssIyBzhwOWEPBwtktmkQ0oqZnrUK8gWT2y6zHdh3lfk4YNg7L7U7UyV
+coPjiKgvoHFf2EbtFwazciqIroIN5OcFWA+KfWFnRl0ft7VYM9b0aSvo8k9p2yci2rJZ8g4EC0iB
+VL7aHNUzxi8b7ljuf422nrEXCREcZL83m8a37buTWCPDj/LCDziAMOFJNUg7GcuSDeE8PeC/jiqZ
+c9wAsVNWsTAcuel1hLzky5JcK7nfQfH7o21rvKcXsqCYt5KupH+6nsD0cEs6PcOkcu4+PPhH8Pmp
+BFe+Ld9kQG+49uZnaEPa1JWiof9ZaOZ5EtXkmw==</SignatureValue><KeyInfo><KeyValue><RSAKeyValue><Modulus>lFOmbrg9OkK2yG7URNP9kaVZQLRvqYF4llzwx5YsJJ9l7pmmkrQxzHNy3kGPdBtX2LIE6GdX11br
+qdGjBIs39SaptmIM0AHvQ5pe/5n/kKUw/hJebUo94RiNTaaKhYw3XcEZ2PcOkZkYNPRYGdNWGzyj
+/5dI5r6wi3JVZRGI2a1mgNFS96sG84nQstYz1PMts7MUuiEK+ibRnmgKAmBKAj2cbHKcqkn9BzEO
+8O83dYX6EQRxSyE2KRONqw7misVop0gcnVIiQm/vOs74rcGZ2t848X6vaVgrYsU+cQYETf7OrArh
+vUpFU+0Iv+br9fxXIR9bxnGFj+ZbaNgAPfaDZQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue></KeyValue><X509Data><X509Certificate>MIIF7zCCBNegAwIBAgIBFDANBgkqhkiG9w0BAQsFADCBpjELMAkGA1UEBhMCQ0wxGDAWBgNVBAoT
+D0FjZXB0YS5jb20gUy5BLjFIMEYGA1UEAxM/QWNlcHRhLmNvbSBBdXRvcmlkYWQgQ2VydGlmaWNh
+ZG9yYSBDbGFzZSAyIFBlcnNvbmEgTmF0dXJhbCAtIEc0MR4wHAYJKoZIhvcNAQkBFg9pbmZvQGFj
+ZXB0YS5jb20xEzARBgNVBAUTCjk2OTE5MDUwLTgwHhcNMTYxMDA3MTkxNzU4WhcNMTkxMDA3MTkx
+NzU4WjCBhjELMAkGA1UEBhMCQ0wxGDAWBgNVBAwTD1BFUlNPTkEgTkFUVVJBTDEfMB0GA1UEAxMW
+UEFCTE8gSVpRVUlFUkRPIFdBTEtFUjEoMCYGCSqGSIb3DQEJARYZcGFibG9penF1aWVyZG93QGdt
+YWlsLmNvbTESMBAGA1UEBRMJNTU0NDcwMC00MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+AQEAlFOmbrg9OkK2yG7URNP9kaVZQLRvqYF4llzwx5YsJJ9l7pmmkrQxzHNy3kGPdBtX2LIE6GdX
+11brqdGjBIs39SaptmIM0AHvQ5pe/5n/kKUw/hJebUo94RiNTaaKhYw3XcEZ2PcOkZkYNPRYGdNW
+Gzyj/5dI5r6wi3JVZRGI2a1mgNFS96sG84nQstYz1PMts7MUuiEK+ibRnmgKAmBKAj2cbHKcqkn9
+BzEO8O83dYX6EQRxSyE2KRONqw7misVop0gcnVIiQm/vOs74rcGZ2t848X6vaVgrYsU+cQYETf7O
+rArhvUpFU+0Iv+br9fxXIR9bxnGFj+ZbaNgAPfaDZQIDAQABo4ICRDCCAkAwHwYDVR0jBBgwFoAU
+ZaWrPj/ItlFtEX5fwwoH5kOgCLYwHQYDVR0OBBYEFKp8iBzLRiGHokqiR7ocmLIYH65iMAsGA1Ud
+DwQEAwIE8DAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwQwEQYJYIZIAYb4QgEBBAQDAgWg
+MHUGA1UdIARuMGwwagYIKwYBBAG1awIwXjAxBggrBgEFBQcCARYlaHR0cHM6Ly9hY2c0LmFjZXB0
+YS5jb20vQ1BTLUFjZXB0YWNvbTApBggrBgEFBQcCAjAdMBYWD0FjZXB0YS5jb20gUy5BLjADAgEJ
+GgNUQkQwWgYDVR0SBFMwUaAYBggrBgEEAcEBAqAMFgo5NjkxOTA1MC04oCQGCCsGAQUFBwgDoBgw
+FgwKOTY5MTkwNTAtOAYIKwYBBAHBAQKBD2luZm9AYWNlcHRhLmNvbTBiBgNVHREEWzBZoBcGCCsG
+AQQBwQEBoAsWCTU1NDQ3MDAtNKAjBggrBgEFBQcIA6AXMBUMCTU1NDQ3MDAtNAYIKwYBBAHBAQKB
+GXBhYmxvaXpxdWllcmRvd0BnbWFpbC5jb20wRwYIKwYBBQUHAQEEOzA5MDcGCCsGAQUFBzABhito
+dHRwczovL2FjZzQuYWNlcHRhLmNvbS9hY2c0L29jc3AvQ2xhc2UyLUc0MD8GA1UdHwQ4MDYwNKAy
+oDCGLmh0dHBzOi8vYWNnNC5hY2VwdGEuY29tL2FjZzQvY3JsL0NsYXNlMi1HNC5jcmwwDQYJKoZI
+hvcNAQELBQADggEBAL0/jTzpAMmxX7v5w/dFYyQmTZPxN7fxWxKyf0np751stBTHnUExiFv+wqIv
+E3iE5Znr8tMoeWwpDz+V0hgKqQDUtZipGbN2XNW19yS6JgenoNbv6dUbVpJwuYJeYcjhtXoePo64
+AoP5cqM/xtcyVkePs2Y/fpBvehXC0qwq1zpxQkMNt+p+3UJqVH12qsMKBUw038Q+t4YIPG18W74c
+KObVaxGG5A/YyTWsGM2Nupmc10p/yXgAZLDptlWA4h7/HHFJT8wRvAdBzhXo1IRsDrfBZ4cI93ts
+fH0PdMlRqFg1zc3e+hA66nqxtua75CK21+fwx6cMP+rm7kRfVWA6tf4=</X509Certificate></X509Data></KeyInfo></Signature></RespuestaDTE>
+------=_Part_1024_1932985641.1501195491174--

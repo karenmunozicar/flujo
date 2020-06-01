@@ -1,0 +1,324 @@
+CREATE OR REPLACE FUNCTION public.emitir_documento_firmado_13794(json)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    json1                       alias for $1;
+    json2                       json;
+    rut1                varchar;
+    pass1               varchar;
+    pass2               varchar;
+    sesid1              varchar;
+    select1             varchar;
+    menu1               RECORD;
+    def1               RECORD;
+     status1    varchar;
+        tx1     integer;
+        cola1   integer;
+        nombre_tabla1   varchar;
+         categoria1      varchar;
+        uri1    varchar;
+        stMaestro       maestro_clientes%ROWTYPE;
+        emision1        varchar;
+        dte1            varchar;
+        --stPatron        patron_dte_10k%ROWTYPE;
+        html1           varchar;
+        file1           varchar;
+        sts         integer;
+        caf1            varchar;
+        rsask1          varchar;
+        rsask_p1        varchar;
+        ted1            varchar;
+        firma_ted1              varchar;
+        json3                   json;
+        folio1          varchar;
+        id_tx1          varchar;
+        rut_emisor1     varchar;
+        data_firma1     varchar;
+        id1             varchar;
+        patron_dte1     varchar;
+        stCont          contribuyentes%ROWTYPE;
+         producto1       varchar;
+         fecha1       varchar;
+        idGestorFolio1  bigint;
+        json_in1        json;
+        resp1   varchar;
+        json_par1       json;
+        json_out1       json;
+        resp_db         json;
+        razon_rec1      varchar;
+        aux     varchar;
+        aux1    varchar;
+        tipo_dte1       varchar;
+        xml_dte1        varchar;
+        caf_aux1        varchar;
+        stCafFirma      record;
+BEGIN
+        json2:=json1;
+
+        json2:=emitir_documento_pivote_13794(json2);
+
+        rut1:=get_json_upper('rutCliente',json2);
+        rut_emisor1:=rut1 || '-' || modulo11(rut1);
+        idGestorFolio1:=get_json('idGestorFolios',json2)::bigint;
+        tipo_dte1:=get_json('TipoDTE',json2);
+
+        xml_dte1:=lower(get_json('XML_DTE',json2));
+        --Agregamos Tag DTE en caso de que no venga
+        if(strpos(xml_dte1,encode('<DTE','hex')::varchar)=0 and strpos(xml_dte1,encode('</DTE>','hex')::varchar)=0) then
+                --perform logfile('1DAO_DTE_13794_1='||coalesce(xml_dte1,'NULO6'));
+                xml_dte1:=encode('<DTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0">','hex')::varchar||xml_dte1||encode('</DTE>','hex')::varchar;
+                --perform logfile('1DAO_DTE_13794_2='||coalesce(xml_dte1,'NULO5'));
+        else
+		-- NBV 20180422 Se separa por documentos segun formato XML
+                if tipo_dte1 not in ('43','110','111','112') then
+                        xml_dte1:=encode('<DTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0"><Documento','hex')||split_part(xml_dte1,encode('<Documento','hex'),2);
+                elsif(tipo_dte1='43') then
+                        xml_dte1:=encode('<DTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0"><Liquidacion','hex')||split_part(xml_dte1,encode('<Liquidacion','hex'),2);
+                else
+                        xml_dte1:=encode('<DTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0"><Exportaciones','hex')||split_part(xml_dte1,encode('<Exportaciones','hex'),2);
+                end if;
+--              xml_dte1:=encode('<DTE xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0"><Documento','hex')||split_part(xml_dte1,encode('<Documento','hex'),2);
+        end if;
+        folio1:=get_xml_hex1('Folio',xml_dte1);
+
+        select * into stMaestro from maestro_clientes where rut_emisor=rut1::integer;
+        if not found then
+                json2:=logjson(json2,'Cliente '||rut1::varchar||' no esta en maestro_clientes');
+                json2:=response_requests_6000('2', 'Cliente '||rut1::varchar||' no esta en maestro_clientes', '', json2);
+                --Libero el Folio
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                return json2;
+        end if;
+
+        --Leo los datos del contribuyente
+        select * into stCont from contribuyentes where rut_emisor=rut1::integer;
+        if not found then
+                json2:=logjson(json2,'Cliente '||rut1::varchar||' no esta en tabla de contribuyentes');
+                json2:=response_requests_6000('2', 'Cliente '||rut1::varchar||' no esta en contribuyentes', '', json2);
+                --Libero el Folio
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                return json2;
+        end if;
+
+        if(folio1<>'') then
+                --Subio folio para firma masiva...Folios no estan en el gestor
+                --Chequeo si tiene CAF para este folio
+                select * into stCafFirma from caf_firma_xml where empresa=rut1::integer and folio1::integer>=folio_init and folio1::integer<=folio_fin;
+                if not found then
+                        json2:=response_requests_6000('2', 'Empresa no tiene CAF cargado para el folio='||folio1, '', json2);
+                        return json2;
+                end if;
+                caf_aux1:=hex_2_ascii(encode(stCafFirma.caf,'hex'));
+                caf1:=replace('<CAF version="1.0">' || split_part(split_part(caf_aux1,'<CAF version="1.0">',2),'</CAF>',1) || '</CAF>',chr(10),'');
+                rsask1:=replace(replace(split_part(split_part(caf_aux1,'-----BEGIN RSA PRIVATE KEY-----'||chr(10),2),chr(10)||'-----END RSA PRIVATE KEY-----',1),chr(10),''),chr(12),'');
+                rsask_p1:=replace(replace(split_part(split_part(caf_aux1,'-----BEGIN PUBLIC KEY-----'||chr(10),2),chr(10)||'-----END PUBLIC KEY-----',1),chr(10),''),chr(12),'');
+
+        else
+                --Vamos a pedir folios al Gestor de Folios
+                json_par1:=get_parametros_motor_json('{}','BASE_GESTOR_FOLIOS');
+                json_in1:=json2;
+                json_in1:=put_json(json_in1,'GF_ID_TRX',idGestorFolio1::varchar);
+                json_in1:=put_json(json_in1,'GF_RUT_EMPRESA',rut_emisor1);
+                json_in1:=put_json(json_in1,'GF_CODIGO_POS','EMISION'||split_part(rut_emisor1::varchar,'-',1));
+                json_in1:=put_json(json_in1,'GF_USUARIO',get_json('rutUsuario',json2));
+                json_in1:=put_json(json_in1,'GF_TIPO_DOC',tipo_dte1);
+                json_in1:=put_json(json_in1,'GF_FORMATO','CAF');
+                json_in1:=put_json(json_in1,'GF_CANAL','ESCRITORIO');
+                json2:=logjson(json2,'Solicito CAF json_in1='||json_in1::varchar);
+                json_out1:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json('__IP_PORT_CLIENTE__',json_par1)::integer,'select web.gf_asigna_subrango_pos('||quote_literal(json_in1)||'::json)');
+                resp_db:=get_json('gf_asigna_subrango_pos',json_out1);
+                resp1:=get_json('WF_RESPUESTA',resp_db);
+                resp1:=hex_2_ascii2(encode(resp1::bytea,'hex'));
+                json2:=logjson(json2,'Respuesta CAF '||resp1);
+                --perform logfile('DAO resp1='||resp1 ||' json_out1='||resp_db::varchar);
+                if (get_json('GF_CODIGO_RESPUESTA',resp_db)<>'1') then
+			if(get_json_upper('__EMISION_LOTE__',json2)='SI') then
+                        	json2:=response_requests_6000_upper('2', 'CAF: '||get_json('GF_MENSAJE_RESPUESTA',resp_db),get_json_upper('URI_IN',json2)||'_SOLICITUD='||get_json_upper('id_solicitud',json2),json2);
+			else
+                        	json2:=response_requests_6000('2', 'CAF: '||get_json('GF_MENSAJE_RESPUESTA',resp_db), '', json2);
+			end if;
+                        --Libero el Folio
+                        update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                        return json2;
+                end if;
+                if(resp1='') then
+                        json2:=response_requests_6000('2', 'CAF: Falla obtencion', '', json2);
+                        --Libero el Folio
+                        update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                        return json2;
+                end if;
+
+                caf1:=replace(replace('<CAF version="1.0">' || split_part(split_part(resp1,'<CAF version="1.0">',2),'</CAF>',1) || '</CAF>',chr(10),''),chr(13),'');
+
+                rsask1:=replace(replace(replace(split_part(split_part(resp1,'-----BEGIN RSA PRIVATE KEY-----'||chr(10),2),chr(10)||'-----END RSA PRIVATE KEY-----',1),chr(10),''),chr(12),''),chr(13),'');
+
+                rsask_p1:=replace(replace(replace(split_part(split_part(resp1,'-----BEGIN PUBLIC KEY-----'||chr(10),2),chr(10)||'-----END PUBLIC KEY-----',1),chr(10),''),chr(12),''),chr(13),'');
+
+                folio1:=split_part(split_part(resp1,'<folioInicial>',2),'</folioInicial>',1);
+        end if;
+
+        --Guardo el folio en el id_temporal_gestor_folios
+        update id_temporal_gestor_folios set folio=folio1 where id=idGestorFolio1;
+        if not found then
+                json2:=logjson(json2,'Falla en actualizacion de id_temporal_gestor_folios con idGestorFolio1='||idGestorFolio1::varchar);
+                json2:=response_requests_6000('2', 'Error en la asignacion de folios, Emita Nuevamente', '', json2);
+                --Libero el Folio
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                return json2;
+        end if;
+
+
+        json2:=logjson(json2,'------RSASK-----'||rsask1);
+        json2:=logjson(json2,'------RSASKPUB-----'||rsask_p1);
+
+        --Transforma el DTE entrante
+
+        uri1:='http://'||stMaestro.dominio||to_char(now(),'YYMM')||'.acepta.com/v01/'||lpad('_'||replace(getipserver('eth0'),'.','')||'_'||to_char(now(),'DDHH24MISSMI')||'_'||nextval('correlativo_uri')::varchar||'_',40,'0')||'?k='||md5(coalesce(stMaestro.dominio,'X'));
+        json2:=put_json(json2,'URI_IN',uri1);
+
+        json3:='{}';
+        json3:=put_json(json3,'DominioEmisor',stMaestro.dominio);
+        if(stMaestro.xsl_dte is not null)then
+                json3:=put_json(json3,'XSL',stMaestro.xsl_dte);
+        else
+                if(tipo_dte1 in ('110','111','112')) then
+                        json3:=get_parametros_motor_json(json3,'XSL_GENERICO_EXP');
+                        json3:=put_json(json3,'XSL',get_json('__VALOR_PARAM__',json3));
+                else
+                        json3:=get_parametros_motor_json(json3,'XSL_GENERICO');
+                        json3:=put_json(json3,'XSL',get_json('__VALOR_PARAM__',json3));
+                end if;
+        end if;
+
+        --Si viene sucursal sacamos la zona del SII del settings
+        aux:=get_xml_hex1('CdgSIISucur',xml_dte1);
+        if(aux<>'') then
+                select coalesce(parametro9,'') into aux1 from settings_10k where codigo_settings=2 and empresa=rut1 and parametro1=aux;
+                json3:=put_json(json3,'siiZona',aux1);
+        end if;
+
+        if(get_json('__FLAG_EMISION_TIENDA__',json2)<>'SI') then
+                --chequeamos si tiene logo y publicidad en la tabla maestro_cliente
+                if length(trim(stMaestro.dte_publicidad_logo))>0 then
+                        json3:=put_json(json3,'Logo',stMaestro.dte_publicidad_logo);
+                end if;
+                if length(trim(stMaestro.dte_publicidad_horizontal))>0 then
+                        json3:=put_json(json3,'Publicidad_Horizontal',stMaestro.dte_publicidad_horizontal);
+                end if;
+                if length(trim(stMaestro.dte_publicidad_vertical))>0 then
+                        json3:=put_json(json3,'Publicidad_Vertical',stMaestro.dte_publicidad_vertical);
+                end if;
+        end if;
+
+        --Para Sobre Custodium
+        json3:=put_json(json3,'RUTEmisor',rut_emisor1);
+        json3:=put_json(json3,'RutFirma',get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2)));
+        json3:=put_json(json3,'Folio',folio1);
+        json3:=put_json(json3,'FchEmis',get_xml_hex1('FchEmis',xml_dte1));
+        json3:=put_json(json3,'RUTRecep',get_xml_hex1('RUTRecep',xml_dte1));
+        json3:=put_json(json3,'RznSocRecep',get_xml_hex1('RznSocRecep',xml_dte1));
+        json3:=put_json(json3,'DirRecep',get_xml_hex1('DirRecep',xml_dte1));
+        json3:=put_json(json3,'NombreEmisor',substring(stMaestro.razon_social,1,100));
+        json3:=put_json(json3,'SUCURSAL',get_xml_hex1('CdgSIISucur',xml_dte1));
+        json3:=put_json(json3,'URI_IN',uri1);
+        --
+
+        --Para el evento de la traza
+        json2:=put_json(json2,'RUT_EMISOR',split_part(rut_emisor1,'-',1));
+        json2:=put_json(json2,'RUT_RECEPTOR',split_part(get_xml_hex1('RUTRecep',xml_dte1),'-',1));
+        json2:=put_json(json2,'FECHA_EMISION',get_xml_hex1('FchEmis',xml_dte1));
+        json2:=put_json(json2,'FOLIO',folio1);
+        json2:=put_json(json2,'TIPO_DTE',tipo_dte1);
+        --
+
+        json2:=bitacora10k(json2,'EMITIR','Get CAF Folio='||get_json('Folio',json3)||' RutEmisor='||get_json('RUTEmisor',json3)||' Tipo='||get_json('TipoDTE',json3));
+
+        id1:='F'||folio1||'T'||tipo_dte1;
+        if (get_json('TipoDTE',json2)='43') then
+                --REVISAR--
+                producto1:=decode(split_part(split_part(split_part(xml_dte1,encode('<NroLinDet>1</NroLinDet>','hex'),2),encode('<NmbItem>','hex'),2),encode('</NmbItem>','hex'),1),'hex');
+        else
+                producto1:=decode(split_part(split_part(split_part(xml_dte1,encode('<NroLinDet>1</NroLinDet>','hex'),2),encode('<NmbItem>','hex'),2),encode('</NmbItem>','hex'),1),'hex');
+        end if;
+
+        producto1:=escape_xml_characters_simple(substring(producto1,1,40));
+       -- razon_rec1:=escape_xml_characters_simple(substring(get_xml_hex1('RznSocRecep',xml_dte1),1,40));
+	razon_rec1:=escape_xml_characters_simple(substring(hex_2_ascii2(get_xml_hex('527a6e536f635265636570',xml_dte1)),1,35));
+
+        fecha1:=to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MM:SS');
+
+        ted1:='<DD><RE>' || rut1 || '-' || modulo11(rut1) || '</RE><TD>' || tipo_dte1 || '</TD><F>' || folio1 || '</F><FE>' || get_xml_hex1('FchEmis',xml_dte1) || '</FE><RR>'||get_xml_hex1('RUTRecep',xml_dte1)||'</RR><RSR>'||razon_rec1||'</RSR><MNT>'||get_xml_hex1('MntTotal',xml_dte1)||'</MNT><IT1>'||producto1||'</IT1>' || caf1 || '<TSTED>'||fecha1||'</TSTED></DD>';
+
+        begin
+                firma_ted1:=sign_rsa_ted(ted1,rsask1,rsask_p1);
+        EXCEPTION WHEN OTHERS THEN
+                perform logfile ('FALLA ted='||ted1||' rsask1='||rsask1||' rsask_p1='||rsask_p1);
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                json2:=response_requests_6000('2', 'Falla Firma CAF, Reintente Por Favor','', json2);
+                return json2;
+        end;
+        ted1:='<TED version="1.0">'||ted1||'<FRMT algoritmo="SHA1withRSA">'||firma_ted1||'</FRMT></TED>'||chr(10)||'<TmstFirma>'||fecha1||'</TmstFirma>';
+
+        patron_dte1:=pg_read_file('./patron_dte_10k/patron_dte_sin_custodium.xml');
+        if (patron_dte1='' or patron_dte1 is null) then
+                json2:=response_requests_6000('2', 'Falla Insercion no existe patron de DTE','', json2);
+                --Libero el Folio
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                return json2;
+        end if;
+
+        --Agregamos TED y TmstFirma en el DTE
+	if tipo_dte1 not in ('43','110','111','112') then
+                xml_dte1:=replace(xml_dte1,encode('</Documento>','hex'),encode(ted1::bytea,'hex')||encode('</Documento>','hex'));
+        elsif(tipo_dte1='43') then
+                xml_dte1:=replace(xml_dte1,encode('</Liquidacion>','hex'),encode(ted1::bytea,'hex')||encode('</Liquidacion>','hex'));
+        else
+                xml_dte1:=replace(xml_dte1,encode('</Exportaciones>','hex'),encode(ted1::bytea,'hex')||encode('</Exportaciones>','hex'));
+        end if;
+
+        --xml_dte1:=replace(xml_dte1,encode('</Documento>','hex'),encode(ted1::bytea,'hex')||encode('</Documento>','hex'));
+        --Agregamos FOLIO en el DTE
+        if(strpos(xml_dte1,encode('<Folio/>','hex')::varchar)>0) then
+                xml_dte1:=replace(xml_dte1,encode('<Folio/>','hex')::varchar,encode('<Folio>','hex')||encode(folio1::varchar::bytea,'hex')||encode('</Folio>','hex'));
+        else
+                xml_dte1:=split_part(xml_dte1,encode('<Folio>','hex'),1)||encode('<Folio>','hex')||encode(folio1::varchar::bytea,'hex')||encode('</Folio>','hex')||split_part(xml_dte1,encode('</Folio>','hex'),2);
+        end if;
+        --Agregamos ID en el DTE
+ --       xml_dte1:=split_part(xml_dte1,encode('<Documento','hex'),1)||encode(('<Documento ID="'||id1||'"><Encabezado>')::bytea,'hex')||split_part(xml_dte1,encode('<Encabezado>','hex'),2);
+	if tipo_dte1 not in ('43','110','111','112') then
+                xml_dte1:=split_part(xml_dte1,encode('<Documento','hex'),1)||encode(('<Documento ID="'||id1||'"><Encabezado>')::bytea,'hex')||split_part(xml_dte1,encode('<Encabezado>','hex'),2);
+        elsif(tipo_dte1='43') then
+                xml_dte1:=split_part(xml_dte1,encode('<Liquidacion','hex'),1)||encode(('<Liquidacion ID="'||id1||'"><Encabezado>')::bytea,'hex')||split_part(xml_dte1,encode('<Encabezado>','hex'),2);
+        else
+                xml_dte1:=split_part(xml_dte1,encode('<Exportaciones','hex'),1)||encode(('<Exportaciones ID="'||id1||'"><Encabezado>')::bytea,'hex')||split_part(xml_dte1,encode('<Encabezado>','hex'),2);
+        end if;
+
+        --perform logfile('DAO_DTE_13794_3='||coalesce(xml_dte1,'NULO3'));
+
+        json3:=escape_xml_characters(json3::varchar)::json;
+        dte1:=remplaza_tags_json_c(json3,patron_dte1);
+        dte1:=limpia_tags(dte1);
+        --perform logfile('DAO_DTE_13794_4='||coalesce(dte1,'NULO2'));
+
+        xml_dte1:=replace(encode(dte1::bytea,'hex'),encode('#|#|#|#DTE#|#|#|#','hex'),xml_dte1);
+        --perform logfile('DAO_DTE_13794_5='||coalesce(xml_dte1,'NULO1'));
+
+        --perform logfile('DAO_DTE_13794_6='||id1||'   '||get_json_upper('rut_firma',json2)||'   '||coalesce(hex2ascii2base64(xml_dte1),'NULO'));
+
+        json2:=put_json(json2,'__SECUENCIAOK__','40');
+        --data_firma1:=replace('{"documento":"'||hex2ascii2base64(xml_dte1)||'","nodoId":"'||id1||'","rutEmpresa":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","entidad":"SII","rutFirmante":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","codigoAcceso":"'||replace(get_json_upper('pass',json2),chr(92),chr(92)||chr(92))||'"}',chr(10),'');
+        --data_firma1:=replace('{"documento":"'||str2latin12base64(decode_hex(xml_dte1))||'","nodoId":"'||id1||'","rutEmpresa":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","entidad":"SII","rutFirmante":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","codigoAcceso":"'||replace(get_json_upper('pass',json2),chr(92),chr(92)||chr(92))||'"}',chr(10),'');
+        --data_firma1:=replace('{"documento":"'||str2latin12base64(decode_hex_latin1(xml_dte1))||'","nodoId":"'||id1||'","rutEmpresa":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","entidad":"SII","rutFirmante":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","codigoAcceso":"'||replace(get_json_upper('pass',json2),chr(92),chr(92)||chr(92))||'"}',chr(10),'');
+        data_firma1:=replace('{"documento":"'||hex2latin12base64(xml_dte1)||'","nodoId":"'||id1||'","rutEmpresa":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","entidad":"SII","rutFirmante":"'||get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))||'","codigoAcceso":"'||replace(get_json_upper('pass',json2),chr(92),chr(92)||chr(92))||'"}',chr(10),'');
+        --perform logfile('DAO_DTE_13794_7 '||coalesce(data_firma1::varchar,'NULO7'));
+
+        --json2:=get_parametros_motor_json(json2,'FIRMADOR');
+	json2:=get_parametros_motor_json(json2,get_parametro_firmador(get_json_upper('rut_firma',json2)||'-'||modulo11(get_json_upper('rut_firma',json2))));
+        json2:=put_json(json2,'INPUT_FIRMADOR','POST '||get_json_upper('PARAMETRO_RUTA',json2)||' HTTP/1.1'||chr(10)||'User-Agent: curl/7.26.0'||chr(10)||'Host: '||get_json_upper('__IP_CONEXION_CLIENTE__',json2)||chr(10)||'Accept: '||chr(42)||'/'||chr(42)||chr(10)||'Content-Type: application/json; charset=ISO-8859-1'||chr(10)||'Content-Length: '||length(data_firma1)::varchar||chr(10)||chr(10)||data_firma1);
+        json2:=put_json(json2,'XML_DTE','');
+        json2:=put_json(json2,'REQUEST_URI','');
+        json2:=put_json(json2,'QUERY_STRING','');
+        RETURN json2;
+END;
+$function$

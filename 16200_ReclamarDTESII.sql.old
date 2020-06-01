@@ -1,0 +1,196 @@
+--Reclamar DTE SII
+delete from isys_querys_tx where llave='16200';
+
+insert into isys_querys_tx values ('16200',10,1,1,'select reclamar_sii_16200(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+
+CREATE or replace FUNCTION reclamar_sii_16200(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+
+        -- input
+        v_data          varchar;
+
+        json_in         json;
+        v_rutEmisor     varchar;
+        v_dvEmisor      varchar;
+        v_tipo_dte      varchar;
+        v_folio         varchar;
+        v_rutReceptor   varchar;
+        campo           record;
+        campo1          record;
+        campoE          record;
+        v_accion        varchar;
+
+        v_canal         varchar;
+        v_cod_txel      bigint;
+        json_out        json;
+        json_script1    json;
+        ws_codResp      varchar;
+        ws_descResp     varchar ;
+        ws_json         json;
+
+        i               integer;
+        aux             varchar;
+        aux2            json;
+
+        ws_codEvento    varchar;
+        ws_descEvento   varchar;
+        te_estado       varchar;
+        te_fecha        varchar;
+
+        xml1            varchar;
+	json_par1	json;
+	json_aux	json;	
+BEGIN
+        json2:=json1;
+
+        json2:=logjson(json2,'URI_RECLAMO='||get_json('URI_IN',json2));
+        --Reclamo a ser enviado
+        v_data:=get_json('INPUT',json2);
+        v_rutEmisor:=split_part(get_xml_hex1('RUTEmisor',v_data),'-',1);
+        v_folio:=get_xml_hex1('Folio',v_data);
+        v_tipo_dte:=get_xml_hex1('TipoDTE',v_data);
+        v_rutReceptor:=split_part(get_xml_hex1('RUTRecep',v_data),'-',1);
+        v_accion:=get_xml_hex1('EstadoDTE',v_data);
+
+        /*
+        0 : ACD
+        1 : RCD
+        2 : ERM
+        3 : RFP
+        4 : RFT
+
+        */
+/*      if(v_accion='0') then
+                v_accion:='ACD';
+        end if;
+        if(v_accion='1') then
+                v_accion:='RCD';
+        end if;
+        if(v_accion='2') then
+                v_accion:='ERM';
+        end if;
+        if(v_accion='3') then
+                v_accion:='RFP';
+        end if;
+        if(v_accion='4') then
+                v_accion:='RFT';
+        end if;
+*/
+        select * from dte_recibidos where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint into campo;
+        if found then
+                --
+                v_rutEmisor:=campo.rut_emisor;
+                v_dvEmisor:=modulo11(v_rutEmisor::varchar);
+                v_tipo_dte:=campo.tipo_dte;
+                v_folio:=campo.folio;
+                json2:=logjson(json2,'DATOS DOCUMENTO RUT_EMISOR=>'||v_rutEmisor::varchar||' TIPO_DTE=>'||v_tipo_dte::varchar||' FOLIO=>'||v_folio::varchar);
+
+                -- validamos la fecha del documento
+                json_in:='{"rutEmisor":"'||v_rutEmisor::varchar||'","dvEmisor":"'||v_dvEmisor::varchar||'","tipoDoc":"'||v_tipo_dte::varchar||'","folio":"'||v_folio::varchar||'","accionDoc":"'||v_accion||'"}';
+                -- VERSION PROD
+                json_par1:=get_parametros_motor_json('{}','BASE_COLAS');
+                json_aux:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,'select curl_python(''escritorio.acepta.com:2021/reclamo_aceptacion'','''||json_in::varchar||''')');
+                if(get_json('STATUS',json_aux)<>'OK' or get_json('STATUS',json_aux)='TIMEOUT') then
+			json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
+			json2:=logjson(json2,'Estado del documento aun no se encuentra disponible en SII. Consulte nuevamente.');
+                	return json2;
+                end if;
+
+                BEGIN
+			json_script1:=get_json('curl_python',json_aux);
+			json2:=logjson(json2,'*************** RESPUESTA WS ***************** '||json_script1);
+			json_out:=decode(get_json('output',json_script1),'hex')::varchar::json;
+			json2:=logjson(json2,'JSON_OUTPUT=> '||json_out::varchar);
+                EXCEPTION WHEN OTHERS THEN
+			json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
+			json2:=logjson(json2,'FALLA Comunicación SII.');
+                	return json2;
+                END;
+
+
+                ws_codResp:=get_json('codResp',json_out::json);
+                ws_descResp:=replace_unicode(get_json('descResp',json_out::json));
+
+                json2:=logjson(json2,'*************** RESPUESTA WS *****************');
+                json2:=logjson(json2,'*************** COD_RESPUESTA_WS => '||ws_codResp::varchar);
+                json2:=logjson(json2,'*************** DESC_RESPUESTA_WS => '||ws_descResp::varchar);
+
+                -- CODIGO 23 y 25 OK
+                if(ws_codResp='0') then
+                        -- GUARDO EVENTO EN TRAZA
+                        xml1:='';
+                        xml1:=put_campo(xml1,'FECHA_EMISION',campo.fecha_emision::varchar);
+                        xml1:=put_campo(xml1,'RUT_EMISOR',v_rutEmisor::varchar);
+                        xml1:=put_campo(xml1,'RUT_OWNER',v_rutEmisor::varchar);
+                        xml1:=put_campo(xml1,'FECHA_EVENTO',now()::varchar);
+                        xml1:=put_campo(xml1,'RUT_RECEPTOR',campo.rut_receptor::varchar);
+                        xml1:=put_campo(xml1,'FOLIO',v_folio::varchar);
+                        xml1:=put_campo(xml1,'TIPO_DTE',v_tipo_dte::varchar);
+                        xml1:=put_campo(xml1,'CANAL','RECIBIDOS');
+                        xml1:=put_campo(xml1,'URI_IN',campo.uri::varchar);
+                        xml1:=put_campo(xml1,'COMENTARIO_TRAZA','Glosa: '||ws_descResp::varchar);
+                        xml1:=graba_bitacora(xml1,v_accion);
+                        json2:=logjson(json2,'RESPUESTA_GRABA_BITACORA_RECIBIDOS ======> '||xml1::varchar);
+
+                        -- TRAIGO ESTADO DEL EVENTO
+                        select * from estado_dte where codigo='R'||v_accion into campoE;
+                        if not found then
+    	                    select * from estado_dte where codigo=v_accion into campoE;
+                        end if;
+                        -- UPDATE DTE_RECIBIDOS
+                        if(v_accion in ('ERM','RFP','RFT')) then
+        	                update dte_recibidos set estado_reclamo=campoE.descripcion,fecha_reclamo=now(),mensaje_reclamo='Glosa: '||ws_descResp||' ('||ws_codResp||')' where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint;
+                        else
+                                update dte_recibidos set estado_nar=campoE.descripcion,fecha_nar=now(),mensaje_nar='Glosa: '||ws_descResp||' ('||ws_codResp||')' where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint;
+                        end if;
+                        json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+                        -- Valido si existe el documento en emitidos !!!!!!!!!!!!!
+                        select * from dte_emitidos where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint into campo1;
+                        if found then
+	                        select * from estado_dte where codigo=v_accion into campoE;
+                                if not found then
+       	                        	select * from estado_dte where codigo='R'||v_accion into campoE;
+                                end if;
+                                -- actualizo estado de emitido
+                                if(v_accion in ('ACD','RCD')) then
+                                	-- NAR / ACD - RCD
+                                        update dte_emitidos set estado_nar=campoE.descripcion,fecha_nar=now(),mensaje_nar='Glosa: '||ws_descResp||' ('||ws_codResp||')' where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint;
+                                        json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+                                else
+                                        -- ERM - RFP - RFT
+                                        update dte_emitidos set estado_reclamo=campoE.descripcion,fecha_reclamo=now(),mensaje_reclamo='Glosa: '||ws_descResp||' ('||ws_codResp||')' where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint;
+                                        json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+                                end if;
+                                -- GUARDO EVENTO EN TRAZA
+                                xml1:='';
+				xml1:=put_campo(xml1,'FECHA_EMISION',campo.fecha_emision::varchar);
+				xml1:=put_campo(xml1,'RUT_EMISOR',v_rutEmisor::varchar);
+				xml1:=put_campo(xml1,'RUT_OWNER',v_rutEmisor::varchar);
+				xml1:=put_campo(xml1,'FECHA_EVENTO',now()::varchar);
+				xml1:=put_campo(xml1,'RUT_RECEPTOR',campo1.rut_receptor::varchar);
+				xml1:=put_campo(xml1,'FOLIO',v_folio::varchar);
+				xml1:=put_campo(xml1,'TIPO_DTE',v_tipo_dte::varchar);
+				xml1:=put_campo(xml1,'CANAL','EMITIDOS');
+				xml1:=put_campo(xml1,'URI_IN',campo1.uri::varchar);
+				xml1:=put_campo(xml1,'COMENTARIO_TRAZA','Glosa: '||ws_descResp::varchar);
+				xml1:=graba_bitacora(xml1,v_accion);
+				json2:=logjson(json2,'RESPUESTA_GRABA_BITACORA_EMITIDO ======> '||xml1::varchar);
+			else
+				json2:=logjson(json2,'No existe el emitido para este recibidos :P');
+			end if;
+
+                        json2:=put_json(json2,'CODIGO_WS','1');
+                        json2:=put_json(json2,'RESPUESTA_WS',ws_descResp);
+                        return json2;
+                else
+			json2:=put_json(json2,'CODIGO_WS','2');
+			json2:=put_json(json2,'RESPUESTA_WS',ws_descResp);
+			return json2;
+                end if;
+        end if;
+        return json2;
+END;
+$$ LANGUAGE plpgsql;
+

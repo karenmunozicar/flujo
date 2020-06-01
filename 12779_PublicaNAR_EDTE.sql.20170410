@@ -1,0 +1,652 @@
+--Publica documento
+delete from isys_querys_tx where llave='12779';
+
+insert into isys_querys_tx values ('12779',10,1,1,'select busco_dte_nar_12779 (''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12779',15,19,1,'select envia_nar_12779 (''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12779',20,1,1,'select actualizo_dte_12779 (''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12779',30,19,1,'select revisa_respuesta_nar_12779(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--Llamamos a Escribir Directo
+insert into isys_querys_tx values ('12779',40,1,1,'select proc_prepara_grabacion_edte_12779(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12779',50,1,3,'Llamada a Escribir en EDTE',8016,0,0,0,0,60,60);
+insert into isys_querys_tx values ('12779',60,1,1,'select proc_respuesta_edte_12779(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+
+CREATE or replace FUNCTION revisa_respuesta_nar_12779(varchar) RETURNS varchar AS $$
+DECLARE
+        xml1   alias for $1;
+        xml2  	varchar; 
+BEGIN
+	xml2:=xml1;
+	xml2:=put_campo(xml2,'__SECUENCIAOK__','0');
+	if (get_campo('__EDTE_NAR_OK__',xml2)='SI') then
+		xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
+	else
+		xml2:=put_campo(xml2,'RESPUESTA','Status: 400 FALLA NAR');
+	end if;
+	xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
+	xml2 := sp_procesa_respuesta_cola_motor88(xml2);
+        return xml2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE or replace FUNCTION  busco_dte_nar_12779(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+        total1  integer;
+        uri1    varchar;
+        hash1   varchar;
+        ver_dcto_attrib varchar;
+        html1   varchar;
+        data1   varchar;
+        largo1  integer;
+        pos_inicial1    integer;
+        pos_final1      integer;
+        mail1   varchar;
+        campo   record;
+        campo1   record;
+        json4   json;
+        sts1    varchar;
+        pos     integer;
+        subject1        varchar;
+        json_out1       json;
+        comentario1     varchar;
+        xml3    varchaR;
+        cola1   varchar;
+        nombre_tabla1   varchar;
+        tx1     varchar;
+        id1     varchar;
+        aux1    varchar;
+        comentario_traza1       varchar;
+        json3   json;
+        jsonsts1        json;
+        i       integer;
+        xml4    varchar;
+        url_get1        varchar;
+        data_lma        varchar;
+        json_par1       json;
+        rut1    varchar;
+        rut_receptor1   varchar;
+        folio1  varchar;
+        data2   varchar;
+        tipo_dte1       varchar;
+        uri_dte1        varchar;
+        fecha_emi1      varchar;
+        sts2            varchar;
+        estado_nar1     varchar;
+        codigo_txel1    varchar;
+	json_reclamo	json;
+	flag_reclamo	varchar;
+BEGIN
+        json2:=json1;
+	/*if (get_json('rutUsuario',json2)<>'7621836') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','40');
+		return json2;
+	end if;
+	*/
+
+	if (get_json('__FLAG_PUB_10K__',json2)='SI') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','0');
+	else
+        	json2:=put_json(json2,'__SECUENCIAOK__','30');
+	end if;
+	json2:=logjson(json2,'URI_NAR='||get_json('URI_IN',json2));
+        --NAR a ser enviado
+        data1:=get_json('INPUT',json2);
+        rut1:=split_part(get_xml_hex1('RUTEmisor',data1),'-',1);
+        folio1:=get_xml_hex1('Folio',data1);
+        tipo_dte1:=get_xml_hex1('TipoDTE',data1);
+        rut_receptor1:=split_part(get_xml_hex1('RUTRecep',data1),'-',1);
+        fecha_emi1:=get_xml_hex1('FchEmis',data1);
+        if (length(folio1)=0) then
+                json2:=logjson(json2,'Si no hay Folio , no se acepta el NAR');
+                return json2;
+        end if;
+	--Si el RUT_EMISOR no es numerico borre el DTE
+   	if (is_number(rut1) is false) then
+                json2:=logjson(json2,'Se borra DTE, rut_emisor no numerico (NAR)');
+                return json2;
+   	end if;
+
+        --Valido si trae URI_DTE, si viene es porque viene des escritoriom, sino validamos el DTE para contestar
+        if (get_json('URI_DTE',json2)='') then
+                --Buscamos el dte recibido
+                SELECT * into campo1 FROM dte_recibidos WHERE rut_emisor=rut1::integer and tipo_dte=tipo_dte1::integer and folio=folio1::integer;
+                if not found then
+                        json2:=logjson(json2,'Si no hay DTE recibido, no se acepta el NAR rut_emisor='||rut1||' tipo_dte='||tipo_dte1||' folio='||folio1);
+                        return json2;
+                end if;
+                uri_dte1:=campo1.uri;
+		json2:=put_json(json2,'URI_DTE',uri_dte1);
+                codigo_txel1:=campo1.codigo_txel;
+		json2:=put_json(json2,'CODIGO_TXEL_NAR',codigo_txel1);
+        end if;
+
+	-- NBV 20170405 DAO
+        if(codigo_txel1 is null) then
+                codigo_txel1:=get_json('CODIGO_TXEL_NAR',json2);
+        end if;
+
+        sts2:=get_xml_hex1('EstadoDTE',data1);
+        --flag_reclamo:=get_xml_hex1('ValorDA',data1);
+        flag_reclamo:=split_part(split_part(split_part(data1,'<NombreDA>ReclamarDTE</NombreDA>',2),'<ValorDA>',2),'</ValorDA>',1);
+        json2:=logjson(json2,'PIVOTE_RECLAMO FLUJO_NAR');
+        if(flag_reclamo='SI') then
+		json2:=logjson(json2,'NAR_VA_AL_SII');
+                if (sts2 in ('0','1')) then
+                        json2:=logjson(json2,'PIVOTE_RECLAMO FLUJO_NAR_ACD');
+                        -- NBV 20170316 envio un ACD
+                        json2:=logjson(json2,'GENERO_ACD_PARA_DOCUMENTO_COD_TXEL=>'||codigo_txel1::varchar);
+                        json_reclamo:=reclamos_dte_sii_6000(('{"COD_TXEL":"'||codigo_txel1::varchar||'","CANAL":"RECIBIDOS","ACCION":"ACD"}')::json);
+                        json2:=logjson(json2,'RESPUESTA_ACD_DOCUMENTO_COD_TXEL=>'||json_reclamo::varchar);
+                        if(get_json('CODIGO_WS',json_reclamo::json)='2') then
+                                json2:=logjson(json2,'No se puede generar reclamo ACD por =>'||get_json('RESPUESTA_WS',json_reclamo::json));
+				json2:=put_json(json2,'__EDTE_NAR_OK__','NO');
+        			json2:=put_json(json2,'__SECUENCIAOK__','30');
+                                --json2:=response_requests_6000_upper('2',get_json('RESPUESTA_WS',json_reclamo::json)::varchar, '',json2);
+                                return json2;
+                        end if;
+                else
+                        -- NBV 20170316 envio un RCD
+                        json2:=logjson(json2,'PIVOTE_RECLAMO FLUJO_NAR_RCD');
+                        json2:=logjson(json2,'GENERO_RCD_PARA_DOCUMENTO_COD_TXEL=>'||codigo_txel1::varchar);
+                        json_reclamo:=reclamos_dte_sii_6000(('{"COD_TXEL":"'||codigo_txel1::varchar||'","CANAL":"RECIBIDOS","ACCION":"RCD"}')::json);
+                        json2:=logjson(json2,'RESPUESTA_RCD_DOCUMENTO_COD_TXEL=>'||json_reclamo::varchar);
+                        if(get_json('CODIGO_WS',json_reclamo::json)='2') then
+                                json2:=logjson(json2,'No se puede generar reclamo ACD por =>'||get_json('RESPUESTA_WS',json_reclamo::json));
+				json2:=put_json(json2,'__EDTE_NAR_OK__','NO');
+        			json2:=put_json(json2,'__SECUENCIAOK__','30');
+                                --json2:=response_requests_6000_upper('2',get_json('RESPUESTA_WS',json_reclamo::json)::varchar, '',json2);
+                                return json2;
+                        end if;
+                end if;
+	else
+		json2:=logjson(json2,'NAR_NO_VA_AL_SII');
+        end if;
+        -- NBV 20170321
+
+        uri1:=get_json('URI_IN',json2);
+        if (length(uri1)=0) then
+                json2:=logjson(json2,'Uri NAR vacia');
+                return json2;
+        end if;
+
+        select * into campo from contribuyentes where rut_emisor=rut1::integer;
+        if not found then
+                json2:=logjson(json2,'Sin mail de intercambio RUT_EMISOR');
+                return json2;
+        end if;
+	json2:=put_json(json2,'CORREO_EMISOR',campo.email);
+	json2:=put_json(json2,'NOMBRE_EMISOR',campo.nombre);
+        select * into campo1 from contribuyentes where rut_emisor=rut_receptor1::integer;
+        if not found then
+                json2:=logjson(json2,'Sin mail de intercambio RUT_RECEPTOR');
+                return json2;
+        end if;
+	json2:=put_json(json2,'CORREO_RECEPTOR',campo1.email);
+	json2:=put_json(json2,'NOMBRE_RECEPTOR',campo1.nombre);
+
+        json2:=logjson(json2,'Mail NAR='||campo.email);
+        --Validamos el correo
+        if (valida_email(campo.email) is false) then
+                json2:=logjson(json2,'Mail Invalido '||campo.email);
+                return json2;
+        end if;
+        json2:=put_json(json2,'__SECUENCIAOK__','15');
+        return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+CREATE or replace FUNCTION  envia_nar_12779(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+        total1  integer;
+        uri1    varchar;
+        hash1   varchar;
+        ver_dcto_attrib varchar;
+        html1   varchar;
+        data1   varchar;
+        largo1  integer;
+        pos_inicial1    integer;
+        pos_final1      integer;
+        mail1   varchar;
+        campo   record;
+        campo1   record;
+        json4   json;
+        sts1    varchar;
+        pos     integer;
+        subject1        varchar;
+        json_out1       json;
+        comentario1     varchar;
+        xml3    varchaR;
+        cola1   varchar;
+        nombre_tabla1   varchar;
+        tx1     varchar;
+        id1     varchar;
+        aux1    varchar;
+        comentario_traza1       varchar;
+        json3   json;
+        jsonsts1        json;
+        i       integer;
+        xml4    varchar;
+        url_get1        varchar;
+        data_lma        varchar;
+        json_par1       json;
+        rut1    varchar;
+        rut_receptor1   varchar;
+        folio1  varchar;
+        data2   varchar;
+        tipo_dte1       varchar;
+        uri_dte1        varchar;
+        fecha_emi1      varchar;
+        sts2            varchar;
+        estado_nar1     varchar;
+        codigo_txel1    varchar;
+	mail_emisor1	varchar;
+	mail_receptor1	varchar;
+	nombre_emisor1	varchar;
+	nombre_receptor1	varchar;
+	tmp1	varchar;
+	tmp2	varchar;
+BEGIN
+        json2:=json1;
+	if (get_json('__FLAG_PUB_10K__',json2)='SI') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','0');
+	else
+        	json2:=put_json(json2,'__SECUENCIAOK__','30');
+	end if;
+        --NAR a ser enviado
+        data1:=get_json('INPUT',json2);
+        rut1:=split_part(get_xml_hex1('RUTEmisor',data1),'-',1);
+        folio1:=get_xml_hex1('Folio',data1);
+        tipo_dte1:=get_xml_hex1('TipoDTE',data1);
+        rut_receptor1:=split_part(get_xml_hex1('RUTRecep',data1),'-',1);
+        fecha_emi1:=get_xml_hex1('FchEmis',data1);
+	uri_dte1:=get_json('URI_DTE',json2);
+	codigo_txel1:=get_json('CODIGO_TXEL_NAR',json2);
+	uri1:=get_json('URI_IN',json2);	
+	mail_emisor1:=get_json('CORREO_EMISOR',json2);
+	mail_receptor1:=get_json('CORREO_RECEPTOR',json2);
+	nombre_emisor1:=get_json('NOMBRE_EMISOR',json2);
+	nombre_receptor1:=get_json('NOMBRE_RECEPTOR',json2);
+
+        json2:=logjson(json2,'Casilla NAR --> '||mail_emisor1||' URI='||uri1||' URI_DTE='||uri_dte1);
+        sts2:=get_xml_hex1('EstadoDTE',data1);
+        json4:='{}';
+        if (sts2 in ('0','1')) then
+                hash1 := encripta_hash_evento_VDC('uri='||uri_dte1||'&owner='||rut_receptor1||'&rutEmisor='||rut1||'&tipoDTE='||tipo_dte1||'&folio='||folio1||'&mail='||trim(mail_emisor1)||'&type=LNRE'||'&rutRecep='||rut_receptor1||'&fchEmis='||fecha_emi1||'&relatedUrl=&comment=Mail Leído por '||trim(mail_emisor1)||'&');
+                if (sts2='0') then
+                        json4:=put_json(json4,'ESTADO_DTE','ACEPTADO OK');
+                else
+                        json4:=put_json(json4,'ESTADO_DTE','ACEPTADA CON DISCREPANCIA');
+                end if;
+        else
+                hash1 := encripta_hash_evento_VDC('uri='||uri_dte1||'&owner='||rut_receptor1||'&rutEmisor='||rut1||'&tipoDTE='||tipo_dte1||'&folio='||folio1||'&mail='||trim(mail_emisor1)||'&type=LRRE'||'&rutRecep='||rut_receptor1||'&fchEmis='||fecha_emi1||'&relatedUrl=&comment=Mail Leído por '||trim(mail_emisor1)||'&');
+                json4:=put_json(json4,'ESTADO_DTE','RECHAZADO');
+        end if;
+
+        --Enviamos el NAR
+        json4:=put_json(json4,'GLOSA_DTE',get_xml_hex1('EstadoDTEGlosa',data1));
+        json4:=put_json(json4,'RAZON_EMISOR',nombre_emisor1);
+        json4:=put_json(json4,'RAZON_RECEPTOR',nombre_receptor1);
+        --Case
+
+        json4:=put_json(json4,'uri',uri1);
+        json4:=put_json(json4,'FECHA_EMISION',fecha_emi1);
+        json4:=put_json(json4,'TIPO_DTE',tipo_dte1);
+        json4:=put_json(json4,'FOLIO',folio1);
+        json4:=put_json(json4,'flag_data_xml','NO');
+        json4:=put_json(json4,'RUT_EMISOR_DV',rut1||'-'||modulo11(rut1));
+        json4:=put_json(json4,'RUT_RECEPTOR_DV',rut_receptor1||'-'||modulo11(rut_receptor1));
+        json4:=put_json(json4,'IMG_LECTURA','<img style="display: none;" src="http://servicios.acepta.com/traza?hash='||hash1||'&"/>');
+        json4:=put_json(json4,'TITULO','Producción Intercambio Revisión Comercial de DTE');
+        json4:=put_json(json4,'MONTO_TOTAL','$ '||get_xml_hex1('MntTotal',data1));
+
+        html1:=pg_read_file('./patron_dte_10k/patron_nar.html');
+        html1:=remplaza_tags_json_c(json4,html1);
+        json4:=put_json(json4,'content_html',encode(html1::bytea,'hex'));
+        --Solo se envia el RespuestaDTE
+	tmp1:=encode('<RespuestaDTE','hex');
+	tmp2:=encode('</RespuestaDTE>','hex');
+        --data2:=encode(('<?xml version="1.0" encoding="ISO-8859-1"?>'||chr(10))::bytea,'hex')||get_xml_hex(encode('Content','hex'),data1);
+        data2:=encode(('<?xml version="1.0" encoding="ISO-8859-1"?>'||chr(10))::bytea,'hex')||tmp1||split_part(split_part(data1,tmp1,2),tmp2,1)||tmp2;
+        json4:=put_json(json4,'INPUT_CUSTODIUM',data2);
+        --json4:=put_json(json4,'adjunta_xml','SI');
+        json4:=put_json(json4,'adjunta_attach','SI');
+        json4:=put_json(json4,'nombre_xml','Notificacion_Aprobacion_o_Rechazo_'||folio1::varchar);
+        json4:=put_json(json4,'RUT_RECEPTOR',rut_receptor1);
+        json4:=put_json(json4,'subject_hex',encode('Revisión Comercial de DTEs -','hex'));
+        json4:=put_json(json4,'from',mail_receptor1);
+        json4:=put_json(json4,'to',mail_emisor1);
+        --json4:=put_json(json4,'bcc','fernando.arancibia@acepta.com');
+        json4:=put_json(json4,'tipo_envio','HTML');
+
+        --json_par1:=get_parametros_motor_json('{}','SERVIDOR_CORREO');
+        json4:=put_json(json4,'return_path','confirmacion_envio@custodium.com');
+        json4:=put_json(json4,'ip_envio','172.16.10.185');
+        --json4:=put_json(json4,'return_path',get_json('PARAMETRO_RUTA',json_par1));
+        --json4:=put_json(json4,'ip_envio',get_json('__IP_CONEXION_CLIENTE__',json_par1));
+        comentario_traza1:='Recibe: '||mail_emisor1||chr(10)||get_xml_hex1('EstadoDTEGlosa',data1);
+
+
+        json4:=put_json(json4,'url_traza','http://servicios.acepta.com/traza');
+        json4:=put_json(json4,'uri_dte',uri_dte1);
+        json4:=put_json(json4,'CANAL','RECIBIDOS');
+
+        if (get_xml_hex1('EstadoDTE',data1) in ('0','1')) then
+                json4:=put_json(json4,'evento_ema','<trace source="ENVIA_NAR" version="1.1"><node name="NRE" stamp="'||to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MI:SS')||'" owner="' ||get_json('RUT_RECEPTOR_DV',json4)||'"><keys><key name="rutEmisor" value="'||get_json('RUT_EMISOR_DV',json4)||'"/><key name="tipoDTE" value="'||tipo_dte1||'"/><key name="folio" value="'||folio1||'"/><key name="fchEmis" value="'||fecha_emi1||'"/></keys><attrs><attr key="code">'||tipo_dte1||'</attr><attr key="url">'||uri_dte1||'</attr><attr key="relatedUrl">'||uri1||'</attr><attr key="orig">'||get_json('RUT_EMISOR_DV',json4)||'</attr><attr key="dest">'||get_json('RUT_RECEPTOR_DV',json4)||'</attr><attr key="tag">'||folio1||'</attr><attr key="data"></attr><attr key="comment">'||comentario_traza1||'</attr></attrs></node></trace>');
+                json4:=put_json(json4,'evento_confirmacion','ENRE');
+		--Se envian los 2 eventos para guardar en la conf de la traza
+                json4:=put_json(json4,'eok','ONRE');
+                json4:=put_json(json4,'enk','FNRE');
+                json4:=put_json(json4,'evento_confirmacion','');
+                estado_nar1:='NAR_APROBADO';
+        else
+                json4:=put_json(json4,'evento_ema','<trace source="ENVIA_NAR" version="1.1"><node name="RRE" stamp="'||to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MI:SS')||'" owner="' ||get_json('RUT_RECEPTOR_DV',json4)||'"><keys><key name="rutEmisor" value="'||get_json('RUT_EMISOR_DV',json4)||'"/><key name="tipoDTE" value="'||tipo_dte1||'"/><key name="folio" value="'||folio1||'"/><key name="fchEmis" value="'||fecha_emi1||'"/></keys><attrs><attr key="code">'||tipo_dte1||'</attr><attr key="url">'||uri_dte1||'</attr><attr key="relatedUrl">'||uri1||'</attr><attr key="orig">'||get_json('RUT_EMISOR_DV',json4)||'</attr><attr key="dest">'||get_json('RUT_RECEPTOR_DV',json4)||'</attr><attr key="tag">'||folio1||'</attr><attr key="data"></attr><attr key="comment">'||comentario_traza1||'</attr></attrs></node></trace>');
+                json4:=put_json(json4,'eok','ORRE');
+                json4:=put_json(json4,'enk','FRRE');
+                json4:=put_json(json4,'evento_confirmacion','');
+                --json4:=put_json(json4,'evento_confirmacion','ERRE');
+                estado_nar1:='NAR_RECHAZADO';
+        end if;
+	id1:='ACP'||encripta_hash_evento_VDC(rut1||'##'||tipo_dte1||'##'||folio1||'##'||fecha_emi1||'##'||uri_dte1||'####RECIBIDOS##'||rut_receptor1||'##'||get_json('eok',json4)||'##'||get_json('enk',json4));
+       	--Generamos un id para confirmar la lectura de correo
+        --id1:=md5(now()::varchar)||nextval('id_confirmacion_mail');
+        json4:=put_json(json4,'msg_id','<'||id1||'@motor2.acepta.com>');
+
+        jsonsts1:=send_mail_python2(json4::varchar);
+        if (get_json('status',jsonsts1)='OK') then
+                json2:=put_json(json2,'__EDTE_NAR_OK__','SI');
+                --perform logfile('send_mail_python1 html2='||get_json('html2',jsonsts1));
+                --perform logfile('send_mail_python1 html='||get_json('html',jsonsts1));
+                --Si envie correctamente, inserto en confirmacion_mail para generar el evento de envio
+                json4:=put_json(json4,'INPUT_CUSTODIUM','');
+                json4:=put_json(json4,'evento_ema','');
+                json4:=put_json(json4,'content_html','');
+                json4:=put_json(json4,'IMG_LECTURA','');
+                --insert into confirmacion_mail (id,json_data) values (id1,json4);
+        	json2:=put_json(json2,'__SECUENCIAOK__','20');
+		json2:=put_json(json2,'ESTADO_NAR',estado_nar1);
+		json2:=put_json(json2,'MENSAJE_NAR',comentario_traza1);
+		json2:=put_json(json2,'URI_NAR',uri1);
+		
+                --update dte_recibidos set uri_nar=uri1,mensaje_nar=comentario_traza1,estado_nar=estado_nar1,fecha_nar=now() where codigo_txel=codigo_txel1::bigint;
+        else
+                json2:=logjson(json2,'Falla Mail');
+                json2:=put_json(json2,'__EDTE_OK__','NO');
+                json2:=put_json(json2,'__EDTE_NAR_OK__','NO');
+        end if;
+    return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION  actualizo_dte_12779(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+        id1     varchar;
+        codigo_txel1    varchar;
+BEGIN
+        json2:=json1;
+	if (get_json('__FLAG_PUB_10K__',json2)='SI') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','0');
+	else
+        	json2:=put_json(json2,'__SECUENCIAOK__','30');
+	end if;
+	codigo_txel1:=get_json('CODIGO_TXEL_NAR',json2);
+        update dte_recibidos set uri_nar=get_json('URI_NAR',json2),mensaje_nar=get_json('MENSAJE_NAR',json2),estado_nar=get_json('ESTADO_NAR',json2),fecha_nar=now() where codigo_txel=codigo_txel1::bigint;
+        json2:=put_json(json2,'__EDTE_OK__','SI');
+        json2:=put_json(json2,'__EDTE_NAR_OK__','SI');
+    return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+CREATE or replace FUNCTION proc_prepara_grabacion_edte_12779(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1        alias for $1;
+        xml2    varchar;
+    data1       varchar;
+    file1       varchar;
+    sts         integer;
+    host1       varchar;
+    header1     varchar;
+   largo1	integer;
+    pos_final1 integer;	
+    pos_inicial1 integer;
+    dominio1 varchar;
+fecha1	varchar;
+directorio1 varchar;
+tabla_traza1	varchar;
+uri1	varchar;
+stTraza	traza.traza%ROWTYPE;
+	id1	varchar;
+BEGIN
+    xml2:=xml1; 
+
+    xml2:=put_campo(xml2,'__SECUENCIAOK__','0');
+
+    --Si es un get salgo altiro
+    if (get_campo('REQUEST_METHOD',xml2)='GET') then
+        if ((strpos(get_campo('HTTP_USER_AGENT',xml2),'check_http')>0) or (length(get_campo('QUERY_STRING',xml2))=0))
+then
+                xml2 := logapp(xml2,'Nagios Check o GET sin datos, se ignora');
+                --Se Responde OK
+                xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK'||chr(10)||
+                'Content-type: text/html; charset=iso-8859-1'||chr(10)||
+                'Content-length: 0'||chr(10)||
+                'Vary: Accept-Encoding'||chr(10)||chr(10));
+                xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+                xml2 := sp_procesa_respuesta_cola_motor(xml2);
+                xml2 := put_campo_ctx(xml2,'__ETAPA1__','OK');
+                return xml2;
+        end if;
+    end if;
+
+    uri1:=get_campo('URI_IN',xml2);
+
+    --20150224 FAY Si no viene URI no se puede publicar
+    if (length(uri1)=0) then
+	xml2 := logapp(xml2,'No viene URI_IN, no se puede publicar');
+        xml2 := put_campo(xml2,'__EDTE_OK__','NO');
+	return xml2;	
+    end if;
+
+
+    --Si ya tiene el evento EMA, no envio el mandato
+    tabla_traza1:=get_tabla_traza(uri1);
+    begin
+               execute 'select * from '||tabla_traza1||' where uri=$1 and evento=''ENVIADO_EDTE_NAR''' into stTraza using uri1;
+               --Si no esta el evento..
+               if stTraza.uri is not null then
+        		xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+                        xml2 := put_campo(xml2,'__EDTE_NAR_OK__','SI');
+			xml2 := logapp(xml2,'Uri '||uri1||' NAR ya enviado al EDTE');
+			--Si ya existe el envio de mandato
+                	if (get_campo('__FLAG_REINTENTO_NAR__',xml2)='SI') then
+                        	id1:=get_campo('__ID_DTE__',xml2);
+	                        --Si viene de un reintento, aumento reintentos
+        	                xml2:=logapp(xml2,'Se borra mandato edte de la cola');
+                	        execute 'delete from '||get_campo('__COLA_MOTOR__',xml2)||' where id='||id1;
+	                end if;
+
+		        return xml2;
+               end if;
+    exception WHEN OTHERS THEN
+               select * into stTraza from traza.traza where uri=uri1 and evento='ENVIADO_EDTE_NAR';
+               if not found then
+                        --Si no esta el evento PUB vamos a publicar
+        		xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+                        xml2 := put_campo(xml2,'__EDTE_NAR_OK__','SI');
+			xml2 := logapp(xml2,'Uri '||uri1||' NAR ya enviado al EDTE*');
+		        return xml2;
+               end if;
+    end;
+    --xml2:=put_context(xml2,'CONTEXTO_ALMACEN');
+    xml2 := put_campo(xml2,'TX','8016'); 
+
+    --Si ya vengo de publicar el Documento y tengo el INPUT_CUSTODIUM, no lo vuelvo a parsear
+    if (get_campo('INPUT_CUSTODIUM',xml2)='') then
+	    --Ya se parseo el DTE
+	    host1:=split_part(split_part(uri1,'//',2),'/',1);
+	    data1:=get_campo('INPUT',xml2);
+ 
+
+	    --Nuevo Procedimiento
+	    largo1:=get_campo('CONTENT_LENGTH',xml2)::integer*2;
+	    --Busco donde empieza <?xml version
+	    pos_inicial1:=strpos(data1,'3c3f786d6c2076657273696f6e3d');
+	    --Buscamos al reves donde esta el primer signo > que en hex es 3e
+	    --Como se pone un reverse se busca e3
+	    --xml2:=logapp(xml2,'MAGIA:'||strpos(reverse(data1),'e3')::varchar);
+	    pos_final1:=largo1-pos_inicial1+4-strpos(reverse(data1),'e3');
+	    data1:=substring(data1,pos_inicial1,pos_final1);
+	    xml2 := put_campo(xml2,'INPUT_CUSTODIUM',data1);
+	    xml2 := put_campo(xml2,'LEN_INPUT_CUSTODIUM',length(data1)::varchar);
+    end if;
+
+   /*
+    dominio1:=split_part(split_part(uri1,'//',2),'.',1);
+    --Los ultimo 4 del dominio1
+    if length(dominio1)>4 then
+    	fecha1:=substring(dominio1,length(dominio1)-3,4);
+        --xml2:=logapp(xml2,'fecha1='||fecha1);
+        dominio1:=lower(substring(dominio1,1,length(dominio1)-4));
+        --xml2:=logapp(xml2,'dominio1='||dominio1);
+        file1:=split_part(uri1,'/',5);
+        --xml2:=logapp(xml2,'file1='||file1);
+        directorio1:=substring(file1,1,2);
+        --xml2:=logapp(xml2,'directorio1='||directorio1);
+        file1:=split_part(substring(file1,3,length(file1)),'?',1);
+        --xml2:=logapp(xml2,'file1='||file1);
+    end if;
+    */
+    --http%3A%2F%2Fdcummins1503.acepta.com%2Fv01%2F8747A8B9163F1433677E5676D9E619701998F1AA%3Fk%3D8181b82294071788d29d6992b4caf785
+    file1:=replace(replace(replace(replace(uri1,':','%3A'),'/','%2F'),'?','%3F'),'=','%3D');
+    xml2:=put_campo(xml2,'ALMACEN','/opt/acepta/enviodte/work/inter/respuestadte/escribiendo_motor/'||file1);
+    xml2:=logapp(xml2,'EDTE NAR: '||get_campo('ALMACEN',xml2));
+
+    xml2:=put_campo(xml2,'SCRIPT_EDTE','/bin/mv /opt/acepta/enviodte/work/inter/respuestadte/escribiendo_motor/'||file1||' /opt/acepta/enviodte/work/inter/respuestadte/pendiente/'||file1);
+    --xml2:=put_campo(xml2,'SCRIPT_EDTE','echo 1');
+
+    xml2:=logapp(xml2,'EDTE NAR Script:'||get_campo('SCRIPT_EDTE',xml2));
+    --Voy siempre a la IP del EDTE
+    xml2:=put_campo(xml2,'__IP_CONEXION_CLIENTE__',get_campo('__IP_CONEXION_CLIENTE__',get_parametros_motor('','EDTE')));
+    xml2:=logapp(xml2,'EDTE NAR: Envia Data Directo '||get_campo('__IP_CONEXION_CLIENTE__',xml2)||' '||uri1);
+    xml2:=put_campo(xml2,'__SECUENCIAOK__','50');
+    xml2 := put_campo(xml2,'_STS_FILE_','');
+    return xml2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE or replace FUNCTION proc_respuesta_edte_12779(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1        alias for $1;
+    xml2        varchar;
+        data1   varchar;
+	sts1	varchar;
+	publicado1	varchar;
+	xml3	varchar;
+	cola1  bigint;
+	nombre_tabla1   varchar;
+	        uri1    varchar;
+        rut1    varchar;
+	        tx1     varchar;
+	id1	varchar;
+	codigo1	varchar;
+
+	tipo1	integer;
+	rut_emisor1	integer;
+	folio1		integer;
+	json_par1	json;
+	json3		json;    
+BEGIN
+        --Cambio la respuesta de cuadratura por la respuesta original
+        xml2:=xml1;
+       	xml2 := put_campo(xml2,'__EDTE_OK__','NO');
+	sts1:=get_campo('_STS_FILE_',xml2);
+	tipo1:=get_campo('TIPO_DTE',xml2);
+	rut_emisor1:=get_campo('RUT_EMISOR',xml2);
+	folio1:=get_campo('FOLIO',xml2);
+	if (sts1='FILE_YA_EXISTE') then
+		xml2 := logapp(xml2,'EDTE NAR:File ya existe en EDTE');	
+        	xml2 := put_campo(xml2,'__EDTE_OK__','SI');
+		xml2 := graba_bitacora(xml2,'ENVIADO_EDTE_NAR');
+		codigo1:=get_campo('CODIGO_TXEL_NAR',xml2);
+		if codigo1<>'' then
+			update dte_recibidos set fecha_ult_modificacion=now(),uri_nar=get_campo('URI_IN',xml2),estado_nar='EN_PROCESO_ENVIO',fecha_nar=now() where codigo_txel=codigo1::bigint;
+		else
+			json_par1:=get_parametros_motor_json('{}','BASE_RESPALDO_CUADRATURA');
+                        json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,'update dte_recibidos set fecha_ult_modificacion=now(),uri_nar='''||get_campo('URI_IN',xml2)||''',estado_nar=''EN_PROCESO_ENVIO'',fecha_nar=now() where rut_emisor='||rut_emisor1||' and tipo_dte='||tipo1||' and folio='||folio1);
+		end if;
+	elsif (sts1='OK') then
+                xml2 := logapp(xml2,'EDTE:OK Escritos '||get_campo('_STS_FILE_BYTES_WRITTEN_',xml2)||' ContentLength:'||get_campo('CONTENT_LENGTH',xml2)||' Largo Data:'||get_campo('LEN_INPUT_CUSTODIUM',xml2));
+        	xml2 := put_campo(xml2,'__EDTE_NAR_OK__','SI');
+		xml2 := graba_bitacora(xml2,'ENVIADO_EDTE_NAR');
+		codigo1:=get_campo('CODIGO_TXEL_NAR',xml2);
+		if codigo1<>'' then
+			update dte_recibidos set fecha_ult_modificacion=now(),uri_nar=get_campo('URI_IN',xml2),estado_nar='EN_PROCESO_ENVIO',fecha_nar=now() where codigo_txel=codigo1::bigint;
+		else
+			json_par1:=get_parametros_motor_json('{}','BASE_RESPALDO_CUADRATURA');
+                        json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,'update dte_recibidos set fecha_ult_modificacion=now(),uri_nar='''||get_campo('URI_IN',xml2)||''',estado_nar=''EN_PROCESO_ENVIO'',fecha_nar=now() where rut_emisor='||rut_emisor1||' and tipo_dte='||tipo1||' and folio='||folio1);
+		end if;
+	else
+                xml2 := logapp(xml2,'EDTE NAR:Falla EDTE Directo '||get_campo('_STS_FILE_',xml2));
+        	xml2 := put_campo(xml2,'__EDTE_NAR_OK__','NO');
+		xml2 := graba_bitacora(xml2,'FALLA_ENVIADO_EDTE_NAR');
+        end if;
+        xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+        xml2 := put_campo(xml2,'_STS_FILE_','');
+
+	--Si falla, ponemos el mensaje en la cola para procesamiento posterior
+	if (get_campo('__EDTE_NAR_OK__',xml2)<>'SI') then
+		--Si no viene de reintento tengo que entrar a la cola
+		if (get_campo('__FLAG_REINTENTO_NAR__',xml2)<>'SI') then
+			xml3:='';
+			xml3:=put_campo(xml3,'TX','12779');
+			xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
+			xml3:=put_campo(xml3,'INPUT_CUSTODIUM',get_campo('INPUT_CUSTODIUM',xml2));
+			xml3:=put_campo(xml3,'LEN_INPUT_CUSTODIUM',get_campo('LEN_INPUT_CUSTODIUM',xml2));
+			xml3:=put_campo(xml3,'RUT_EMISOR',get_campo('RUT_EMISOR',xml2));
+			xml3:=put_campo(xml3,'FOLIO',get_campo('FOLIO',xml2));
+			xml3:=put_campo(xml3,'TIPO_DTE',get_campo('TIPO_DTE',xml2));
+			xml3:=put_campo(xml3,'__FLAG_REINTENTO_NAR__','SI');
+			xml3:=put_campo(xml3,'__DTE_CON_NAR__','SI');
+			xml3:=put_campo(xml3,'CODIGO_TXEL_NAR',get_campo('CODIGO_TXEL_NAR',xml2));
+			
+			cola1:=nextval('id_cola_procesamiento');
+		        nombre_tabla1:='cola_motor_'||cola1::varchar;
+		        uri1:=get_campo('URI_IN',xml2);
+		        rut1:=get_campo('RUT_EMISOR',xml2);
+			tx1:='45';
+			xml2 := logapp(xml2,'EDTE NAR: Graba uri '||uri1||' en cola');
+			execute 'insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values ( now(),'||quote_literal(uri1)||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(rut1)||',''NO'',''NAR_EDTE'');';	
+			return xml2;
+		else
+			id1:=get_campo('__ID_DTE__',xml2);
+			--Si viene de un reintento, aumento reintentos
+			xml2:=logapp(xml2,'Aumenta Reintentos Envio de Mandato Edte');
+			execute 'update '||get_campo('__COLA_MOTOR__',xml2)||' set reintentos=reintentos+1 where id='||id1;
+			return xml2;
+		end if;
+	--Envio mandato exitoso
+	else
+		--Si me fue bien y es un __FLAG_REINTENTO_NAR__, lo borro de la cola
+		if (get_campo('__FLAG_REINTENTO_NAR__',xml2)='SI') then
+			id1:=get_campo('__ID_DTE__',xml2);
+			--Si viene de un reintento, aumento reintentos
+			xml2:=logapp(xml2,'Se borra mandato edte de la cola');
+			execute 'delete from '||get_campo('__COLA_MOTOR__',xml2)||' where id='||id1;
+			return xml2;
+		end if;
+	end if;
+        return xml2;
+END;
+$$ LANGUAGE plpgsql;
+

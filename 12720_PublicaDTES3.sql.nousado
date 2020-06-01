@@ -1,0 +1,139 @@
+--Publica documento
+delete from isys_querys_tx where llave='12720';
+
+--Llamamos a Escribir Directo
+insert into isys_querys_tx values ('12720',10,1,1,'select proc_prepara_dte_s3_12720(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12720',20,1,10,'$$SCRIPT$$',0,0,0,1,1,30,30);
+insert into isys_querys_tx values ('12720',30,1,1,'select proc_respuesta_dte_s3_12720(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+
+CREATE or replace FUNCTION proc_prepara_dte_s3_12720(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1        alias for $1;
+        xml2    varchar;
+    data1       varchar;
+    file1       varchar;
+    sts         integer;
+    host1       varchar;
+    header1     varchar;
+   largo1	integer;
+    pos_final1 integer;	
+    pos_inicial1 integer;
+    dominio1 varchar;
+fecha1	varchar;
+directorio1 varchar;
+tabla_traza1	varchar;
+uri1	varchar;
+stTraza	traza.traza%ROWTYPE;
+id1	varchar;
+cola1	varchar;
+    
+BEGIN
+    xml2:=xml1;
+
+    uri1:=get_campo('URI_IN',xml2);
+    id1:=get_campo('__ID_DTE__',xml2);
+    cola1:=get_campo('__COLA_MOTOR__',xml2);
+
+    --Si ya tiene el evento RES en traza, no se publica
+    tabla_traza1:=get_tabla_traza(uri1);
+    begin
+               execute 'select * from '||tabla_traza1||' where uri=$1 and evento=''RES''' into stTraza using uri1;
+               --Si no esta el evento..
+               if stTraza.uri is not null then
+        		xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := logapp(xml2,'Uri '||uri1||' ya respaldado ID='||id1);
+			execute 'delete from '||cola1||' where id='||id1||'::bigint';
+		        return xml2;
+               end if;
+    exception WHEN OTHERS THEN
+               select * into stTraza from traza.traza where uri=uri1 and evento='RES';
+               if not found then
+                        --Si no esta el evento PUB vamos a publicar
+        		xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := logapp(xml2,'Uri '||uri1||' ya respaldado* ID='||id1);
+			execute 'delete from '||cola1||' where id='||id1||'::bigint';
+		        return xml2;
+               end if;
+    end;
+    --xml2:=put_context(xml2,'CONTEXTO_ALMACEN');
+
+    --Solo windte por ahora
+    --Ya se parseo el DTE
+    host1:=split_part(split_part(uri1,'//',2),'/',1);
+    data1:=get_campo('INPUT',xml2);
+    --if (strpos(host1,'windte')=0) then
+	--xml2:=put_campo(xml2,'__SECUENCIAOK__','0');
+	--return xml2;
+    --end if;
+    --Nuevo Procedimiento
+    largo1:=get_campo('CONTENT_LENGTH',xml2)::integer*2;
+    --Busco donde empieza <?xml version
+    pos_inicial1:=strpos(data1,'3c3f786d6c2076657273696f6e3d');
+    --Buscamos al reves donde esta el primer signo > que en hex es 3e
+    --Como se pone un reverse se busca e3
+    --xml2:=logapp(xml2,'MAGIA:'||strpos(reverse(data1),'e3')::varchar);
+    pos_final1:=largo1-pos_inicial1+4-strpos(reverse(data1),'e3');
+    data1:=substring(data1,pos_inicial1,pos_final1);
+    --xml2 := put_campo(xml2,'INPUT',data1);
+
+
+    dominio1:=split_part(split_part(uri1,'//',2),'.',1);
+    --Los ultimo 4 del dominio1
+    if length(dominio1)>4 then
+    	fecha1:=substring(dominio1,length(dominio1)-3,4);
+        --xml2:=logapp(xml2,'fecha1='||fecha1);
+        dominio1:=lower(substring(dominio1,1,length(dominio1)-4));
+        --xml2:=logapp(xml2,'dominio1='||dominio1);
+        file1:=split_part(uri1,'/',5);
+        --xml2:=logapp(xml2,'file1='||file1);
+        directorio1:=substring(file1,1,2);
+        --xml2:=logapp(xml2,'directorio1='||directorio1);
+        file1:=split_part(substring(file1,3,length(file1)),'?',1);
+        --xml2:=logapp(xml2,'file1='||file1);
+    end if;
+
+    xml2:=put_campo(xml2,'FILE_S3',file1);
+    xml2:=put_campo(xml2,'RUTA_S3','s3://almacen_acepta/'||dominio1||'/'||fecha1||'/'||directorio1||'/');
+    xml2:=put_campo(xml2,'INPUT_S3',data1);
+    
+    --Se llama al script que sube el archivo gzipeado al S3
+    xml2 := put_campo(xml2,'SCRIPT','/opt/acepta/motor/Procesos/copia_dte_s3.sh '||file1||' s3://almacen_acepta/'||dominio1||'/'||fecha1||'/'||directorio1||'/ '||data1);
+    xml2:=logapp(xml2,'Ejecuta copia_dte_s3.sh para uri='||uri1);
+    xml2:=put_campo(xml2,'__SECUENCIAOK__','20');
+    return xml2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE or replace FUNCTION proc_respuesta_dte_s3_12720(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1        alias for $1;
+    xml2        varchar;
+        data1   varchar;
+	sts1	varchar;
+	publicado1	varchar;
+	ubicacion1	varchar;
+	bytes1	varchar;
+	id1	varchar;
+BEGIN
+        --Cambio la respuesta de cuadratura por la respuesta original
+        xml2:=xml1;
+	sts1:=get_campo('RESPUESTA_SYSTEM',xml2);
+	ubicacion1:=split_part(split_part(sts1,'stored as '||chr(39),2),chr(39),1);
+	bytes1:=split_part(split_part(sts1,'(',2),' ',1);
+	id1:=get_campo('__ID_DTE__',xml2);
+	xml2:=logapp(xml2,'Respuesta = '||sts1);
+	--xml2:=logapp(xml2,'CONTENT_LENGTH='||get_campo('CONTENT_LENGTH',xml2));
+	if (strpos(sts1,'stored')>0) then
+		xml2 := logapp(xml2,'Almacen S3: Archivo Almacenado OK en '||ubicacion1||' Bytes '||bytes1||' URI='||get_campo('URI_IN',xml2));
+		xml2 := graba_bitacora(xml2,'RES');
+		delete from cola_motor_s3 where id=id1::bigint;	
+	else
+		xml2 := logapp(xml2,'Almacen S3: Falla Almacenado en '||ubicacion1||' URI='||get_campo('URI_IN',xml2)||' Resp='||sts1);
+		update cola_motor_s3 set reintentos=reintentos+1 where id=id1::bigint;
+        end if;
+        xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+        return xml2;
+END;
+$$ LANGUAGE plpgsql;
+

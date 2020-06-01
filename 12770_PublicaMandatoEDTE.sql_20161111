@@ -1,0 +1,419 @@
+--Publica documento
+delete from isys_querys_tx where llave='12770';
+
+--Enviar mail
+insert into isys_querys_tx values ('12770',20,19,1,'select envia_mandato_12770(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+--insert into isys_querys_tx values ('12770',30,19,1,'select borra_mandato_12770(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
+
+CREATE or replace FUNCTION  envia_mandato_12770(json) RETURNS json AS $$
+DECLARE
+	json1	alias for $1;
+	json2 	json;
+	total1	integer;
+	uri1	varchar;
+	hash1	varchar;
+	ver_dcto_attrib	varchar;
+	data1	varchar;
+	largo1	integer;
+	pos_inicial1	integer;
+	pos_final1	integer;
+	mail1	varchar;
+	campo	record;
+	json4	json;
+	sts1	varchar;
+	pos	integer;
+	subject1	varchar;
+	json_out1	json;
+	comentario1	varchar;
+	xml3	varchaR;
+	cola1	varchar;
+	nombre_tabla1	varchar;
+	tx1	varchar;
+	rut1	varchar;	
+	id1	varchar;
+	aux1	varchar;
+	comentario_traza1	varchar;
+	json3	json;
+	jsonsts1	json;
+	i	integer;
+	xml4	varchar;
+	url_get1	varchar;
+	data_lma	varchar;
+	json_par1	json;
+	flag_envio_mandato	boolean;
+BEGIN
+	json2:=json1;
+        json2:=put_json(json2,'__SECUENCIAOK__','0');
+
+
+/*
+	if (get_json('__FLAG_REINTENTO_MANDATO__',json2)<>'SI') then
+		select * into campo from mandato_test limit 1;
+	        if found then
+        	        json2:=put_json(json2,'__SECUENCIAOK__','40');
+                	return json2;
+	        end if;
+
+        	insert into mandato_test (i) values (1);
+	end if;
+	*/
+
+
+        --Solo si tiene DTE con mandato
+	if (get_json('__DTE_CON_MANDATO__',json2)<>'SI') then
+        	return json2;
+	end if;
+	
+        uri1:=get_json('URI_IN',json2);
+
+    --20150224 FAY Si no viene URI no se puede publicar
+    if (length(uri1)=0) then
+	json2 := logjson(json2,'No viene URI_IN, no se puede publicar');
+	json2 := put_json(json2,'__MENSAJE_10K__','DTE sin Uri');
+        json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+	return json2;	
+    end if;
+
+
+    if (get_json('INPUT_CUSTODIUM',json2)='') then
+            data1:=get_json('INPUT',json2);
+	    if (length(data1)=0) then
+		   --Sacamos la data del almacen
+		   json3:=put_json('{}','uri',uri1);
+		   data1:=get_input_almacen(json3::varchar);
+		   if (length(data1)=0) then
+			json2 := logjson(json2,'Falla Lectura de la uri en el almacen');
+		 	json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+			json2 := put_json(json2,'__MENSAJE_10K__','Falla Lectura de DTE en Almacen');
+		        id1:=get_json('__ID_DTE__',json2);
+                        --Si viene de un reintento, aumento reintentos
+                        json2:=logjson(json2,'Aumenta Reintentos Envio de Mandato Edte');
+                        execute 'update '||get_json('__COLA_MOTOR__',json2)||' set reintentos=reintentos+1 where id='||id1;
+			return json2;
+		   end if;
+		   data1:=data1||encode(('<URI>filename="'||uri1||'"</URI>')::bytea,'hex');
+		   --Este caso no tenia input, asi lo proceso nuevamente
+		   xml3:='';
+		   xml3:=put_campo(xml3,'INPUT',data1);
+		   xml3:=put_campo(xml3,'URI_IN',uri1);
+		   json3:=query_db_json('172.16.14.177',8001,'select reglas.parseo_datos('||quote_literal(xml3)||') as xml3');
+		   if (get_json('STATUS',json3)<>'OK') then
+			json2 := logjson(json2,'Falla ejecucion reglas.parseo_datos');
+			json2 := put_json(json2,'__MENSAJE_10K__','Falla ejecucion, por favor reintente.');
+		 	json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+		        id1:=get_json('__ID_DTE__',json2);
+                        --Si viene de un reintento, aumento reintentos
+                        json2:=logjson(json2,'Aumenta Reintentos Envio de Mandato Edte');
+                        execute 'update '||get_json('__COLA_MOTOR__',json2)||' set reintentos=reintentos+1 where id='||id1;
+			return json2;
+		   end if;
+		   --Corrijo el xml
+		   data1:=split_part(data1,encode(('<URI>filename="')::bytea,'hex'),1);
+		   xml3:=get_json('xml3',json3);
+		   xml3:=put_campo(xml3,'INPUT','');
+		   --Saco los datos que necesito y los copio al json	
+		   json2:=put_json(json2,'MANDATO_EMAIL',get_campo('MANDATO_EMAIL',xml3));
+		   json2:=put_json(json2,'TOTAL_CASILLAS',get_campo('TOTAL_CASILLAS',xml3));
+		   json2:=put_json(json2,'RUT_EMISOR',get_campo('RUT_EMISOR',xml3));
+		   json2:=put_json(json2,'RUT_EMISOR_DV',get_campo('RUT_EMISOR_DV',xml3));
+		   json2:=put_json(json2,'TIPO_DTE',get_campo('TIPO_DTE',xml3));
+		   json2:=put_json(json2,'FOLIO',get_campo('FOLIO',xml3));
+		   json2:=put_json(json2,'RUT_RECEPTOR',get_campo('RUT_RECEPTOR',xml3));
+		   json2:=put_json(json2,'RUT_RECEPTOR_DV',get_campo('RUT_RECEPTOR_DV',xml3));
+		   json2:=put_json(json2,'FECHA_EMISION',get_campo('FECHA_EMISION',xml3));
+		   json2:=put_json(json2,'DOMINIO',get_campo('DOMINIO',xml3));
+		   json2:=put_json(json2,'MANDATO_MAIL_EMISOR',get_campo('MANDATO_MAIL_EMISOR',xml3));
+		   json3:=query_db_json('172.16.14.177',8001,'select reglas.maestro_clientes('||quote_literal(xml3)||') as xml3');
+		   if (get_json('STATUS',json3)<>'OK') then
+			json2 := logjson(json2,'Falla Lectura del maestro de clientes');
+			json2 := put_json(json2,'__MENSAJE_10K__','Falla ejecucion, por favor reintente*.');
+		 	json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+		        id1:=get_json('__ID_DTE__',json2);
+                        --Si viene de un reintento, aumento reintentos
+                        json2:=logjson(json2,'Aumenta Reintentos Envio de Mandato Edte');
+                        execute 'update '||get_json('__COLA_MOTOR__',json2)||' set reintentos=reintentos+1 where id='||id1;
+			return json2;
+		   end if;
+		   xml3:=get_json('xml3',json3);
+		   --Leo datos del maestro de lciente
+		   --perform logfile('MANDATO 3 '||xml3);
+		   json2:=put_json(json2,'DTE_MANDATO',get_campo('DTE_MANDATO',xml3));
+		   json2:=put_json(json2,'DTE_MANDATO_PDF',get_campo('DTE_MANDATO_PDF',xml3));
+		   json2:=put_json(json2,'DTE_MANDATO_PDF_CLAVE',get_campo('DTE_MANDATO_PDF_CLAVE',xml3));
+		   json2:=put_json(json2,'DTE_MANDATO_PDF_TIPO_CLAVE',get_campo('DTE_MANDATO_PDF_TIPO_CLAVE',xml3));
+		   json2:=put_json(json2,'XSL_MANDATO',get_campo('XSL_MANDATO',xml3));
+	    else
+	            --Nuevo Procedimiento
+        	    largo1:=get_json('CONTENT_LENGTH',json2)::integer*2;
+	            --Busco donde empieza <?xml version
+        	    pos_inicial1:=strpos(data1,'3c3f786d6c2076657273696f6e3d');
+	            --Buscamos al reves donde esta el primer signo > que en hex es 3e
+        	    --Como se pone un reverse se busca e3
+	            --xml2:=logapp(xml2,'MAGIA:'||strpos(reverse(data1),'e3')::varchar);
+        	    pos_final1:=largo1-pos_inicial1+4-strpos(reverse(data1),'e3');
+	            data1:=substring(data1,pos_inicial1,pos_final1);
+	    end if;
+    else
+            data1:=get_json('INPUT_CUSTODIUM',json2);
+    end if;
+
+   --Sacamos el subject
+   pos=strpos(data1,encode('>Subject_Mail<','hex'));
+   if (pos=0) then
+          subject1:=split_part(split_part(data1,encode('<DatoAdjunto nombre="Subject_Mail">','hex'),2),encode('</DatoAdjunto>','hex'),1);
+   else
+         subject1:=split_part(split_part(substring(data1,pos,length(data1)),encode('<ValorDA>','hex'),2),encode('</ValorDA>','hex'),1);
+   end if;
+	
+    mail1:=get_json('MANDATO_EMAIL',json2);
+/*
+    if (get_json('TOTAL_CASILLAS',json2)='1' and (get_json('DOMINIO',json2)='larrainvialcdb' or get_json('RUT_EMISOR',json2)='76568660')) then
+	mail1:=mail1||',fernando.arancibia@acepta.com';
+    end if;
+*/
+
+    --Mandatos que vienen desde Escritorio
+    if(get_json('__FLAG_PUB_10K__',json2)='SI') then
+        -- Puede venir por PANTALLA
+	json2:=logjson(json2,'Entra a __FLAG_PUB_10K__');
+        mail1:=get_json('mailMandato',json2);
+        subject1:=encode(('Documento de ACEPTA COM S A: Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');
+        json2:=put_json(json2,'MANDATO_MAIL_EMISOR','acepta@acepta.com');
+    end if;
+
+
+    json2:=logjson(json2,'Mandatos '||mail1||' TotalCasillas='||get_json('TOTAL_CASILLAS',json2)||' URI='||uri1);
+    i:=0;
+    --Para verificar que se envia algun mandato
+    flag_envio_mandato:=false;
+    for campo in select trim(mail) as mail from (select * from regexp_split_to_table(mail1,'[\,,\;]') mail) x where length(mail)>0 loop
+        flag_envio_mandato:=true;
+    	json2:=logjson(json2,'Mandato='||campo.mail);
+	--Validamos el correo
+	if (valida_email(campo.mail) is false) then
+		json2:=logjson(json2,'Mail Invalido '||campo.mail);
+		--Si viene desde las colas
+    		if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI') then
+		    id1:=get_json('__ID_DTE__',json2);
+        	    --Si viene de un reintento, aumento reintentos
+	            --json2:=logjson(json2,'Se borra mandato edte de la cola');
+        	    --execute 'delete from '||get_json('__COLA_MOTOR__',json2)||' where id='||id1;
+	      	    json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+		    json2:=sp_procesa_respuesta_cola_motor88_json(json2);
+		end if;
+		continue;
+	end if;
+
+	if(get_json('__FLAG_PUB_10K__',json2)<>'SI') then
+		--Verificamos que no tenga evento en la traza para ese correo
+		json_out1:=query_db_json('172.16.14.177','8001','select lee_traza_evento_comentario1('||quote_literal(uri1)||','||quote_literal('EMA')||','||quote_literal(campo.mail)||')');
+		if (get_json('STATUS',json_out1)='OK') then
+			--Si hay datos, es porque ya se envio el correo
+			aux1:=get_json('uri',get_json('lee_traza_evento_comentario1',json_out1)::json);
+			--Ya esta el evento
+			if (length(aux1)>0) then
+	        	        json2:=logjson(json2,'Mail ya Enviado OK');
+	                	json2:=put_json(json2,'__EDTE_MANDATO_OK__','SI');
+			        --Si ya existe el envio de mandato
+        	                if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI') then
+                	                id1:=get_json('__ID_DTE__',json2);
+                        	        --Si viene de un reintento, aumento reintentos
+                                	json2:=logjson(json2,'Se borra mandato edte de la cola');
+	                                execute 'delete from '||get_json('__COLA_MOTOR__',json2)||' where id='||id1;
+        	                end if;
+			       continue;
+			end if;
+		end if;
+	end if;
+	
+    --for campo in select 'fernando.arancibia@acepta.com'::varchar as mail  loop
+    json2:=logjson(json2,'Mandato Casilla --> '||campo.mail||' URI='||uri1);
+	hash1 := encripta_hash_evento_VDC(split_part(uri1,'v01/',2)||'&v_origen='||get_json('RUT_EMISOR',json2)||'&v_tipo_dte='||get_json('TIPO_DTE',json2)||'&v_folio='||get_json('FOLIO',json2)||'&v_email='||trim(campo.mail)||'&v_evento=CVD'||'&v_receptor='||get_json('RUT_RECEPTOR',json2)||'&v_fecha_emi='||get_json('FECHA_EMISION',json2));
+	ver_dcto_attrib:=split_part(uri1,'v01/',1)||'eventos/'||hash1;
+        --se limpia el atributo EMAIL
+        data1:=regexp_replace(data1,encode('<Attribute Type="EMAIL">'::bytea,'hex')::varchar||'.*'||encode('</Attribute>'::bytea,'hex')::varchar,'');
+        --se agrega el mail que corresponde a esta "vuelta" y Atributo nuevo para boton "VER DOCUMENTO"
+        data1:=split_part(data1,encode('</Attributes>','hex'),1)||encode('<Attribute Type="EMAIL">'::bytea,'hex')::varchar || encode(trim(campo.mail)::bytea,'hex')::varchar||encode('</Attribute>'::bytea,'hex')::varchar||encode((chr(10)||'<Attribute Type="URIBOTON">')::bytea,'hex')::varchar||encode(ver_dcto_attrib::bytea,'hex')::varchar||encode('</Attribute>'::bytea,'hex')::varchar||encode((chr(10)||'</Attributes>')::bytea,'hex')||split_part(data1,encode('</Attributes>','hex'),2);
+
+	--Enviamos el mandato
+	json4:='{}';
+	json4:=put_json(json4,'uri',uri1);
+	json4:=put_json(json4,'flag_data_xml','SI');
+	json4:=put_json(json4,'INPUT_CUSTODIUM',data1);
+	json4:=put_json(json4,'RUT_RECEPTOR',get_json('RUT_RECEPTOR',json2));
+	json4:=put_json(json4,'subject_hex',subject1);
+	json4:=put_json(json4,'from',get_json('MANDATO_MAIL_EMISOR',json2));
+	json4:=put_json(json4,'to',campo.mail);
+	--json4:=put_json(json4,'to','fernando.arancibia@acepta.com');
+	json4:=put_json(json4,'tipo_envio','XSL');
+	--Buscamos el xsl que le corresponde
+	json4:=put_json(json4,'file_xsl','/opt/acepta/motor/xsl/'||get_json('DOMINIO',json2)||'/xsl/mail.xsl');
+	--Si tiene XSL_MANDATO = SI sacamos el XSL completo desde la BD.
+	if get_json('XSL_MANDATO',json2) ='SI' then
+		json2:=logjson(json2,'Mandato con Casilla de la BD'); 
+		json4:=put_json(json4,'flag_xls_bd','SI');
+	end if;
+
+	--json_par1:=get_parametros_motor_json('{}','SERVIDOR_CORREO');
+	--if (get_json('rutUsuario',json2)='7621836') then
+		json4:=put_json(json4,'return_path','confirmacion_envio@custodium.com');
+	--else
+	--	json4:=put_json(json4,'return_path','segmandato@custodium.com');
+	--end if;
+	json4:=put_json(json4,'ip_envio','172.16.10.185');
+	--json4:=put_json(json4,'return_path',get_json('PARAMETRO_RUTA',json_par1));
+	--json4:=put_json(json4,'ip_envio',get_json('__IP_CONEXION_CLIENTE__',json_par1));
+	comentario_traza1:='Recibe: '||campo.mail;
+	
+
+	--Verifico si se adjunta el PDF con clave
+	aux1:=get_json('DTE_MANDATO_PDF_CLAVE',json2);
+	if (strpos(aux1,'ALL')>0 or strpos(aux1,get_json('TIPO_DTE',json2))>0) then
+		--Seteo adjuntar el PDF
+		json4:=put_json(json4,'nombre_pdf',get_json('RUT_EMISOR',json2)||'_'||get_json('TIPO_DTE',json2)||'_'||get_json('FOLIO',json2));
+		json4:=put_json(json4,'adjunta_pdf','SI');
+		if (get_json('DTE_MANDATO_PDF_TIPO_CLAVE',json2)='RUT') then
+			json4:=put_json(json4,'clave_pdf',get_json('RUT_RECEPTOR',json2));
+			comentario_traza1:=comentario_traza1||' (Adjunta PDF con Clave)';
+		else
+			comentario_traza1:=comentario_traza1||' (Adjunta PDF)';
+		end if;
+	else
+		--Verifico si viene mandando con pdf
+		aux1:=get_json('DTE_MANDATO_PDF',json2);
+		if (strpos(aux1,'ALL')>0 or strpos(aux1,get_json('TIPO_DTE',json2))>0) then
+			--Seteo adjuntar el PDF
+			json4:=put_json(json4,'nombre_pdf',get_json('RUT_EMISOR',json2)||'_'||get_json('TIPO_DTE',json2)||'_'||get_json('FOLIO',json2));
+			json4:=put_json(json4,'adjunta_pdf','SI');
+			comentario_traza1:=comentario_traza1||' (Adjunta PDF)';
+		else
+			--Si no tiene activamos DTE_MANDATO, no enviamos nada
+			aux1:=get_json('DTE_MANDATO',json2);
+			--Si no tiene activado los mandatos, solo para los que no vienen por pantalla
+			if (strpos(aux1,'ALL')=0 and strpos(aux1,get_json('TIPO_DTE',json2))=0 and get_json('__FLAG_PUB_10K__',json2)<>'SI') then
+				--No se envia nada
+				json2:=logjson(json2,'Cliente sin Mandato Activado en Maestro de Clientes');
+				json2:=put_json(json2,'__EDTE_MANDATO_OK__','NO');
+				--Si ya existe el envio de mandato
+				if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI') then
+					--id1:=get_json('__ID_DTE__',json2);
+					--Si viene de un reintento, aumento reintentos
+					--json2:=logjson(json2,'Se borra mandato edte de la cola');
+					--execute 'delete from '||get_json('__COLA_MOTOR__',json2)||' where id='||id1;
+	      	    			json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+					json2:=sp_procesa_respuesta_cola_motor88_json(json2);
+				end if;
+			       return json2;
+			end if;
+		end if;
+
+		
+	end if;
+
+	--Que envie el evento
+	--if (campo.mail<>'fernando.arancibia@acepta.com') then
+		--Definimos la URL de donde se almacena el html del mandato
+		i:=i+1;
+		url_get1:=replace(split_part(uri1,'?k=',1)||'_m'||i::varchar||to_char(now(),'YYYYMMDDHH24MISSMS'),'v01','mandato');
+		--if (get_json('rutUsuario',json2)='7621836') then
+			 json4:=put_json(json4,'msg_id','<ACP'||encripta_hash_evento_VDC(get_json('RUT_EMISOR',json2)||'##'||get_json('TIPO_DTE',json2)||'##'||get_json('FOLIO',json2)||'##'||get_json('FECHA_EMISION',json2)||'##'||uri1||'##EMS##EMITIDOS##'||get_json('RUT_RECEPTOR',json2))||'@motor2.acepta.com>');
+		perform logfile('msg_id='||get_json('msg_id',json4));
+		--else
+		--	json4:=put_json(json4,'msg_id','<MND-DTE-'||get_json('RUT_EMISOR_DV',json2)||'-'||get_json('RUT_RECEPTOR_DV',json2)||'-'||get_json('TIPO_DTE',json2)||'-'||get_json('FOLIO',json2)||'-'||to_char(now(),'YYYYMMDD')||'@motor2.acepta.com>');
+		--end if;
+		json4:=put_json(json4,'url_traza','http://motor-prod.acepta.com:8082/motor/traza.fcgi');
+		json4:=put_json(json4,'evento_ema','<trace source="MANDATO2" version="1.1"><node name="EMA" stamp="'||to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MI:SS')||'" owner="' ||get_json('RUT_EMISOR_DV',json2)||'"><keys><key name="rutEmisor" value="'||get_json('RUT_EMISOR_DV',json2)||'"/><key name="tipoDTE" value="'||get_json('TIPO_DTE',json2)||'"/><key name="folio" value="'||get_json('FOLIO',json2)||'"/><key name="fchEmis" value="'||get_json('FECHA_EMISION',json2)||'"/></keys><attrs><attr key="code">'||get_json('TIPO_DTE',json2)||'</attr><attr key="url">'||uri1||'</attr><attr key="relatedUrl">'||url_get1||'</attr><attr key="orig">'||get_json('RUT_EMISOR_DV',json2)||'</attr><attr key="dest">'||get_json('RUT_RECEPTOR_DV',json2)||'</attr><attr key="tag">'||get_json('FOLIO',json2)||'</attr><attr key="data"></attr><attr key="comment">'||comentario_traza1||'</attr></attrs></node></trace>');
+
+		--Se le agrega el evento de lectura al html resultante
+		--json4:=put_json(json4,'evento_lma','http://traza.acepta.com/tproxy/put/?source=Motor&amp;type=LMA&amp;timestamp=now&amp;owner='||get_json('RUT_EMISOR_DV',json2)||'&amp;rutEmisor='||get_json('RUT_EMISOR_DV',json2)||'&amp;tipoDTE='||get_json('TIPO_DTE',json2)||'&amp;folio='||get_json('FOLIO',json2)||'&amp;fchEmis'||get_json('FECHA_EMISION',json2)||'&amp;uri='||uri1||'&amp;mail='||campo.mail);
+		--data_lma := encripta_hash_evento_VDC('&v_origen='||get_json('RUT_EMISOR',json2)||'&v_tipo_dte='||get_json('TIPO_DTE',json2)||'&v_folio='||get_json('FOLIO',json2)||'&v_evento=LMA'||'&v_receptor='||get_json('RUT_RECEPTOR',json2)||'&v_fecha_emi='||get_json('FECHA_EMISION',json2));
+		--json4:=put_json(json4,'evento_lma','http://traza.acepta.com/tproxy/put/?source=Motor&amp;type=LMA&amp;uri='||uri1||'&amp;mail='||campo.mail||'&amp;data_lma='||data_lma);
+
+		data_lma := encripta_hash_evento_VDC('uri='||uri1||'&owner='||get_json('RUT_EMISOR',json2)||'&rutEmisor='||get_json('RUT_EMISOR',json2)||'&tipoDTE='||get_json('TIPO_DTE',json2)||'&folio='||get_json('FOLIO',json2)||'&mail='||trim(campo.mail)||'&type=LMA'||'&rutRecep='||get_json('RUT_RECEPTOR',json2)||'&fchEmis='||get_json('FECHA_EMISION',json2)||'&relatedUrl=&comment=Mail Leído por '||trim(campo.mail)||'&');
+		json4:=put_json(json4,'evento_lma','http://servicios.acepta.com/traza?hash='||data_lma);
+
+	--else
+	--end if;
+	--perform logfile('send_mail_python1='||json4::varchar);
+	jsonsts1:=send_mail_python2(json4::varchar);
+	if (get_json('status',jsonsts1)='OK') then
+		json2:=put_json(json2,'__EDTE_MANDATO_OK__','SI');
+		json2:=logjson(json2,'Mandato Enviado OK');
+		
+		--perform logfile('send_mail_python1 html2='||get_json('html2',jsonsts1));
+		--perform logfile('send_mail_python1 html='||get_json('html',jsonsts1));
+		
+		--Voy a grabar al S3 el mandato
+		aux1:=get_json('html',jsonsts1);
+		if (length(aux1)>0) then
+			xml4:='';
+			--Para grabar en el S3 ponemos la misma URI con el MX al final
+			xml4:=put_campo(xml4,'URI_IN',split_part(uri1,'?k=',1)||'_m'||i::varchar||to_char(now(),'YYYYMMDDHH24MISSMS'));
+			xml4:=put_campo(xml4,'INPUT_CUSTODIUM',aux1);
+			xml4:=put_campo(xml4,'RUT_EMISOR',get_json('RUT_EMISOR',json2));
+			xml4:=graba_documento_s3(xml4);
+			json2:=logjson(json2,'Se graba html en s3 en '||get_campo('URI_IN',xml4));
+		end if;
+	else
+		json2:=logjson(json2,'Falla Mail');
+		json2:=put_json(json2,'__EDTE_MANDATO_OK__','NO');
+		if (get_json('__FLAG_REINTENTO_MANDATO__',json2)<>'SI') then
+			xml3:='';
+                        xml3:=put_campo(xml3,'TX','12770');
+                        xml3:=put_campo(xml3,'URI_IN',uri1);
+                        xml3:=put_campo(xml3,'MANDATO_EMAIL',campo.mail);
+                        xml3:=put_campo(xml3,'INPUT_CUSTODIUM',data1);
+                        xml3:=put_campo(xml3,'MANDATO_MAIL_EMISOR',get_json('MANDATO_MAIL_EMISOR',json2));
+                        xml3:=put_campo(xml3,'DOMINIO',get_json('DOMINIO',json2));
+			xml3:=put_campo(xml3,'FOLIO',get_json('FOLIO',json2));
+			xml3:=put_campo(xml3,'RUT_EMISOR',get_json('RUT_EMISOR',json2));
+			xml3:=put_campo(xml3,'RUT_EMISOR_DV',get_json('RUT_EMISOR_DV',json2));
+			xml3:=put_campo(xml3,'TIPO_DTE',get_json('TIPO_DTE',json2));
+			xml3:=put_campo(xml3,'FECHA_EMISION',get_json('FECHA_EMISION',json2));
+			xml3:=put_campo(xml3,'RUT_RECEPTOR',get_json('RUT_RECEPTOR',json2));
+			xml3:=put_campo(xml3,'RUT_RECEPTOR_DV',get_json('RUT_RECEPTOR_DV',json2));
+                        xml3:=put_campo(xml3,'__FLAG_REINTENTO_MANDATO__','SI');
+                        xml3:=put_campo(xml3,'__DTE_CON_MANDATO__','SI');
+			xml3:=put_campo(xml3,'DTE_MANDATO_PDF_CLAVE',get_json('DTE_MANDATO_PDF_CLAVE',json2));
+			xml3:=put_campo(xml3,'DTE_MANDATO_PDF',get_json('DTE_MANDATO_PDF',json2));
+			xml3:=put_campo(xml3,'DTE_MANDATO',get_json('DTE_MANDATO',json2));
+
+
+                        cola1:=nextval('id_cola_procesamiento');
+                        nombre_tabla1:='cola_motor_'||cola1::varchar;
+                        rut1:=get_json('RUT_EMISOR',json2);
+                        tx1:='45';
+                        json2 := logjson(json2,'MANDATO: Graba uri '||uri1||' en cola '||nombre_tabla1);
+                        execute 'insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values ( now(),'||quote_literal(uri1)||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(rut1)||',''NO'',''MANDATO'');';
+                        --return json2;
+                else
+                        --id1:=get_json('__ID_DTE__',json2);
+                        --Si viene de un reintento, aumento reintentos
+                        --json2:=logjson(json2,'Aumenta Reintentos Envio de Mandato Edte');
+                        --execute 'update '||get_json('__COLA_MOTOR__',json2)||' set reintentos=reintentos+1 where id='||id1;
+	      	    	json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
+			json2:=sp_procesa_respuesta_cola_motor88_json(json2);
+                        --return json2;
+                end if;
+	end if;
+    end loop;
+    --json2:=put_json(json2,'__SECUENCIAOK__','0');
+    --Si venia de la cola y envie bien, se borra
+    if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI' and (get_json('__EDTE_MANDATO_OK__',json2)='SI' or flag_envio_mandato is false)) then
+	    --id1:=get_json('__ID_DTE__',json2);
+            --Si viene de un reintento, aumento reintentos
+            json2:=logjson(json2,'Se borra mandato edte de la cola');
+      	    json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+	    json2:=sp_procesa_respuesta_cola_motor88_json(json2);
+            --execute 'delete from '||get_json('__COLA_MOTOR__',json2)||' where id='||id1;
+	    --if (get_json('BD_ORIGEN',json2)='172.16.14.88') then
+    end if;
+    return json2;	
+END;
+$$ LANGUAGE plpgsql;
+
+
+	
+	
+
+

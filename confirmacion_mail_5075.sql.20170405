@@ -1,0 +1,153 @@
+CREATE OR REPLACE FUNCTION public.confirmacion_mail_5075(json)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    json1       alias for $1;
+        json2   json;
+        json3   json;
+        json4   json;
+        json5   json;
+        campo   record;
+        xml4    varchar;
+        id1     varchar;
+        accion1 varchar;
+        action1 varchar;
+        status1 varchar;
+	json_par1	json;
+	server_remoto1	varchar;
+BEGIN
+        json2:=json1;
+	--Remplazamos los ; 
+	json2:=replace(json2::varchar,'\u0006',';')::json;
+        json2:=put_json(json2,'__SECUENCIAOK__','0');
+        json2:=logjson(json2,'JSON INPUT='||json2::varchar);
+        --Solo procesamos las confirmacion de lectura
+        if (get_json('delivery-status',json2)='') then
+                json2:=logjson(json2,'Confirmacion sin delivery-status, no se procesa');
+                json2:=response_requests_6000('1','Confirmacion sin delivery-status','',json2);
+                return json2;
+        end if;
+        if (get_json('rfc822-headers',json2)='') then
+                json2:=logjson(json2,'Confirmacion sin rfc822-headers, no se procesa');
+                json2:=response_requests_6000('1','Confirmacion sin rfc822-headers','',json2);
+                return json2;
+        end if;
+        id1:=get_json('Message-ID',get_json('rfc822-headers',json2)::json);
+        id1:=split_part(split_part(id1,'<',2),'@',1);
+
+	if (substring(id1,1,3)='ACP') then
+		id1:=substring(id1,4);
+		id1:=desencripta_hash_evento_VDC(id1);
+		if (strpos(id1,'##')>0) then
+			json3:='{}';
+			json3:=put_json(json3,'RUT_EMISOR',split_part(id1,'##',1));
+			json3:=put_json(json3,'TIPO_DTE',split_part(id1,'##',2));
+			json3:=put_json(json3,'FOLIO',split_part(id1,'##',3));
+			json3:=put_json(json3,'FECHA_EMISION',split_part(id1,'##',4));
+			json3:=put_json(json3,'uri_dte',split_part(id1,'##',5));
+			json3:=put_json(json3,'evento_confirmacion',split_part(id1,'##',6));
+			json3:=put_json(json3,'CANAL',split_part(id1,'##',7));
+			json3:=put_json(json3,'RUT_RECEPTOR',split_part(id1,'##',8));
+			if (get_json('evento_confirmacion',json3)='') then
+				json3:=put_json(json3,'eok',split_part(id1,'##',9));
+				json3:=put_json(json3,'enk',split_part(id1,'##',10));
+        			json2:=logjson(json2,'Eventos Nuevos');
+			else
+				json3:=put_json(json3,'eok',get_json('evento_confirmacion',json3));
+				json3:=put_json(json3,'enk',get_json('evento_confirmacion',json3));
+			end if;
+		else
+			json3:='{}';
+			json3:=put_json(json3,'RUT_EMISOR',split_part(id1,'_',1));
+			json3:=put_json(json3,'TIPO_DTE',split_part(id1,'_',2));
+			json3:=put_json(json3,'FOLIO',split_part(id1,'_',3));
+			json3:=put_json(json3,'FECHA_EMISION',split_part(id1,'_',4));
+			json3:=put_json(json3,'uri_dte',split_part(id1,'_',5));
+			json3:=put_json(json3,'evento_confirmacion',split_part(id1,'_',6));
+			json3:=put_json(json3,'CANAL',split_part(id1,'_',7));
+			json3:=put_json(json3,'RUT_RECEPTOR',split_part(id1,'_',8));
+			if (get_json('evento_confirmacion',json3)='') then
+				json3:=put_json(json3,'eok',split_part(id1,'_',9));
+				json3:=put_json(json3,'enk',split_part(id1,'_',10));
+        			json2:=logjson(json2,'Eventos Nuevos');
+			else
+				json3:=put_json(json3,'eok',get_json('evento_confirmacion',json3));
+				json3:=put_json(json3,'enk',get_json('evento_confirmacion',json3));
+			end if;
+		end if;
+                --json2:=response_requests_6000('1','Evento Repetido','',json2);
+		--return json2;
+	else
+                json2:=logjson(json2,'Confirmacion sin ACP, se ignora');
+                json2:=response_requests_6000('1','Confirmacion sin ACP, se ignora','',json2);
+                return json2;
+	end if;
+
+        json4:=get_json('delivery-status',json2)::json;
+        xml4:='';
+        xml4:=put_campo(xml4,'FECHA_EMISION',get_json('FECHA_EMISION',json3));
+        xml4:=put_campo(xml4,'RUT_EMISOR',get_json('RUT_EMISOR',json3));
+	--RME 20161026 Se agrega RUT_OWNER para graba_eventos_erp
+	xml4:=put_campo(xml4,'RUT_OWNER',get_json('RUT_EMISOR',json3));
+	xml4:=put_campo(xml4,'FECHA_EVENTO',now()::varchar);
+        xml4:=put_campo(xml4,'RUT_RECEPTOR',get_json('RUT_RECEPTOR',json3));
+        xml4:=put_campo(xml4,'URI_IN',get_json('uri_dte',json3));
+
+	json3:=put_json(json3,'evento_confirmacion',get_json('eok',json3));
+        action1:=get_json('Action',json4);
+        if (action1='failed') then
+                accion1:='Fallida';
+		json3:=put_json(json3,'evento_confirmacion',get_json('enk',json3));
+        elsif (action1='delayed') then
+                accion1:='Atrasado';
+		json3:=put_json(json3,'evento_confirmacion',get_json('enk',json3));
+        elsif (action1='delivered') then
+                accion1:='Exitosa';
+        elsif (action1='relayed') then
+                accion1:='Retransmitida';
+        elsif (action1='expanded') then
+                accion1:='Expandido';
+	else
+		accion1:=action1;
+        end if;
+        status1:=split_part(get_json('Diagnostic-Code',json4),';',2);
+	--Las confirmaciones de envio del bcc no van
+	--if (strpos(get_json('Original-Recipient',json4),'fernando.arancibia@acepta.com')>0) then
+        --        json2:=response_requests_6000('1','Se ignora Evento para BCC','',json2);
+        --        json2:=logjson(json2,'Se ignora Evento para BCC');
+	--	return json2;
+	--end if;
+
+	if(trim(split_part(get_json('Original-Recipient',json4),';',2))='') then
+		--Si no viene... lo descartamos
+                json2:=logjson(json2,'Confirmacion sin Original-Recipient, se ignora');
+                json2:=response_requests_6000('1','Confirmacion sin Original-Recipient, se ignora','',json2);
+                return json2;
+	end if;
+
+
+	server_remoto1:=split_part(get_json('Remote-MTA',json4),';',2);
+	if (server_remoto1='') then
+		server_remoto1:=split_part(get_json('Reporting-MTA',json4),';',2);
+	end if;
+
+        xml4:=put_campo(xml4,'COMENTARIO_TRAZA','Receptor: '||split_part(get_json('Original-Recipient',json4),';',2)||chr(10)||'Entrega: '||accion1||' Estado: '||get_json('Status',json4)||chr(10)||'Servidor Informante: '||split_part(get_json('Reporting-MTA',json4),';',2)||chr(10)||'Servidor Remoto: '||server_remoto1||chr(10)||'Codigo de Respuesta: '||status1);
+        xml4:=put_campo(xml4,'FOLIO',get_json('FOLIO',json3));
+        xml4:=put_campo(xml4,'TIPO_DTE',get_json('TIPO_DTE',json3));
+        xml4:=put_campo(xml4,'CANAL',get_json('CANAL',json3));
+	--perform logfile('Graba Evento '||get_json('evento_confirmacion',json3)||' '||xml4);
+	json2:=logjson(json2,'Uri --> '||get_json('uri_dte',json3)||' Evento --> '||get_json('evento_confirmacion',json3));
+
+	--perform logfile('Graba Evento evento='||get_json('evento_confirmacion',json3)||' xml4='||xml4::varchar);
+        xml4:=graba_bitacora(xml4,get_json('evento_confirmacion',json3));
+        if (get_campo('EVENTO_REPETIDO',xml4)='SI') then
+                json2:=response_requests_6000('1','Evento Repetido','',json2);
+                json2:=logjson(json2,'Evento Repetido');
+        else
+                json2:=response_requests_6000('1','Evento OK','',json2);
+                json2:=logjson(json2,'Evento OK');
+        end if;
+        return json2;
+END;
+$function$

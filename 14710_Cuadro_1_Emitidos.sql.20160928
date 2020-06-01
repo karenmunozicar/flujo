@@ -1,0 +1,1264 @@
+--PIVOTE CUADRO1 EMITIDOS
+CREATE or replace FUNCTION cuadro1emitidos1(json) RETURNS json AS $$
+DECLARE
+        json2   json;
+        json1   alias for $1;
+    	v_fecha_inicio      integer;
+    	v_fecha_fin         integer;
+	fecha_in1	varchar;
+	json3       json;
+    	json4       json;
+    	json5       json;
+BEGIN
+        json2:=json1;
+	json2:=put_json(json2,'__CUADRO__','1');
+
+	perform logfile('FAY json2='||json2::varchar);
+	--Ingresamos las variables como las esperan las funciones
+	json2:=put_json(json2,'tipoFecha',get_json('TIPO_FECHA',json2));
+        json2:=put_json(json2,'fstart',get_json('FSTART',json2));
+        json2:=put_json(json2,'fend',get_json('FEND',json2));
+        json2:=put_json(json2,'tipo',get_json('TIPO_DTE',json2));
+        json2:=put_json(json2,'tipo_dte_filtro',get_json('TIPO_DTE',json2));
+        json2:=put_json(json2,'rut_emisor_filtro',get_json('RUT_EMISOR',json2));
+	----------------------------------------------------------------------
+        json2:=corrige_fechas(json2);
+
+	--Agregamos el Texto de Criterio de Busqueda
+	json2:=put_json(json2,'criterio_busqueda','<div id=''div_criterio''><b>Desde: </b>'||substring(get_json('fstart',json2),1,4)||'-'||substring(get_json('fstart',json2),5,2)||'-'||substring(get_json('fstart',json2),7,2)
+		||' <b>Hasta: </b>'||substring(get_json('fend',json2),1,4)||'-'||substring(get_json('fend',json2),5,2)||'-'||substring(get_json('fend',json2),7,2)||' <b>Tipo Fecha: </b>'||get_json('TIPO_FECHA',json2)||' <b>Tipo Dte: </b>'||case when get_json('TIPO_DTE',json2)='*' then 'Todos Dte (No incluye Boletas)' else (select replace(initcap(descripcion),'_',' ') from tipo_dte where codigo::varchar=get_json('TIPO_DTE',json2)) end||'</div>');
+
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+	fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+	--Si fend=hoy y fstart=hoy vamos a la funcion antigua
+        if (v_fecha_inicio>=to_char(now(),'YYYYMMDD')::integer and v_fecha_fin>=to_char(now(),'YYYYMMDD')::integer) then
+		json4:='[]';
+	        json3:=select_documentos_x_rut_resumen_totalizados_6000(json2);
+		json3:=split_part(get_json('RESPUESTA',json3)::varchar,chr(10)||chr(10),2);
+		if(get_json('CODIGO_RESPUESTA',json3)='1') then
+			json5:='{}';
+		        json5:=put_json(json5,'id','Cuadro1');
+                	json5:=put_json(json5,'tipo','1');
+                	json5:=put_json(json5,'data',get_json('RESPUESTA',json3));
+                	json5:=put_json(json5,'uri',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro2emitidos'),''));
+			json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));	
+                	json4:=put_json_list(json4,json5);
+		end if;
+		json3:=select_cuadro_1_excepciones_6000(json2);
+		json3:=split_part(get_json('RESPUESTA',json3)::varchar,chr(10)||chr(10),2);
+                if(get_json('CODIGO_RESPUESTA',json3)='1') then
+                        json5:='{}';
+                        json5:=put_json(json5,'id','Cuadro1');
+                        json5:=put_json(json5,'tipo','1');
+                        json5:=put_json(json5,'data',get_json('RESPUESTA',json3));
+                        json5:=put_json(json5,'uri',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro2emitidos'),''));
+			json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));	
+                        json4:=put_json_list(json4,json5);
+                end if;
+		return response_requests_6000('1', '', json4::varchar, json2);
+	else
+        	json2:=put_json(json2,'LLAMA_FLUJO','SI');
+	        json2:=put_json(json2,'__SECUENCIAOK__','14710');
+        end if;
+        return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+--PIVOTE CUADRO2 EMITIDOS
+CREATE or replace FUNCTION cuadro2emitidos1(json) RETURNS json AS $$
+DECLARE
+        json2   json;
+        json1   alias for $1;
+    	v_fecha_inicio      integer;
+    	v_fecha_fin         integer;
+	fecha_in1	varchar;
+	json3       json;
+    	json4       json;
+    	json5       json;
+BEGIN
+        json2:=json1;
+	json2:=put_json(json2,'__CUADRO__','2');
+
+	--Ingresamos las variables como las esperan las funciones
+        json2:=put_json(json2,'tipoFecha',get_json('TIPO_FECHA',json2));
+        json2:=put_json(json2,'fstart',get_json('FSTART',json2));
+        json2:=put_json(json2,'fend',get_json('FEND',json2));
+        json2:=put_json(json2,'tipo',get_json('TIPO_DTE',json2));
+        json2:=put_json(json2,'tipo_dte_filtro',get_json('TIPO_DTE',json2));
+        json2:=put_json(json2,'rut_emisor_filtro',get_json('RUT_EMISOR',json2));
+	json2:=put_json(json2,'grupo_tot',get_json('ejex',json2));
+        json2:=put_json(json2,'evento_tot',get_json('ejey',json2));
+        ----------------------------------------------------------------------
+        json2:=corrige_fechas(json2);
+	
+	--Agregamos el Texto de Criterio de Busqueda
+	json2:=put_json(json2,'criterio_busqueda','<div id=''div_criterio''><b>Desde: </b>'||substring(get_json('fstart',json2),1,4)||'-'||substring(get_json('fstart',json2),5,2)||'-'||substring(get_json('fstart',json2),7,2)
+		||' <b>Hasta: </b>'||substring(get_json('fend',json2),1,4)||'-'||substring(get_json('fend',json2),5,2)||'-'||substring(get_json('fend',json2),7,2)||' <b>Tipo Fecha: </b>'||get_json('TIPO_FECHA',json2)||' <b>Tipo Dte: </b>'||case when get_json('TIPO_DTE',json2)='*' then 'Todos Dte (No incluye Boletas)' else (select replace(initcap(descripcion),'_',' ') from tipo_dte where codigo::varchar=get_json('TIPO_DTE',json2)) end||' '||' <b>Estado: </b>'||get_json('ejey',json2)||' <b>Grupo: </b>'||initcap(replace(get_json('ejex',json2),'_',' '))||'</div>');
+
+
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+	fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+	--Si fend=hoy y fstart=hoy vamos a la funcion antigua
+        if (v_fecha_inicio>=to_char(now(),'YYYYMMDD')::integer and v_fecha_fin>=to_char(now(),'YYYYMMDD')::integer) then
+		json4:='[]';
+	        json3:=select_doc_emitidos_por_dte_6000_new(json2);
+		json3:=split_part(get_json('RESPUESTA',json3)::varchar,chr(10)||chr(10),2);
+		if(get_json('CODIGO_RESPUESTA',json3)='1') then
+			json5:='{}';
+			json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));	
+		        json5:=put_json(json5,'id','Cuadro2');
+                	json5:=put_json(json5,'tipo','2');
+                	json5:=put_json(json5,'data',get_json('RESPUESTA',json3));
+			json5:=put_json(json5,'uri',coalesce((select replace(remplaza_tags_6000(href,json2),'NO_BUSCAR','') from menu_info_10k where id2='buscarNEW_emitidos'),''));
+			json5:=put_json(json5,'uri_ant',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro1emitidos'),''));
+			json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));
+                	json4:=put_json_list(json4,json5);
+		end if;
+		return response_requests_6000('1', '', json4::varchar, json2);
+	else
+        	json2:=put_json(json2,'LLAMA_FLUJO','SI');
+	        json2:=put_json(json2,'__SECUENCIAOK__','14710');
+        end if;
+        return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+
+
+delete from isys_querys_tx where llave='14710';
+delete from isys_querys_tx where llave='14711';
+delete from isys_querys_tx where llave='14712';
+
+--Consultamos en la base de traza si el DTE ya esta publicado
+insert into isys_querys_tx values ('14710',5,1,1,'select pivote_14710(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+insert into isys_querys_tx values ('14710',10,1,9,'<EJECUTA0>14711</EJECUTA0><EJECUTA1>14712</EJECUTA1><EJECUTA2>14713</EJECUTA2><TIMEOUT>15</TIMEOUT>',0,0,0,1,1,20,20);
+
+--Pivote para armar respuesta
+insert into isys_querys_tx values ('14710',20,1,1,'select valida_respuesta_14710(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+--FUNCION valida_respuesta_cuadro2_14710
+--FUNCION valida_respuesta_cuadro1_excepciones_14710
+--FUNCION select_suma_emision_actual_14710
+
+--Voy a la base de los emitidos Redshift
+insert into isys_querys_tx values ('14711',10,1,1,'select select_cuadro_1_emitidos_redshift_14711(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+--Voy a la base de los emitidos Redshift
+insert into isys_querys_tx values ('14712',10,1,1,'select select_cuadro_1_boletas_redshift_14712(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+--Voy a la base de las excepciones Redshift
+insert into isys_querys_tx values ('14713',10,1,1,'select select_cuadro_1_excepciones_redshift_14713(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+CREATE or replace FUNCTION pivote_14710(json) RETURNS json AS $$
+declare
+        json2   json;
+        json1   alias for $1;
+	grupo_tot1	varchar;
+begin
+	json2:=json1;	
+	if(get_json('__CUADRO__',json2)='1') then
+		--Limpiamos para el cuadro 1, el evento_tot y grupo_tot para que no altere
+		json2 := put_json(json2,'evento_tot','');
+		json2 := put_json(json2,'grupo_tot','');
+		--Vamos al multihilo
+		json2 := put_json(json2,'__SECUENCIAOK__','10');	
+		return json2;
+	else
+		grupo_tot1:=get_json('grupo_tot',json2);
+	
+		if (get_json('evento_tot',json2) in ('Error de Esquema','Folios Duplicados','En Espera','Documentos Reprocesados','Documentos Repetidos')) then
+			json2:=select_cuadro_1_excepciones_redshift_14713(json2);	
+			json2 := put_json(json2,'__SECUENCIAOK__','20');
+			return json2;
+        	elsif (grupo_tot1 in ('documentos_nacionales','documentos_exportacion')) then
+			json2:=select_cuadro_1_emitidos_redshift_14711(json2);
+			json2 := put_json(json2,'__SECUENCIAOK__','20');
+			return json2;
+        	elsif (grupo_tot1='documentos_boletas') then
+			json2:=select_cuadro_1_boletas_redshift_14712(json2);
+			json2 := put_json(json2,'__SECUENCIAOK__','20');
+			return json2;
+		else
+			json2:=select_cuadro_1_emitidos_redshift_14711(json2);
+			json2 := put_json(json2,'__SECUENCIAOK__','20');
+			return json2;
+		end if;
+	end if;
+/*	
+        if (grupo_tot1 in ('documentos_nacionales','documentos_exportacion')) then
+		json2:=select_cuadro_1_emitidos_redshift_14711(json2);
+		json2 := put_json(json2,'__SECUENCIAOK__','20');
+		return json2;
+        elsif (grupo_tot1='documentos_boletas') then
+		json2:=select_cuadro_1_boletas_redshift_14712(json2);
+		json2 := put_json(json2,'__SECUENCIAOK__','20');
+		return json2;
+        end if;
+	json2 := put_json(json2,'__SECUENCIAOK__','0');
+	return json2;
+*/
+end;
+$$ LANGUAGE plpgsql;
+
+
+CREATE or replace FUNCTION valida_respuesta_cuadro2_14710(json) RETURNS json AS $$
+DECLARE
+        json2   json;
+        json1   alias for $1;
+        lista_emi       json;
+        lista_bol       json;
+	json_resp	json;
+	json5		json;
+	json_resp1	json;
+	json_resp2	json;
+	json_resp3	json;
+        json_aux1       json;
+        json_pend       json;
+        tipo_dte1       varchar;
+        texto1          varchar;
+        select_1        varchar;
+        json3   json;
+        json4   json;
+        json_hoy1       json;
+        v_fecha_inicio  integer;
+        v_fecha_fin     integer;
+        i       integer;
+        aux     varchar;
+	grupo_tot1	varchar;
+	evento_tot1	varchar;
+	campo	record;
+	estado1	varchar;
+BEGIN
+        json2:=json1;
+        json2 := put_json(json2,'__SECUENCIAOK__','0');
+	grupo_tot1:=get_json('grupo_tot',json2);
+	evento_tot1:=get_json('evento_tot',json2);
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+        --Si fend es hoy saco los valore de hoy para sumar
+        if (v_fecha_fin>=to_char(now(),'YYYYMMDD')::integer) then
+                json3:=json2;
+                json3:=put_json(json3,'fstart',to_char(now(),'YYYY-MM-DD'));
+                --raise notice 'fstart=%',get_json('fend',json2);
+                json_hoy1:=select_doc_emitidos_por_dte_6000_new(json3);
+                json_hoy1:=split_part(get_json('RESPUESTA',json_hoy1),chr(10)||chr(10),2)::json;
+                if (get_json('CODIGO_RESPUESTA',json_hoy1)='1') then
+                        json_hoy1:=get_json('RESPUESTA',json_hoy1)::json;
+			json_hoy1:=replace(json_hoy1::varchar,'factura_afecta__link__33','factura_electronica__link__33');
+			json_hoy1:=replace(json_hoy1::varchar,'boleta_afecta__link__39','boleta_electronica__link__39');
+			json_hoy1:=replace(json_hoy1::varchar,'guia_despacho__link__52','guias_despacho__link__52');
+			json_hoy1:=replace(json_hoy1::varchar,'factura_compra__link__46','factura_de_compra__link__46');
+		else
+			json_hoy1:=null;
+                end if;
+        end if;
+
+	begin
+		lista_emi:=get_json('EMITIDOS',json2);
+	exception when others then
+		begin
+			lista_emi:=get_json('EXCEPCIONES',json2);
+		exception when others then
+			lista_emi:='[]';
+		end;
+	end;
+	begin
+		lista_bol:=get_json('BOLETAS',json2);	
+	exception when others then
+		lista_bol:='[]';
+	end;
+	
+
+        --Verificamos si debo contar los emitidos del dia de hoy que no estan en el redshift
+        if (get_json('TIPO_FECHA',json2)='Emision' and json_hoy1 is null) then
+		if (grupo_tot1<>'documentos_boletas') then
+                	json5:=select_suma_emision_actual_14710(json2);
+        	        if (json5 is not null) then
+                	        --Para las excepciones, sume diferente
+                        	if (get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+                                	lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado"]');
+	                        else
+        	                        lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado_sii","estado_inter"]');
+                	        end if;
+	                end if;
+		else
+	                json2:=put_json(json2,'TIPO_SUMA','BOLETAS');
+        	        json5:=select_suma_emision_actual_14710(json2);
+	                if (json5 is not null) then
+        	                lista_bol:=suma_json2(lista_bol,json5,'["count"]','["tipo_dte","estado_sii","estado_inter"]');
+                	end if;
+		end if;
+        end if;
+
+
+        json2:=logjson(json2,'JUNTAMOS JSONS  json_hoy1='||json_hoy1::varchar);
+
+        --Juntar los json
+	if (grupo_tot1='documentos_nacionales') then
+		json_resp:='{"estado":"","factura_electronica__link__33":"0","factura_exenta__link__34":"0","liquidacion_factura__link__43":"0","factura_de_compra__link__46":"0","guias_despacho__link__52":"0","nota_debito__link__56":"0","nota_credito__link__61":"0","total":"0"}';
+	elsif (grupo_tot1='documentos_exportacion') then
+		json_resp:='{"estado":"","factura_exportacion__link__110":"0","nota_debito_exportacion__link__111":"0","nota_credito_exportacion__link__112":"0","total":"0"}';
+	elsif (grupo_tot1='documentos_boletas') then
+		json_resp:='{"estado":"","boleta_electronica__link__39":"0","boleta_exenta__link__41":"0","total":"0"}';
+	end if;
+
+	if (evento_tot1='Emitidos') then
+		json_resp:=put_json(json_resp,'estado','Emitidos__info__EMITIDO');
+	elsif (evento_tot1='Aceptados') then
+		json_resp:=put_json(json_resp,'estado','Aprobado SII__info__ACEPTADO_POR_EL_SII');
+		json_resp1:=put_json(json_resp,'estado','Aprobado SII con Reparos__info__ACEPTADO_CON_REPAROS_POR_EL_SII');
+	elsif (evento_tot1='Rechazados') then
+		json_resp:=put_json(json_resp,'estado','Rechazado SII__info__RECHAZADO_POR_EL_SII');
+		json_resp1:=put_json(json_resp,'estado','Rechazados por Recepcion de Correo__info__RECHAZADO_POR_SERVIDOR_CORREO');
+		json_resp2:=put_json(json_resp,'estado','Rechazados por Notificacion Comercial__info__RECHAZADO_CON_NOTIFICACION_COMERCIAL');
+		json_resp3:=put_json(json_resp,'estado','Rechazados por Notificacion Tecnica__info__RECHAZADO_CON_NOTIFICACION_TECNICA');
+	elsif (evento_tot1='Pendientes') then
+		json_resp:=put_json(json_resp,'estado','Pendiente Intercambio__info__PENDIENTE_INTER');
+		json_resp1:=put_json(json_resp,'estado','Pendientes SII__info__PENDIENTE_SII');
+	elsif (evento_tot1='En Espera') then
+		json_resp:=put_json(json_resp,'estado','En Espera__info__DTE_EN_ESPERA');
+	elsif (evento_tot1='Folios Duplicados') then
+		json_resp:=put_json(json_resp,'estado','Folios Duplicados__info__DTE_YA_ACEPTADO_SII');
+	elsif (evento_tot1='Documentos Reprocesados') then
+		json_resp:=put_json(json_resp,'estado','Documentos Reprocesados__info__REPROCESA_DTE_RECHAZADA_SII');
+	elsif (evento_tot1='Documentos Repetidos') then
+		json_resp:=put_json(json_resp,'estado','Documentos Repetidos__info__DTE_REPETIDO');
+	elsif (evento_tot1='Error de Esquema') then
+		json_resp:=put_json(json_resp,'estado','Error de Esquema__info__FALLA_ESQUEMA_DTE');
+	end if;		
+
+	if (grupo_tot1<>'documentos_boletas') then
+	        i:=0;
+        	json3:=lista_emi;
+	        aux:=get_json_index(json3,i);
+        	while (aux<>'') loop
+	                json_aux1:=aux::json;
+			tipo_dte1:=get_json('tipo_dte',json_aux1);
+			estado1:=get_json('estado',json_aux1);
+			if (grupo_tot1='documentos_exportacion') then
+				--Leo el tipo de dte
+				select * into campo from tipo_dte where codigo=tipo_dte1::integer and codigo in (110,111,112);
+			else
+				select * into campo from tipo_dte where codigo=tipo_dte1::integer and codigo not in (110,111,112);
+			end if;
+			if not found then
+				--json2:=logjson(json2,'No deberia ocurrir tipo_dte no definido en tipo_dte '||tipo_dte1);
+				--continue;
+        	        	i:=i+1;
+	                	aux:=get_json_index(json3,i);
+				continue;
+			end if;
+			texto1:=campo.descripcion||'__link__'||tipo_dte1;
+			if (evento_tot1='Emitidos') then
+				json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+				json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			elsif (evento_tot1='Aceptados') then
+				if(get_json('estado_sii',json_aux1) in ('ACEPTADO_CON_REPAROS_POR_EL_SII')) then
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+				if (get_json('estado_sii',json_aux1) in ('ACEPTADO_POR_EL_SII')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+			elsif (evento_tot1='Rechazados') then
+				if(get_json('estado_sii',json_aux1) in ('RECHAZADO_POR_EL_SII'))  then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_CON_NOTIFICACION_TECNICA'))  then
+					json_resp3:=put_json(json_resp3,texto1,(get_json(texto1,json_resp3)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp3:=put_json(json_resp3,'total',(get_json('total',json_resp3)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_POR_SERVIDOR_CORREO'))  then
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_CON_NOTIFICACION_COMERCIAL'))  then
+					json_resp2:=put_json(json_resp2,texto1,(get_json(texto1,json_resp2)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp2:=put_json(json_resp2,'total',(get_json('total',json_resp2)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+			elsif (tipo_dte1 not in ('110','111','112','39','41') and evento_tot1='Pendientes') then
+				if (get_json('estado_inter',json_aux1) in ('ENVIADO_POR_INTERCAMBIO','ENTREGA_DE_DTE_POR_INTERCAMBIO_EXITOSA')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+				if (get_json('estado_sii',json_aux1) in ('PROCESADO_POR_EL_SII','')) then
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::integer)::varchar);
+				end if;
+			elsif (evento_tot1='En Espera' and estado1 in ('DTE_EN_ESPERA')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			elsif (evento_tot1='Folios Duplicados' and estado1 in ('DTE_YA_ACEPTADO_SII')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			elsif (evento_tot1='Documentos Reprocesados' and estado1 in ('REPROCESA_DTE_RECHAZADA_SII')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			elsif (evento_tot1='Documentos Repetidos' and estado1 in ('DTE_REPETIDO')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			elsif (evento_tot1='Error de Esquema' and estado1 in ('FALLA_ESQUEMA_DTE')) then
+					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			end if;
+	
+        	        i:=i+1;
+                	aux:=get_json_index(json3,i);
+	        end loop;
+	else
+	        json3:=lista_bol;
+        	i:=0;
+	        aux:=get_json_index(json3,i);
+        	while (aux<>'') loop
+	                json_aux1:=aux::json;
+			tipo_dte1:=get_json('tipo_dte',json_aux1);
+			--Leo el tipo de dte
+			select * into campo from tipo_dte where codigo=tipo_dte1::integer;
+			if not found then
+				json2:=logjson(json2,'No deberia ocurrir tipo_dte no definido en tipo_dte '||tipo_dte1);
+				continue;
+			end if;
+			texto1:=campo.descripcion||'__link__'||tipo_dte1;
+			json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+			json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::integer+get_json('count',json_aux1)::integer)::varchar);
+	                i:=i+1;
+        	        aux:=get_json_index(json3,i);
+	        end loop	;
+	end if;
+
+	select_1:='['||json_resp::varchar;
+	--Armar la lista de salida
+	if (json_resp1 is not null) then
+		select_1:=select_1||','||json_resp1::varchar;
+	end if; 
+	if (json_resp2 is not null) then
+		select_1:=select_1||','||json_resp2::varchar;
+	end if; 
+	if (json_resp3 is not null) then
+		select_1:=select_1||','||json_resp3::varchar;
+	end if; 
+	select_1:=select_1||']';
+
+        if (json_hoy1 is not null) then
+                select_1:=suma_json(select_1::json,json_hoy1)::json;
+        end if;
+        json4:='[]';
+        json5:='{}';
+        json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));
+        json5:=put_json(json5,'id','Cuadro2');
+        json5:=put_json(json5,'tipo','2');
+        json5:=put_json(json5,'data',select_1::varchar);
+        json5:=put_json(json5,'uri',coalesce((select replace(remplaza_tags_6000(href,json2),'NO_BUSCAR','') from menu_info_10k where id2='buscarNEW_emitidos'),''));
+        json5:=put_json(json5,'uri_ant',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro1emitidos'),''));
+        json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));
+        json4:=put_json_list(json4,json5);
+        return response_requests_6000('1', '', json4::varchar, json2);
+
+--        json2:=response_requests_6000('1', '', select_1::Varchar, json2);
+--        RETURN json2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION valida_respuesta_cuadro1_excepciones_14710(json) RETURNS json AS $$
+DECLARE
+	json2	json;
+	json1	alias for $1;
+    	json_emi	json;
+    	json_bol	json;
+	lista_emi	json;
+	lista_bol	json;
+	json_ace	json;
+	json_rec	json;
+	json_aux1	json;
+	json_pend	json;
+	json_esquema	json;
+	json5		json;
+	tipo_dte1	varchar;
+	texto1		varchar;
+	select_1	varchar;
+	json3	json;
+	json_hoy1	json;
+	v_fecha_inicio	integer;
+	v_fecha_fin	integer;
+	i	integer;
+	aux	varchar;
+	estado1	varchar;
+BEGIN
+	json2:=json1;
+	json2 := put_json(json2,'__SECUENCIAOK__','0');
+
+	begin
+		lista_emi:=get_json('EXCEPCIONES',json2);
+	exception when others then
+		lista_emi:='[]';
+	end;
+	begin
+		lista_bol:=get_json('BOLETAS',json2);	
+	exception when others then
+		lista_bol:='[]';
+	end;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+	--Si fend es hoy saco los valore de hoy para sumar
+        if (v_fecha_fin>=to_char(now(),'YYYYMMDD')::integer) then
+                json3:=json2;
+                json3:=put_json(json3,'fstart',to_char(now(),'YYYY-MM-DD'));
+                json_hoy1:=select_cuadro_1_excepciones_6000(json3);
+                json_hoy1:=split_part(get_json('RESPUESTA',json_hoy1),chr(10)||chr(10),2)::json;
+                if (get_json('CODIGO_RESPUESTA',json_hoy1)='1') then
+                        json_hoy1:=get_json('RESPUESTA',json_hoy1)::json;
+		else
+			json_hoy1:=null;
+                end if;
+        end if;
+
+        --Verificamos si debo contar los emitidos del dia de hoy que no estan en el redshift
+        if (get_json('TIPO_FECHA',json2)='Emision' and json_hoy1 is null) then
+                json5:=select_suma_emision_actual_14710(json2);
+                if (json5 is not null) then
+                        --Para las excepciones, sume diferente
+                        if (get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+                                lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado"]');
+                        else
+                                lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado_sii","estado_inter"]');
+                        end if;
+                end if;
+        end if;
+
+	json2:=logjson(json2,'JUNTAMOS JSONS  json_hoy1='||json_hoy1::varchar);
+
+	--Juntar los json	
+        json_emi:='{"evento":"Documentos Reprocesados","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"0","documentos_totales":"0"}';
+        json_ace:='{"evento":"Folios Duplicados","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        json_rec:='{"evento":"En Espera","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        json_pend:='{"evento":"Documentos Repetidos","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+	json_esquema:='{"evento":"Error de Esquema","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        i:=0;
+        json3:=lista_emi;
+        aux:=get_json_index(json3,i);
+        while (aux<>'') loop
+                json_aux1:=aux::json;
+                tipo_dte1:=get_json('tipo_dte',json_aux1);
+                if (tipo_dte1 in ('110','111','112'))then
+                        texto1:='documentos_exportacion__link';
+                elsif (tipo_dte1 in ('39','41'))then
+                        texto1:='documentos_boletas__link';
+                else
+                        texto1:='documentos_nacionales__link';
+                end if;
+
+                --Emitidos son todos
+		estado1:=get_json('estado',json_aux1);
+		if (estado1 in ('REPROCESA_DTE_RECHAZADA_SII')) then
+	                json_emi:=put_json(json_emi,texto1,(get_json(texto1,json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+        	        json_emi:=put_json(json_emi,'documentos_totales',(get_json('documentos_totales',json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+		elsif (estado1 in ('DTE_YA_ACEPTADO_SII')) then
+                        json_ace:=put_json(json_ace,texto1,(get_json(texto1,json_ace)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_ace:=put_json(json_ace,'documentos_totales',(get_json('documentos_totales',json_ace)::integer+get_json('count',json_aux1)::integer)::varchar);
+		elsif (estado1 in ('DTE_EN_ESPERA')) then
+                        json_rec:=put_json(json_rec,texto1,(get_json(texto1,json_rec)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_rec:=put_json(json_rec,'documentos_totales',(get_json('documentos_totales',json_rec)::integer+get_json('count',json_aux1)::integer)::varchar);
+		elsif (estado1 in ('DTE_REPETIDO')) then
+                        json_pend:=put_json(json_pend,texto1,(get_json(texto1,json_pend)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_pend:=put_json(json_pend,'documentos_totales',(get_json('documentos_totales',json_pend)::integer+get_json('count',json_aux1)::integer)::varchar);
+		elsif (estado1 in ('FALLA_ESQUEMA_DTE')) then
+                        json_esquema:=put_json(json_esquema,texto1,(get_json(texto1,json_esquema)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_esquema:=put_json(json_esquema,'documentos_totales',(get_json('documentos_totales',json_esquema)::integer+get_json('count',json_aux1)::integer)::varchar);
+		end if;
+                i:=i+1;
+                aux:=get_json_index(json3,i);
+        end loop;
+        
+        select_1:='['||json_emi::varchar||','||json_ace::varchar||','||json_rec::varchar||','||json_pend::varchar||','||json_esquema::varchar||']';
+
+        if (json_hoy1 is not null) then
+                select_1:=suma_json(select_1::json,json_hoy1)::json;
+        end if;
+
+	return select_1;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+--UNIMOS JSONS (HOY-EMITIDOS-BOLETAS)
+CREATE or replace FUNCTION valida_respuesta_14710(json) RETURNS json AS $$
+DECLARE
+	json2	json;
+	json1	alias for $1;
+    	json_emi	json;
+    	json_bol	json;
+	lista_emi	json;
+	lista_bol	json;
+	json_ace	json;
+	json_rec	json;
+	json_aux1	json;
+	json_pend	json;
+	json4		json;
+	json5		json;
+	tipo_dte1	varchar;
+	texto1		varchar;
+	select_1	varchar;
+	json3	json;
+	json_hoy1	json;
+	v_fecha_inicio	integer;
+	v_fecha_fin	integer;
+	i	integer;
+	aux	varchar;
+BEGIN
+	json2:=json1;
+	json2 := put_json(json2,'__SECUENCIAOK__','0');
+
+	--Cuadro 1 excepciones
+	--if (get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+	--	json2:=logjson(json2,'Ejecuta valida_respuesta_cuadro1_excepciones');
+	--	return valida_respuesta_cuadro1_excepciones_14710(json2);
+	--Cuadro 2
+	--elsif (get_json('tipo_tx',json2)<>'select_documentos_x_rut_resumen_totalizados') then
+	if(get_json('__CUADRO__',json2)='2') then
+		json2:=logjson(json2,'Ejecuta valida_respuesta_cuadro2_14710');
+		return valida_respuesta_cuadro2_14710(json2);
+	end if;
+
+	begin
+		lista_emi:=get_json('EMITIDOS',json2);
+	exception when others then
+		lista_emi:='[]';
+	end;
+	begin
+		lista_bol:=get_json('BOLETAS',json2);	
+	exception when others then
+		lista_bol:='[]';
+	end;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+	--Si fend es hoy saco los valore de hoy para sumar
+        if (v_fecha_fin>=to_char(now(),'YYYYMMDD')::integer) then
+                json3:=json2;
+                json3:=put_json(json3,'fstart',to_char(now(),'YYYY-MM-DD'));
+                --raise notice 'fstart=%',get_json('fend',json2);
+                json_hoy1:=select_documentos_x_rut_resumen_totalizados_6000(json3);
+                json_hoy1:=split_part(get_json('RESPUESTA',json_hoy1),chr(10)||chr(10),2)::json;
+                if (get_json('CODIGO_RESPUESTA',json_hoy1)='1') then
+                        json_hoy1:=get_json('RESPUESTA',json_hoy1)::json;
+		else
+			json_hoy1:=null;
+                end if;
+        end if;
+
+	--Verificamos si debo contar los emitidos del dia de hoy que no estan en el redshift
+        if (get_json('TIPO_FECHA',json2)='Emision' and json_hoy1 is null) then
+                json5:=select_suma_emision_actual_14710(json2);
+                if (json5 is not null) then
+                        --Para las excepciones, sume diferente
+                        if (get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+                                lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado"]');
+                        else
+                                lista_emi:=suma_json2(lista_emi,json5,'["count"]','["tipo_dte","estado_sii","estado_inter"]');
+                        end if;
+                end if;
+
+		json2:=put_json(json2,'TIPO_SUMA','BOLETAS');
+		json5:=select_suma_emision_actual_14710(json2);
+		if (json5 is not null) then
+                        lista_bol:=suma_json2(lista_bol,json5,'["count"]','["tipo_dte","estado_sii","estado_inter"]');
+		end if;
+        end if;
+
+	json2:=logjson(json2,'JUNTAMOS JSONS  json_hoy1='||json_hoy1::varchar);
+
+
+	--Juntar los json	
+        json_emi:='{"evento":"Emitidos","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"0","documentos_totales":"0"}';
+        json_ace:='{"evento":"Aceptados","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        json_rec:='{"evento":"Rechazados","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        json_pend:='{"evento":"Pendientes","documentos_nacionales__link":"0","documentos_exportacion__link":"0","documentos_boletas__link":"-","documentos_totales":"0"}';
+        i:=0;
+        json3:=lista_emi;
+        aux:=get_json_index(json3,i);
+        while (aux<>'') loop
+                --raise notice 'aux=%',aux;
+                json_aux1:=aux::json;
+                tipo_dte1:=get_json('tipo_dte',json_aux1);
+                if (tipo_dte1 in ('110','111','112'))then
+                        texto1:='documentos_exportacion__link';
+                elsif (tipo_dte1 in ('39','41'))then
+                        texto1:='documentos_boletas__link';
+                else
+                        texto1:='documentos_nacionales__link';
+                end if;
+
+                --Emitidos son todos
+                json_emi:=put_json(json_emi,texto1,(get_json(texto1,json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+                json_emi:=put_json(json_emi,'documentos_totales',(get_json('documentos_totales',json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+                --Sumo el resultado que necesito
+                if (get_json('estado_sii',json_aux1) in ('RECHAZADO_POR_EL_SII') or get_json('estado_inter',json_aux1) in ('RECHAZADO_CON_NOTIFICACION_TECNICA','RECHAZADO_POR_SERVIDOR_CORREO','RECHAZADO_CON_NOTIFICACION_COMERCIAL')) then
+                        json_rec:=put_json(json_rec,texto1,(get_json(texto1,json_rec)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_rec:=put_json(json_rec,'documentos_totales',(get_json('documentos_totales',json_rec)::integer+get_json('count',json_aux1)::integer)::varchar);
+		end if;
+                if (get_json('estado_sii',json_aux1) in ('ACEPTADO_POR_EL_SII','ACEPTADO_CON_REPAROS_POR_EL_SII')) then
+                        json_ace:=put_json(json_ace,texto1,(get_json(texto1,json_ace)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_ace:=put_json(json_ace,'documentos_totales',(get_json('documentos_totales',json_ace)::integer+get_json('count',json_aux1)::integer)::varchar);
+		end if;
+                if (tipo_dte1 not in ('110','111','112','39','41') and (get_json('estado_sii',json_aux1) in ('PROCESADO_POR_EL_SII','') or get_json('estado_inter',json_aux1) in ('ENVIADO_POR_INTERCAMBIO','ENTREGA_DE_DTE_POR_INTERCAMBIO_EXITOSA'))) then
+                        json_pend:=put_json(json_pend,texto1,(get_json(texto1,json_pend)::integer+get_json('count',json_aux1)::integer)::varchar);
+                        json_pend:=put_json(json_pend,'documentos_totales',(get_json('documentos_totales',json_pend)::integer+get_json('count',json_aux1)::integer)::varchar);
+
+                end if;
+                i:=i+1;
+                aux:=get_json_index(json3,i);
+        end loop;
+        
+	json3:=lista_bol;
+	i:=0;
+        aux:=get_json_index(json3,i);
+        while (aux<>'') loop
+                --raise notice 'aux=%',aux;
+                json_aux1:=aux::json;
+                --tipo_dte1:=get_json('tipo_dte',json_aux1);
+                texto1:='documentos_boletas__link';
+
+                --Emitidos son todos
+                json_emi:=put_json(json_emi,texto1,(get_json(texto1,json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+                json_emi:=put_json(json_emi,'documentos_totales',(get_json('documentos_totales',json_emi)::integer+get_json('count',json_aux1)::integer)::varchar);
+                i:=i+1;
+                aux:=get_json_index(json3,i);
+	end loop;
+
+        select_1:='['||json_emi::varchar||',{"evento":"","documentos_nacionales__link":"","documentos_exportacion__link":"","documentos_boletas__link":"","documentos_totales":""},'||json_ace::varchar||','||json_rec::varchar||','||json_pend::varchar||']';
+
+        if (json_hoy1 is not null) then
+                select_1:=suma_json(select_1::json,json_hoy1)::json;
+        end if;
+
+	json4:='[]';
+	json5:='{}';
+        json5:=put_json(json5,'id','Cuadro1');
+        json5:=put_json(json5,'tipo','1');
+        json5:=put_json(json5,'data',select_1::varchar);
+        json5:=put_json(json5,'uri',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro2emitidos'),''));
+	json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));
+        json4:=put_json_list(json4,json5);
+        json3:=valida_respuesta_cuadro1_excepciones_14710(json2);
+--        json3:=split_part(get_json('RESPUESTA',json3)::varchar,chr(10)||chr(10),2);
+--        if(get_json('CODIGO_RESPUESTA',json3)='1') then
+       	json5:='{}';
+        json5:=put_json(json5,'id','Cuadro1');
+        json5:=put_json(json5,'tipo','1');
+        json5:=put_json(json5,'data',json3::varchar);
+        json5:=put_json(json5,'uri',coalesce((select remplaza_tags_6000(href,json2) from menu_info_10k where id2='cuadro2emitidos'),''));
+	json5:=put_json(json5,'criterio_busqueda',get_json('criterio_busqueda',json2));
+        json4:=put_json_list(json4,json5);
+        --end if;
+        return response_requests_6000('1', '', json4::varchar, json2);
+
+--        json2:=response_requests_6000('1', '', select_1::Varchar, json2);
+--        RETURN json2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION select_suma_emision_actual_14710(json) RETURNS json AS $$
+DECLARE
+    json2                json;
+    json1                alias for $1;
+    v_rut_emisor        integer;
+    v_fecha_inicio      integer;
+    v_fecha_fin         integer;
+    v_resultado         varchar;
+        tipo_dia1       varchar;
+        v_parametro_var varchar;
+        aux             varchar;
+        campo   record;
+        v_parametro_tipo_dte    varchar;
+        v_rut_usuario   integer;
+        select1         varchar;
+        tmp1    varchar;
+        v_parametro_rut_emisor  varchar;
+        query1  varchar;
+        query2  varchar;
+        query_parte1    varchar;
+        json3   json;
+        json4   json;
+        json5   json;
+        fecha_fin1      integer;
+        aux1    varchar;
+        aux2    varchar;
+        json_aux1       json;
+        json_aux2       json;
+        json_aux3       json;
+        tipoFecha1      varchar;
+        i       integer;
+        fecha_in1       varchar;
+        rut_idx1        varchar;
+        json_hoy1       json;
+        json_emi        json;
+        json_ace        json;
+        json_rec        json;
+        json_pend       json;
+        json_par1       json;
+        select_1        varchar;
+        texto1  varchar;
+        tipo_dte1       varchar;
+	dia1		varchar;
+BEGIN
+        json2:=json1;
+
+	json2:=logjson(json2,'Ejecuta select_cuadro_1_emitidos_redshift_14711');
+        v_rut_emisor:=get_json('rutCliente',json2)::integer;
+        v_rut_usuario:=get_json('rutUsuario',json2)::integer;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+        fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+        tipo_dia1:=get_json('TIPO_FECHA',json2);
+        if (tipo_dia1='Emision') then
+                tipo_dia1:='E';
+                tipoFecha1:='_emision ';
+        else
+                tipo_dia1:='A';
+                tipoFecha1:=' ';
+        end if;
+
+        --Agrega parametro tipo_dte
+        v_parametro_tipo_dte:='';
+        aux:=get_json('tipo_dte_filtro',json2);
+        --Si no es numerico
+        v_parametro_tipo_dte:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,'tipo_dte',aux);
+        json2:=logjson(json2,'PARAMETRO v_parametro_tipo_dte='||coalesce(v_parametro_tipo_dte,'vacio'));
+
+        v_parametro_rut_emisor:=get_json('TAG_RUT_EMISOR',obtiene_filtro_perfilamiento_rut_emisor_6000(v_rut_emisor,v_rut_usuario,'rut_emisor',get_json('rut_emisor_filtro',json2)));
+
+        rut_idx1:='';
+        rut_idx1:=replace(v_parametro_rut_emisor,'rut_emisor',' and rut');
+
+        --Si tiene parametros adicionales, los usamos para filtrar la query
+        --parametro1='E512' and parametro2='ERP'
+        v_parametro_var:=' ';
+        for campo in select lower(parametro) as parametro from filtros_rut where rut_emisor=v_rut_emisor loop
+                aux:=get_json(campo.parametro,json2);
+                tmp1:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,upper(campo.parametro),aux);
+                json2:=logjson(json2,'PARAMETRO '||campo.parametro||'='||coalesce(tmp1,'vacio')||' aux='||aux);
+                /*if (length(aux)>0 and aux not in ('*','undefined')) then
+                        v_parametro_var:=v_parametro_var||' and '||campo.parametro||'='||quote_literal(aux)||' ';
+                end if;*/
+                v_parametro_var:=v_parametro_var|| ' ' ||tmp1;
+        end loop;
+
+	dia1:=to_char(now(),'YYYYMMDD');
+	--Si tiene que sumar BOLETAS
+	if (get_json('TIPO_SUMA',json2)='BOLETAS') then
+	        	query1:='select array_to_json(array_agg(row_to_json(sql))) from (select count(*),tipo_dte::varchar,coalesce(estado_sii,'''') as estado_sii,coalesce(estado_inter,'''') as estado_inter from dte_boletas_generica where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3,4 order by 1) sql';
+	else
+		--Si es un error (cuadro1 o cuadro2) 
+		if (get_json('evento_tot',json2) in ('Error de Esquema','Folios Duplicados','En Espera','Documentos Reprocesados','Documentos Repetidos') or get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+		        query1:='select array_to_json(array_agg(row_to_json(sql))) from ( select count(*),tipo_dte::varchar,coalesce(estado,'''') as estado from dte_emitidos_errores where dia='||dia1||' and  '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3 order by 1) sql';
+		else
+	        	query1:='select array_to_json(array_agg(row_to_json(sql))) from (select count(*),tipo_dte::varchar,coalesce(estado_sii,'''') as estado_sii,coalesce(estado_inter,'''') as estado_inter from dte_emitidos where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3,4 order by 1) sql';
+		end if;
+	end if;
+
+	execute query1 into json4;
+	return json4;
+END;
+$$ LANGUAGE plpgsql;
+
+
+--CUADROS EMITIDOS
+CREATE or replace FUNCTION select_cuadro_1_emitidos_redshift_14711(json) RETURNS json AS $$
+DECLARE
+    json2                json;
+    json1                alias for $1;
+    v_rut_emisor        integer;
+    v_fecha_inicio      integer;
+    v_fecha_fin         integer;
+    v_resultado         varchar;
+        tipo_dia1       varchar;
+        v_parametro_var varchar;
+        aux             varchar;
+        campo   record;
+        v_parametro_tipo_dte    varchar;
+        v_rut_usuario   integer;
+        select1         varchar;
+        tmp1    varchar;
+        v_parametro_rut_emisor  varchar;
+        query1  varchar;
+        query2  varchar;
+        query_parte1    varchar;
+        json3   json;
+        json4   json;
+        json5   json;
+        fecha_fin1      integer;
+        aux1    varchar;
+        aux2    varchar;
+        json_aux1       json;
+        json_aux2       json;
+        json_aux3       json;
+        tipoFecha1      varchar;
+        i       integer;
+        fecha_in1       varchar;
+        rut_idx1        varchar;
+        json_hoy1       json;
+        json_emi        json;
+        json_ace        json;
+        json_rec        json;
+        json_pend       json;
+        json_par1       json;
+        select_1        varchar;
+        texto1  varchar;
+        tipo_dte1       varchar;
+	lista1	json;
+BEGIN
+        json2:=json1;
+
+	json2:=logjson(json2,'Ejecuta select_cuadro_1_emitidos_redshift_14711');
+        v_rut_emisor:=get_json('rutCliente',json2)::integer;
+        v_rut_usuario:=get_json('rutUsuario',json2)::integer;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+        fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+        tipo_dia1:=get_json('TIPO_FECHA',json2);
+        if (tipo_dia1='Emision') then
+                tipo_dia1:='E';
+                tipoFecha1:='_emision ';
+        else
+                tipo_dia1:='A';
+                tipoFecha1:=' ';
+        end if;
+
+        --Agrega parametro tipo_dte
+        v_parametro_tipo_dte:='';
+        aux:=get_json('tipo_dte_filtro',json2);
+        --Si no es numerico
+        v_parametro_tipo_dte:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,'tipo_dte',aux);
+        json2:=logjson(json2,'PARAMETRO v_parametro_tipo_dte='||coalesce(v_parametro_tipo_dte,'vacio'));
+
+        v_parametro_rut_emisor:=get_json('TAG_RUT_EMISOR',obtiene_filtro_perfilamiento_rut_emisor_6000(v_rut_emisor,v_rut_usuario,'rut_emisor',get_json('rut_emisor_filtro',json2)));
+
+        rut_idx1:='';
+        rut_idx1:=replace(v_parametro_rut_emisor,'rut_emisor',' and rut');
+
+        --Si tiene parametros adicionales, los usamos para filtrar la query
+        --parametro1='E512' and parametro2='ERP'
+        v_parametro_var:=' ';
+        for campo in select lower(parametro) as parametro from filtros_rut where rut_emisor=v_rut_emisor loop
+                aux:=get_json(campo.parametro,json2);
+                tmp1:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,upper(campo.parametro),aux);
+                --json2:=logjson(json2,'PARAMETRO '||campo.parametro||'='||coalesce(tmp1,'vacio'));
+                json2:=logjson(json2,'PARAMETRO EMI '||campo.parametro||'='||coalesce(tmp1,'vacio')||' aux='||aux);
+                /*if (length(aux)>0 and aux not in ('*','undefined')) then
+                        v_parametro_var:=v_parametro_var||' and '||campo.parametro||'='||quote_literal(aux)||' ';
+                end if;*/
+                v_parametro_var:=v_parametro_var|| ' ' ||tmp1;
+        end loop;
+
+        --Saco los estados del redshift
+        json_par1:=get_parametros_motor_json('{}','BASE_REDSHIFT_EMITIDOS');
+	query1:='select count(*),tipo_dte,estado_sii,estado_inter from dte_emitidos where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3,4 order by 1';
+
+	perform logfile('FAY '||query1);
+	json4:='{}';
+	json4:=put_json(json4,'_LOG_',get_json('_LOG_',json2));
+        json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
+	json4:=logjson(json4,'Busqueda Emitidos '||json3::varchar);
+	perform logfile('FAY '||json3::varchar);
+        if (get_json('STATUS',json3)<>'OK') then
+		json4:=logjson(json4,'Falla Busqueda de Emitidos en BASE_REDSHIFT_EMITIDOS');
+		json4:=put_json(json4,'EMITIDOS','[]');
+		return json4;
+        end if;
+	
+
+	if (get_json('TOTAL_REGISTROS',json3)='1') then
+		lista1:='['||json3||']';
+	else
+		lista1:=get_json('LISTA',json3);
+	end if;	
+	json4:=put_json(json4,'EMITIDOS',lista1);
+	return json4;
+END;
+$$ LANGUAGE plpgsql;
+
+
+--CUADROS EXCEPCIONES
+CREATE or replace FUNCTION select_cuadro_1_excepciones_redshift_14713(json) RETURNS json AS $$
+DECLARE
+    json2                json;
+    json1                alias for $1;
+    v_rut_emisor        integer;
+    v_fecha_inicio      integer;
+    v_fecha_fin         integer;
+    v_resultado         varchar;
+        tipo_dia1       varchar;
+        v_parametro_var varchar;
+        aux             varchar;
+        campo   record;
+        v_parametro_tipo_dte    varchar;
+        v_rut_usuario   integer;
+        select1         varchar;
+        tmp1    varchar;
+        v_parametro_rut_emisor  varchar;
+        query1  varchar;
+        query2  varchar;
+        query_parte1    varchar;
+        json3   json;
+        json4   json;
+        json5   json;
+        fecha_fin1      integer;
+        aux1    varchar;
+        aux2    varchar;
+        json_aux1       json;
+        json_aux2       json;
+        json_aux3       json;
+        tipoFecha1      varchar;
+        i       integer;
+        fecha_in1       varchar;
+        rut_idx1        varchar;
+        json_hoy1       json;
+        json_emi        json;
+        json_ace        json;
+        json_rec        json;
+        json_pend       json;
+        json_par1       json;
+        select_1        varchar;
+        texto1  varchar;
+        tipo_dte1       varchar;
+	lista1	json;
+BEGIN
+        json2:=json1;
+
+	json2:=logjson(json2,'Ejecuta select_cuadro_1_emitidos_redshift_14711');
+        v_rut_emisor:=get_json('rutCliente',json2)::integer;
+        v_rut_usuario:=get_json('rutUsuario',json2)::integer;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+        fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+        tipo_dia1:=get_json('TIPO_FECHA',json2);
+        if (tipo_dia1='Emision') then
+                tipo_dia1:='E';
+                tipoFecha1:='_emision ';
+        else
+                tipo_dia1:='A';
+                tipoFecha1:=' ';
+        end if;
+
+        --Agrega parametro tipo_dte
+        v_parametro_tipo_dte:='';
+        aux:=get_json('tipo_dte_filtro',json2);
+        --Si no es numerico
+        v_parametro_tipo_dte:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,'tipo_dte',aux);
+        json2:=logjson(json2,'PARAMETRO v_parametro_tipo_dte='||coalesce(v_parametro_tipo_dte,'vacio'));
+
+        v_parametro_rut_emisor:=get_json('TAG_RUT_EMISOR',obtiene_filtro_perfilamiento_rut_emisor_6000(v_rut_emisor,v_rut_usuario,'rut_emisor',get_json('rut_emisor_filtro',json2)));
+
+        rut_idx1:='';
+        rut_idx1:=replace(v_parametro_rut_emisor,'rut_emisor',' and rut');
+
+        --Si tiene parametros adicionales, los usamos para filtrar la query
+        --parametro1='E512' and parametro2='ERP'
+        v_parametro_var:=' ';
+        for campo in select lower(parametro) as parametro from filtros_rut where rut_emisor=v_rut_emisor loop
+                aux:=get_json(campo.parametro,json2);
+                tmp1:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,upper(campo.parametro),aux);
+                --json2:=logjson(json2,'PARAMETRO '||campo.parametro||'='||coalesce(tmp1,'vacio'));
+                json2:=logjson(json2,'PARAMETRO EMI '||campo.parametro||'='||coalesce(tmp1,'vacio')||' aux='||aux);
+                /*if (length(aux)>0 and aux not in ('*','undefined')) then
+                        v_parametro_var:=v_parametro_var||' and '||campo.parametro||'='||quote_literal(aux)||' ';
+                end if;*/
+                v_parametro_var:=v_parametro_var|| ' ' ||tmp1;
+        end loop;
+
+	--if (get_json('evento_tot',json2) in ('Error de Esquema','Folios Duplicados','En Espera','Documentos Reprocesados','Documentos Repetidos') or get_json('tipo_tx',json2)='select_cuadro_1_excepciones') then
+        json_par1:=get_parametros_motor_json('{}','BASE_REDSHIFT_RECIBIDOS');
+	query1:='select count(*),tipo_dte,estado from dte_emitidos_errores where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3 order by 1';
+	--end if;
+
+	json4:='{}';
+	json4:=put_json(json4,'_LOG_',get_json('_LOG_',json2));
+        json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
+	json4:=logjson(json4,'Busqueda Emitidos '||json3::varchar);
+        if (get_json('STATUS',json3)<>'OK') then
+		json4:=logjson(json4,'Falla Busqueda de Emitidos en BASE_REDSHIFT_EMITIDOS');
+		json4:=put_json(json4,'EXCEPCIONES','[]');
+		return json4;
+        end if;
+	
+
+	if (get_json('TOTAL_REGISTROS',json3)='1') then
+		lista1:='['||json3||']';
+	else
+		lista1:=get_json('LISTA',json3);
+	end if;	
+	json4:=put_json(json4,'EXCEPCIONES',lista1);
+	return json4;
+END;
+$$ LANGUAGE plpgsql;
+
+--CUADROS BOLETAS
+CREATE or replace FUNCTION select_cuadro_1_boletas_redshift_14712(json) RETURNS json AS $$
+DECLARE
+    json2                json;
+    json1                alias for $1;
+    v_rut_emisor        integer;
+    v_fecha_inicio      integer;
+    v_fecha_fin         integer;
+    v_resultado         varchar;
+        tipo_dia1       varchar;
+        v_parametro_var varchar;
+        aux             varchar;
+        campo   record;
+        v_parametro_tipo_dte    varchar;
+        v_rut_usuario   integer;
+        select1         varchar;
+        tmp1    varchar;
+        v_parametro_rut_emisor  varchar;
+        query1  varchar;
+        query2  varchar;
+        query_parte1    varchar;
+        json3   json;
+        json4   json;
+        json5   json;
+        fecha_fin1      integer;
+        aux1    varchar;
+        aux2    varchar;
+        json_aux1       json;
+        json_aux2       json;
+        json_aux3       json;
+        tipoFecha1      varchar;
+        i       integer;
+        fecha_in1       varchar;
+        rut_idx1        varchar;
+        json_hoy1       json;
+        json_emi        json;
+        json_ace        json;
+        json_rec        json;
+        json_pend       json;
+        json_par1       json;
+        select_1        varchar;
+        texto1  varchar;
+        tipo_dte1       varchar;
+	lista1	json;
+BEGIN
+        json2:=json1;
+
+	json2:=logjson(json2,'Ejecuta select_cuadro_1_boletas_redshift_14711');
+        v_rut_emisor:=get_json('rutCliente',json2)::integer;
+        v_rut_usuario:=get_json('rutUsuario',json2)::integer;
+
+        json2:=corrige_fechas(json2);
+        v_fecha_inicio:=get_json('fstart',json2)::integer;
+        v_fecha_fin:=get_json('fend',json2)::integer;
+
+        fecha_in1:=genera_in_fechas(v_fecha_inicio::integer,v_fecha_fin::integer);
+        if (fecha_in1 is null) then
+                json2:=response_requests_6000('2', 'Rango de Fechas Invalida','',json2);
+                return json2;
+        end if;
+
+        tipo_dia1:=get_json('TIPO_FECHA',json2);
+        if (tipo_dia1='Emision') then
+                tipo_dia1:='E';
+                tipoFecha1:='_emision ';
+        else
+                tipo_dia1:='A';
+                tipoFecha1:=' ';
+        end if;
+
+        --Agrega parametro tipo_dte
+        v_parametro_tipo_dte:='';
+        aux:=get_json('tipo_dte_filtro',json2);
+        --Si no es numerico
+        v_parametro_tipo_dte:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,'tipo_dte',aux);
+        json2:=logjson(json2,'PARAMETRO v_parametro_tipo_dte='||coalesce(v_parametro_tipo_dte,'vacio'));
+
+        v_parametro_rut_emisor:=get_json('TAG_RUT_EMISOR',obtiene_filtro_perfilamiento_rut_emisor_6000(v_rut_emisor,v_rut_usuario,'rut_emisor',get_json('rut_emisor_filtro',json2)));
+
+        rut_idx1:='';
+        rut_idx1:=replace(v_parametro_rut_emisor,'rut_emisor',' and rut');
+
+        --Si tiene parametros adicionales, los usamos para filtrar la query
+        --parametro1='E512' and parametro2='ERP'
+        v_parametro_var:=' ';
+        for campo in select lower(parametro) as parametro from filtros_rut where rut_emisor=v_rut_emisor loop
+                aux:=get_json(campo.parametro,json2);
+                tmp1:=obtiene_filtro_perfilamiento_usuario_6000(v_rut_emisor,v_rut_usuario,upper(campo.parametro),aux);
+                --json2:=logjson(json2,'PARAMETRO '||campo.parametro||'='||coalesce(tmp1,'vacio'));
+                json2:=logjson(json2,'PARAMETRO BOL '||campo.parametro||'='||coalesce(tmp1,'vacio')||' aux='||aux);
+                /*if (length(aux)>0 and aux not in ('*','undefined')) then
+                        v_parametro_var:=v_parametro_var||' and '||campo.parametro||'='||quote_literal(aux)||' ';
+                end if;*/
+                v_parametro_var:=v_parametro_var|| ' ' ||tmp1;
+        end loop;
+
+        --Saco los estados del redshift
+        --query1:='select count(*),tipo_dte,estado_sii,estado_inter from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2,3,4';
+        query1:='select count(*),tipo_dte from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||'  group by 2';
+
+        json_par1:=get_parametros_motor_json('{}','BASE_REDSHIFT_BOLETAS');
+	json4:='{}';
+	json4:=put_json(json4,'_LOG_',get_json('_LOG_',json2));
+        json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
+	json4:=logjson(json4,'Busqueda Boletas '||json3::varchar);
+        if (get_json('STATUS',json3)<>'OK') then
+		json4:=put_json(json4,'BOLETAS','[]');	
+		json4:=logjson(json4,'Falla Busqueda de Boletas en BASE_REDSHIFT_BOLETAS');
+		return json4;
+        end if;
+	if (get_json('TOTAL_REGISTROS',json3)='1') then
+		lista1:='['||json3||']';
+	else
+		lista1:=get_json('LISTA',json3);
+	end if;	
+
+        json4:=put_json(json4,'BOLETAS',lista1);
+
+	return json4;
+END;
+$$ LANGUAGE plpgsql;

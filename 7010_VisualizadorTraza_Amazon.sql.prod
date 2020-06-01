@@ -1,0 +1,135 @@
+delete from isys_querys_tx where llave='7010';
+
+insert into isys_querys_tx values ('7010',10,1,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--Copia desde Traza Antigua registro de la URI
+insert into isys_querys_tx values ('7010',20,1,10,'/opt/acepta/motor/Procesos/copia_registro_traza_antigua.sh $$URI_IN$$ $$TABLA_TRAZA$$',0,0,0,1,1,10,10);
+
+
+CREATE or replace FUNCTION proc_procesa_bitacora_7010(varchar) RETURNS varchar AS $$
+DECLARE
+	xml1	alias for $1;
+	xml2	varchar;
+	data1	varchar;
+        temp    integer;
+	resp1	varchar;
+	respuesta1	varchar;
+	output1 varchar;
+	query1  varchar;
+	url1    varchar;
+	query2  varchar;
+	header1 varchar;
+	jsonq	varchar;
+	relacionados1 varchar;
+	mes1	varchar;
+	dominio1	varchar;
+	fecha1		varchar;
+	tabla_traza1	varchar;
+	total1	integer;
+BEGIN
+
+	xml2:=xml1;
+	xml2:=put_campo(xml2,'BUSCA_TRAZA_ANTIGUA','NO');
+
+	--Si viene de respuesta de Traza Antigua, mostramos que hizo
+	if get_campo('BUSCA_TRAZA_ANTIGUA',xml2)='SI' then
+		xml2:=logapp(xml2,'Respuesta Traza Antigua '||get_campo('RESPUESTA_SYSTEM',xml2));
+	end if;
+	--xml2:=logapp(xml2,'comienzo_bitacora_get_datos');	
+    	data1	:=get_campo('INPUT',xml2);
+	xml2	:=put_campo(xml2,'__SECUENCIAOK__','0');
+	--url del documento a obtener
+	if (strpos(data1,'url=')>0) then
+		url1:= split_part(data1,'url=',2);
+	end if; 
+	xml2:=logapp(xml2,'URI='||url1);
+	xml2:=put_campo(xml2,'URI_IN',url1);
+
+
+	--tabla_traza1:=get_tabla_traza(url1);
+	tabla_traza1:='traza_global';
+
+	
+	--tabla_traza1:='traza.traza';
+
+	xml2:=put_campo(xml2,'TABLA_TRAZA',tabla_traza1);
+	xml2:=logapp(xml2,'Tabla Traza '||tabla_traza1);
+
+	execute 'select row_to_json(head) FROM (select to_char(coalesce(fecha_ingreso,fecha),''YYYY-MM-DD HH24:MI:SS'') as nodeTimeStamp,replace(folio,''-'','''') as nodeId,cfg.descripcion1 as nodeLabel,recipient.rut||''-''||modulo11(recipient.rut::varchar) as noOwnerUid,recipient.name as noOwner,recipient.email as noOwnerMail,receptor.rut||''-''||modulo11(receptor.rut::varchar) as ownerUid,receptor.name as owner,case when receptor.recipt_type is null then ''(receptor manual)'' when receptor.recipt_type=''M'' then ''(receptor manual)'' else receptor.email end as ownerMail,cfg.icono as nodeIcon, cfg2.descripcion1 as eventoemisor,
+--Si es un libro de compras, la fecha de emision viene en el folio
+case tipo_dte when ''COMPRA'' then (replace(folio,''-'','''')||''01'')::integer 
+	      when ''VENTA'' then  (replace(folio,''-'','''')||''01'')::integer
+else fecha_emision end as timeStamp from (select * from '||tabla_traza1||' where  uri= $1 and length(folio)>0 and fecha_emision>0 order by fecha_ingreso limit 1) trz left join recipient_traza_historico recipient  on trz.rut_emisor= recipient.rut left join recipient_traza_historico receptor on receptor.rut=trz.rut_receptor left join config cfg on trz.tipo_dte=cfg.evento left join config cfg2 on cfg2.evento=trz.evento ) head' into header1 using url1;
+
+	--xml2:=logapp(xml2,'header1='||header1);
+	--xml2:=logapp(xml2,'head='||header1);
+	
+	--listado de documentos relacionados
+	relacionados1 := array_to_json(array_agg(row_to_json(related))) from (select r.folio, cfg.descripcion1 as tipodte, r.url_relacion as url, cfg.icono  from (select * from documentos_relacionados where url = url1 ) r left join config cfg  on r.tipo_dte = cfg.evento ) related;
+	xml2:=logapp(xml2,'relacionados1='||relacionados1);
+
+	execute 'select array_to_json(array_agg(row_to_json(r))) from (SELECT to_char(fecha,''YYYY-MM-DD HH24:MI:SS'') as processedDate,canal,grupo,descripcion1 as description,comentario1 as comment2,comentario2 as commentFragment ,icono as icon ,url_get as url  from (select distinct fecha,rut_emisor,canal,comentario1||case when comentario_erp is null then '''' else chr(10)||comentario_erp end as comentario1,comentario2,url_get,evento from '||tabla_traza1||' where uri= $1  and evento <>''EMI'') trz join config on trz.evento=config.evento left join recipient_traza_historico recipient  on trz.rut_emisor=recipient.rut  order by orden,fecha) r' into query2 using url1;
+	xml2:=logapp(xml2,'Eventos='||query2);
+
+	
+	
+
+	--se ordenan las queris en un arreglo json, el primer elemento es la info de cabecera, el segundo un arreglo con los eventos
+	--si una query no arroja resultados se envia arreglo vacio.
+	query1 := '[';
+	IF (header1 IS NOT NULL) THEN
+		query1:=query1||header1||',';
+	END IF;
+	IF (relacionados1 IS NOT NULL) THEN
+		query1 := query1||relacionados1||',';
+	ELSE
+		query1 := query1||'[],';
+	END IF;
+	IF (query2 IS NOT NULL) THEN
+		query1:= query1 || query2;
+	END IF;
+
+	query1 := query1 || ']';
+	--La primera vez siempre vamos a ir a traza antigua, la segunda completamos
+	if (get_campo('BUSCA_TRAZA_ANTIGUA',xml2)='') then
+		query1:='[[],]';
+	end if;
+
+	--Si la respuesta esta vacia, entonces podria estar en la traza antigua
+	if ((query1='[[],]') and get_campo('BUSCA_TRAZA_ANTIGUA',xml2)='') then
+		
+		/*
+		--Antes de ir a traza antigua, veo el mes de publicion
+		dominio1:=split_part(split_part(url1,'//',2),'.',1);
+		if length(dominio1)>4 then
+			fecha1:=substring(dominio1,length(dominio1)-3,4);
+		else		
+			fecha1:='0';
+		end if;
+		--Solo vamos a traza antiguo si la fecha de publicacion es menor a Enero del 2014
+		if is_number(fecha1) and fecha1::integer<1401 then
+			xml2:=logapp(xml2,'Buscamos en Traza Antigua');
+			xml2:=put_campo(xml2,'__SECUENCIAOK__','20');
+			xml2:=put_campo(xml2,'BUSCA_TRAZA_ANTIGUA','SI');
+			return xml2;
+		end if;
+		*/
+			xml2:=logapp(xml2,'Buscamos en Traza Antigua');
+			xml2:=put_campo(xml2,'__SECUENCIAOK__','20');
+			xml2:=put_campo(xml2,'BUSCA_TRAZA_ANTIGUA','SI');
+			return xml2;
+	end if;
+
+	xml2:=logapp(xml2,'respuesta query'||query1);
+	--envio respuesta content tipe para json es application/json, en otro caso la respuesta llega como error
+        resp1:='Status: 200 OK'||chr(10)||
+                 'Content-type: application/json;charset=UTF-8;'||chr(10)||
+                 'Content-length: '||length(query1)||chr(10);
+	xml2:=put_campo(xml2,'RESPUESTA',resp1||chr(10)||query1);
+	xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
+        xml2 := logapp(xml2,'Respuesta Servicio 200 OK');
+	xml2 := logapp(xml2,'JSONSend '||query1);
+	xml2 := logapp(xml2,'fin_bitacora_get_datos');
+    	RETURN xml2;
+	
+END;
+$$ LANGUAGE plpgsql;

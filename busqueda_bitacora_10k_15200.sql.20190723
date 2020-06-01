@@ -1,0 +1,139 @@
+CREATE OR REPLACE FUNCTION public.busqueda_bitacora_10k_15200(json)
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+declare
+        json1                alias for $1;
+        json2                   json;
+        rut_cliente1              varchar;
+        rut_usuario1              varchar;
+        offset1  integer;
+        v_in_offset1  integer;
+        cant_regs1 integer;
+        total_regs1 varchar;
+        cantidad_paginas1 varchar;
+        fecha1    varchar;
+        fecha2    varchar;
+        filtro1  varchar;
+        query1    varchar;
+        json_out1   json;
+        rol1            varchar;
+        funcionalidad1 varchar;
+        categoria1        varchar;
+        app10k            varchar; --A.A 21/02/2017
+        vin_offset      varchar;
+        v_in_cant_reg   varchar;
+        count_local1    bigint;
+        jcount  json;
+	aux1	varchar;
+	mes1	record;
+BEGIN
+        json2:=json1;
+        rut_cliente1:=get_json('rutCliente',json2);
+        rut_usuario1:=get_json('rutUsuario',json2);
+        rol1:=replace(get_json('rol_usuario',json2),'_QA','');
+        categoria1:=get_json('CATEGORIA_BITACORA',json2);
+        fecha1:=replace(get_json('FECHA_INI',json2),'-','');
+        app10k:=get_json('aplicacion',json2); --A.A 21/02/2017
+        if (fecha1='') then
+                fecha1:=to_char(now(),'YYYYMMDD');
+        end if;
+        fecha2:=replace(get_json('FECHA_FIN',json2),'-','');
+        if (fecha2='') then
+                fecha2:=to_char(now(),'YYYYMMDD');
+        end if;
+        --verificamos funcionalidad
+        if (check_funcionalidad_6000(json2,'bitacora')) then
+                rut_usuario1:=get_json('RUT_USUARIO_BITACORA',json2);
+                if (rut_usuario1 in ('*','')) then
+                        filtro1:=' empresa='||quote_literal(rut_cliente1);
+                else
+                        filtro1:=' empresa='||quote_literal(rut_cliente1)||' and rut_usuario='||quote_literal(rut_usuario1);
+                end if;
+        else
+                filtro1:=' empresa='||quote_literal(rut_cliente1)||' and rut_usuario='||quote_literal(rut_usuario1);
+        end if;
+        if (categoria1 not in ('*','')) then
+                filtro1:=filtro1||' and accion='||quote_literal(categoria1);
+        end if;
+
+        json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' to_char(bit.fecha,''YYYY-MM-DD HH24:MI:SS'') as INFO__FECHA__ON,bit.rut_usuario as INFO__RUT_USUARIO__ON,bit.empresa as INFO__RUT_EMPRESA__ON,bit.perfil as INFO__PERFIL__ON,bit.accion as INFO__CATEGORIA__ON,bit.descripcion as INFO__DESCRIPCION__ON,bit.aplicacion as INFO__APP__ON,bit.ip_cliente as INFO__IP_CLIENTE__ON '));
+        
+        vin_offset:=get_json('offset',json2);
+        if(vin_offset is null or vin_offset='' or vin_offset='undefined')then
+                vin_offset=1;
+        end if;
+        v_in_cant_reg:='100';
+        v_in_offset1:=(vin_offset::integer-1)*v_in_cant_reg::integer;
+        json2:=put_json(json2,'v_in_offset',vin_offset::varchar);
+
+--select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day','20180401'::date),date_trunc('day','20180512'::Date),'1 day') order by fecha
+        --Solo local 
+        if fecha1::integer>get_json('periodo_hasta_rds',json2)::integer then
+                json2:=logjson(json2,'Solo busqueda Local offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg);
+                json2:=put_json(json2,'EJECUTO_LOCAL','SI');
+                json2:=put_json(json2,'EJECUTO_RDS','NO');
+                json2:=put_json(json2,'COUNT_RDS','0');
+                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+		if get_json('rutUsuario',json2)='17597643' then
+                	perform logfile('BITACORA (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg);
+		end if;
+                --Contamos
+		if get_json('rutUsuario',json2)='17597643' then
+                	--perform logfile('BITACORA COUNT1 select count(*) from (select * from bitacora_10k where dia>'||get_json('periodo_hasta_rds',json2)||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ');
+                	perform logfile('BITACORA COUNT1 select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ');
+		end if;
+                --execute 'select count(*) from (select * from bitacora_10k where dia>'||get_json('periodo_hasta_rds',json2)||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ' into count_local1; 
+                execute 'select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ' into count_local1; 
+		if get_json('rutUsuario',json2)='17597643' then
+                	perform logfile('BITACORA COUNT2');
+		end if;
+                json2:=logjson(json2,'Solo busqueda Local offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' count='||count_local1::varchar);
+                json2:=put_json(json2,'COUNT_LOCAL',coalesce(count_local1,0)::varchar);
+        --Solo RDS
+        elsif fecha2::integer<=get_json('periodo_hasta_rds',json2)::integer then
+                json2:=put_json(json2,'EJECUTO_LOCAL','NO');
+                json2:=put_json(json2,'EJECUTO_RDS','SI');
+		aux1:='';
+		for mes1 in select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day',fecha1::date),date_trunc('day',fecha2::Date),'1 day') order by fecha loop
+			if aux1<>'' then
+				aux1:=aux1||' union ';
+			end if;	
+			aux1:=aux1||' select * from bitacora_10k_'||mes1.fecha||' where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ';
+		end loop;
+                json2:=put_json(json2,'__FW_RDS__',encode_hex(' ('||aux1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+                --json2:=put_json(json2,'__FW_RDS__',encode_hex(' (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+                json2:=put_json(json2,'COUNT_LOCAL','0');
+                json2:=logjson(json2,'Query Count= select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ');
+                json2:=logjson(json2,'Solo busqueda RDS offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' ');
+                json2:=put_json(json2,'QUERY_COUNT_RDS',encode_hex('select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo '));
+        --Mix Local-RDS
+        else
+                json2:=put_json(json2,'EJECUTO_LOCAL','SI');
+                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from bitacora_10k where dia>='||get_json('periodo_hasta_rds',json2)||' and dia<='||fecha2||' and '||filtro1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+                json2:=put_json(json2,'EJECUTO_RDS','SI');
+                --Contamos
+                execute 'select count(*) from (select * from bitacora_10k where dia>'||get_json('periodo_hasta_rds',json2)||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ' into count_local1;
+                jcount:=get_offset_limit_2_bases(v_in_offset1,v_in_cant_reg::integer,count_local1::bigint,0);
+                json2:=put_json(json2,'COUNT_LOCAL',coalesce(count_local1,0)::varchar);
+		
+		aux1:='';
+		for mes1 in select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day',fecha1::date),date_trunc('day',get_json('periodo_hasta_rds',json2)::date),'1 day') order by fecha loop
+			if aux1<>'' then
+				aux1:=aux1||' union ';
+			end if;	
+			aux1:=aux1||' select * from bitacora_10k_'||mes1.fecha||' where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ';
+		end loop;
+                
+                json2:=put_json(json2,'__FW_RDS__',encode_hex(' ('||aux1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||get_json('OFFSET_BASE_2',jcount)||' limit '||get_json('LIMIT_BASE_2',jcount)));
+                json2:=put_json(json2,'QUERY_COUNT_RDS',encode_hex('select count(*) from ('||aux1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo '));
+                --json2:=put_json(json2,'__FW_RDS__',encode_hex(' (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||' ) bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo order by bit.fecha offset '||get_json('OFFSET_BASE_2',jcount)||' limit '||get_json('LIMIT_BASE_2',jcount)));
+                --json2:=put_json(json2,'QUERY_COUNT_RDS',encode_hex('select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo '));
+                
+                json2:=logjson(json2,'Query Count= select count(*) from (select * from bitacora_10k where dia>='||fecha1||' and dia<='||fecha2||' and '||filtro1||') bit inner join (select * from detalle_parametros where aplicacion@@'''||app10k||''') det on bit.accion=det.codigo ');
+                json2:=logjson(json2,'busqueda Local-RDS offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' count_local='||count_local1::varchar);
+        end if;
+        RETURN json2;
+
+end
+$function$
