@@ -347,7 +347,7 @@ BEGIN
 
         --Si viene el ROL desde pantalla...
         rol_dec:=get_json('ROL',json2);
-        if get_json('super_user',json2)<>'SI'  and strpos(upper(get_json('roles_institucion',json2)),'"REPORTES"')=0 then
+        if get_json('super_user',json2)<>'SI'  and strpos(upper(get_json('roles_institucion',json2)),'"REPORTES"')=0 and get_json('institucion_dec',json2)<>'HITES' then
                 jaux:=get_json('roles_institucion',json2);
                 json2:=logjson(json2,'roles_institucion ='||jaux::varchar);
                 i:=0;

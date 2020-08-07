@@ -77,7 +77,7 @@ BEGIN
 	json2:=put_json(json2,'__COLA_MOTOR__',get_campo('__COLA_MOTOR__',text_all));
 	json2:=put_json(json2,'__ID_DTE__',get_campo('__ID_DTE__',text_all));
 	correos_to1:=get_json('C_MAILTO',json2);
-	json2:=logjson(json2,'CONTROLLER: Paso1 ');
+	json2:=logjson(json2,'CONTROLLER: '||get_json('URI_IN',json2));
 	--||get_campo('INPUT',text_all));
 	--Si no viene C_MAILTO, no se envia correo
 	if (correos_to1='') then
@@ -119,8 +119,8 @@ BEGIN
 			v_caratula:=v_caratula||chr(10)||'<SetDTE ID="ID'||get_json('RUT_EMISOR',json2)||'_'||get_json('TIPO_DTE',json2)||'_'||get_json('FOLIO',json2)||'">'||chr(10)||'<Caratula version="1.0">'||chr(10)||'<RutEmisor>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEmisor>'||chr(10);
 			v_caratula:=v_caratula||'<RutEnvia>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEnvia>'||chr(10);
 			v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
-			v_caratula:=v_caratula||'<FchResol></FchResol>'||chr(10);	
-			v_caratula:=v_caratula||'<NroResol></NroResol>'||chr(10);
+			v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);	
+			v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
 			v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DD HH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
 			v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			json3:=put_json(json3,'caratula_hex_ini',encode(v_caratula::bytea,'hex')::varchar);

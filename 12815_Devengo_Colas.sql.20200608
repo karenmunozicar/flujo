@@ -55,11 +55,6 @@ begin
         v_uri:=get_campo('URI_IN',xml2);
         v_rut_receptor_devengo:=get_campo('RUT_EMISOR',xml2);
         v_cod_oc:=get_campo('DP_COD_OC',xml2);
-	-- FGE - 20200617 - Revisamos si podemos obtener la OC si faltase
-        if v_cod_oc = '' or not v_cod_oc ~ '\d+\-\d+\-(CM|SE|MC|AG|D1|CC)\d{2}' then
-        	select dp_obtiene_oc_flujo(get_xml('ID_SOLICITUD_WF', data_dte)) into v_cod_oc from dte_recibidos where codigo_txel = v_codigo_txel::bigint;
-        end if;
-
         v_folio_compromiso:=get_campo('DP_FOLIO_COMPROMISO',xml2);
         v_area_tx:=get_campo('DP_AREA_TX',xml2);
         v_cod_rc:=get_campo('DP_COD_RC',xml2);
@@ -276,13 +271,9 @@ begin
 
         resp1:=get_json('RESPUESTA_COLA',json2);
         if (resp1<>'OK') then
-                -- FGE - 20200723 - Vamos a reintentar en lugar de pasarlo a manual
-                json2:=logjson(json2,'no trae respuesta de 12813, volvemos a intentar despues en dp_devengo para codigo_dv='||cod_devengo_num1::varchar);
-                json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
-                return sp_procesa_respuesta_cola_motor_json(json2);
-                -- json2:=logjson(json2,'Falla Servicio en Flujo 12813, Devengo Manual');
-                -- json2:=put_json(json2,'__SECUENCIAOK__','1000');
-                -- return json2;
+                json2:=logjson(json2,'Falla Servicio en Flujo 12813, Devengo Manual');
+                json2:=put_json(json2,'__SECUENCIAOK__','1000');
+                return json2;
         end if;
 
         --Se validan la cantidad de registros grabados en dp_devengo_detalle para el devengo. Si hay mas de uno, es Manual.
@@ -298,21 +289,9 @@ begin
         select count(1) into num_detalles from dp_devengo_detalle where codigo_dv=cod_devengo_num1;
         select dte_codigo_txel into v_codigo_txel from dp_devengo where codigo_dv = cod_devengo_num1;
 
-	-- FGE - 20200608 - Si es un tipo demanda = 02 entonces se va a extrapresupuesta
-        if get_json('TIPO_DEMANDA', json2) <> '01' then
-                 --Sin detalles, entonces se deja manual.
-                 update dte_recibidos set data_dte = put_data_dte(put_data_dte(data_dte, 'TIPO_DEVENGO', 'EXT'), 'ESTADO_DEVENGO', 'EXTRA_PRESUPUESTARIO') where codigo_txel = v_codigo_txel::bigint;
-                 update dp_devengo set tipo_devengo = 'EXT', estado = 'EXTRA_PRESUPUESTARIO' where codigo_dv = cod_devengo_num1;
-                 json2:=logjson(json2,'DTE con devengo extra presupuestario');
-                 json2:=put_json(json2,'__SECUENCIAOK__','1000');
-                 return json2;
-        end if;
-
         if (num_detalles=0) then
                 --Sin detalles, entonces se deja manual.
-		-- FGE - 20200608
-                --update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_dv = v_codigo_txel::bigint;
-                update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = v_codigo_txel::bigint;
+                update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_dv = v_codigo_txel::bigint;
                 update dp_devengo set tipo_devengo = 'MAN' where codigo_dv = cod_devengo_num1;
                 json2:=logjson(json2,'Devengo sin detalles en tabla dp_devengo_detalle codigo-->'||cod_devengo1);
                 json2:=put_json(json2,'__SECUENCIAOK__','1000');
@@ -415,5 +394,4 @@ begin
         --return json2;
 end;
 $$ LANGUAGE plpgsql;
-
 

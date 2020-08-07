@@ -20,6 +20,7 @@ $$ LANGUAGE plpgsql;
 
 insert into isys_querys_tx values ('15200','10',9,1,'select query_local__arma_query_rds_15200(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('15200','20',42,1,'$$QUERY_DATA$$',0,0,0,9,1,30,30);
+insert into isys_querys_tx values ('15200','22',44,1,'$$QUERY_DATA$$',0,0,0,9,1,30,30);
 insert into isys_querys_tx values ('15200','30',9,1,'select armo_resultado_15200(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 
 
@@ -165,6 +166,8 @@ BEGIN
         --Vemos a que secuencia nos iremos a ejecutar despues de ejecutar local
         if campo.parametro_rds='CD_BITACORA_HIST' then
                 json2:=put_json(json2,'__SECUENCIAOK__','20');
+	elsif campo.parametro_rds='BASE_DEC' then
+                json2:=put_json(json2,'__SECUENCIAOK__','22');
         else
                 json2:=put_json(json2,'CODIGO_RESPUESTA','2');
                 json2:=put_json(json2,'MENSAJE_RESPUESTA','Falla Configuracion.');
@@ -486,6 +489,135 @@ BEGIN
 		json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__off,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,rut_empresa||''-''||modulo11(rut_empresa::varchar) as info__empresa__off,cd_lista_mail.categoria as info__categoria__off,desde as info__de__off,b.casilla_from||''-''||modulo11(b.casilla_from::varchar) as info__compartido_por__on,to_char(b.dia_desde,''YYYY/MM/DD HH24:MI'') as info__compartido_desde__on,to_char(b.dia_hasta,''YYYY/MM/DD HH24:MI'') as info__compartido_hasta__on,b.categoria as info__categoria_documento__off, coalesce(decode_utf8_amz(subject),caption_usuario,''-'')||''__''||coalesce(url,url_html,url_text) as urlbutton__documento__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,cd_lista_mail.id as info__id__off '));
 	end if;
         return json2;
+end
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.busqueda_bitacora_dec_15200(json)
+ RETURNS json
+AS $$
+declare
+        json1                alias for $1;
+        json2                   json;
+        rut_cliente1              varchar;
+        rut_usuario1              varchar;
+        offset1  integer;
+        v_in_offset1  integer;
+        cant_regs1 integer;
+        total_regs1 varchar;
+        cantidad_paginas1 varchar;
+        fecha1    varchar;
+        fecha2    varchar;
+        filtro1  varchar;
+        query1    varchar;
+        json_out1   json;
+        rol1            varchar;
+        funcionalidad1 varchar;
+        categoria1        varchar;
+        app10k            varchar; --A.A 21/02/2017
+        vin_offset      varchar;
+        v_in_cant_reg   varchar;
+        count_local1    bigint;
+        jcount  json;
+	aux1	varchar;
+	mes1	record;
+	fecha_in1	varchar;
+BEGIN
+        json2:=json1;
+        rut_cliente1:=get_json('rutCliente',json2);
+        rut_usuario1:=get_json('rutUsuario',json2);
+        rol1:=replace(get_json('rol_usuario',json2),'_QA','');
+        categoria1:=get_json('CATEGORIA_BITACORA',json2);
+        fecha1:=replace(get_json('FECHA_INI',json2),'-','');
+        app10k:=get_json('aplicacion',json2); --A.A 21/02/2017
+        if (fecha1='') then
+                fecha1:=to_char(now(),'YYYYMMDD');
+        end if;
+        fecha2:=replace(get_json('FECHA_FIN',json2),'-','');
+        if (fecha2='') then
+                fecha2:=to_char(now(),'YYYYMMDD');
+        end if;
+        --verificamos funcionalidad
+	rut_usuario1:=replace(get_json('RUT_USUARIO_BITACORA',json2),'.','');
+	filtro1:=' empresa in ('||quote_literal(get_json('razon_social',json2))||',(select inst_base from grupo_rut where institucion='||quote_literal(get_json('razon_social',json2))||')) ';
+	if (rut_usuario1 not in ('*','')) then
+		filtro1:=filtro1||' and rut_usuario in ('||quote_literal(lpad(rut_usuario1,12,'0'))||','||quote_literal(rut_usuario1)||')';
+	end if;
+        if (categoria1 not in ('*','')) then
+                filtro1:=filtro1||' and accion='||quote_literal(categoria1);
+        end if;
+
+        json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' to_char(bit.fecha,''YYYY-MM-DD HH24:MI:SS'') as INFO__FECHA__ON,ltrim(bit.rut_usuario,''0'') as INFO__RUT_USUARIO__ON,bit.empresa as INFO__RUT_EMPRESA__ON,bit.perfil as INFO__PERFIL__ON,bit.accion as INFO__CATEGORIA__ON,bit.descripcion as INFO__DESCRIPCION__ON '));
+        
+        vin_offset:=get_json('offset',json2);
+        if(vin_offset is null or vin_offset='' or vin_offset='undefined')then
+                vin_offset=1;
+        end if;
+        v_in_cant_reg:='100';
+        v_in_offset1:=(vin_offset::integer-1)*v_in_cant_reg::integer;
+        json2:=put_json(json2,'v_in_offset',vin_offset::varchar);
+
+--select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day','20180401'::date),date_trunc('day','20180512'::Date),'1 day') order by fecha
+        --Solo local 
+        if fecha1::integer>get_json('periodo_hasta_rds',json2)::integer then
+                json2:=logjson(json2,'Solo busqueda Local offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg);
+                json2:=put_json(json2,'EJECUTO_LOCAL','SI');
+                json2:=put_json(json2,'EJECUTO_RDS','NO');
+                json2:=put_json(json2,'COUNT_RDS','0');
+		fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);
+                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||' ) bit order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+		fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);
+                execute 'select count(*) from (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||') bit ' into count_local1; 
+		if get_json('rutUsuario',json2)='17597643' then
+                	perform logfile('BITACORA COUNT2');
+		end if;
+                json2:=logjson(json2,'Solo busqueda Local offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' count='||count_local1::varchar);
+                json2:=put_json(json2,'COUNT_LOCAL',coalesce(count_local1,0)::varchar);
+        --Solo RDS
+        elsif fecha2::integer<=get_json('periodo_hasta_rds',json2)::integer then
+                json2:=put_json(json2,'EJECUTO_LOCAL','NO');
+                json2:=put_json(json2,'EJECUTO_RDS','SI');
+		aux1:='';
+		for mes1 in select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day',fecha1::date),date_trunc('day',fecha2::Date),'1 day') order by fecha loop
+			if aux1<>'' then
+				aux1:=aux1||' union ';
+			end if;	
+			fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);	
+			aux1:=aux1||' select * from bitacora_dec_'||mes1.fecha||' where dia in '||fecha_in1||' and '||filtro1||' ';
+		end loop;
+                json2:=put_json(json2,'__FW_RDS__',encode_hex(' ('||aux1||' ) bit order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+                json2:=put_json(json2,'COUNT_LOCAL','0');
+		fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);
+                json2:=logjson(json2,'Query Count= select count(*) from (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||') bit ');
+                json2:=logjson(json2,'Solo busqueda RDS offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' ');
+                json2:=put_json(json2,'QUERY_COUNT_RDS',encode_hex('select count(*) from (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||') bit '));
+        --Mix Local-RDS
+        else
+                json2:=put_json(json2,'EJECUTO_LOCAL','SI');
+		fecha_in1:=genera_in_fechas(get_json('periodo_hasta_rds',json2)::integer,fecha2::integer);
+                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||' ) bit order by bit.fecha offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg));
+                json2:=put_json(json2,'EJECUTO_RDS','SI');
+                --Contamos
+                execute 'select count(*) from (select * from bitacora_dec where dia in '||fecha_in1||' and '||filtro1||') bit ' into count_local1;
+                jcount:=get_offset_limit_2_bases(v_in_offset1,v_in_cant_reg::integer,count_local1::bigint,0);
+                json2:=put_json(json2,'COUNT_LOCAL',coalesce(count_local1,0)::varchar);
+		
+		aux1:='';
+		for mes1 in select distinct to_char(generate_series,'YYMM') as fecha from generate_series(date_trunc('day',fecha1::date),date_trunc('day',get_json('periodo_hasta_rds',json2)::date),'1 day') order by fecha loop
+			if aux1<>'' then
+				aux1:=aux1||' union ';
+			end if;	
+			fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);
+			aux1:=aux1||' select * from bitacora_dec_'||mes1.fecha||' where dia in '||fecha_in1||' and '||filtro1||' ';
+		end loop;
+                
+                json2:=put_json(json2,'__FW_RDS__',encode_hex(' ('||aux1||') bit order by bit.fecha offset '||get_json('OFFSET_BASE_2',jcount)||' limit '||get_json('LIMIT_BASE_2',jcount)));
+                json2:=put_json(json2,'QUERY_COUNT_RDS',encode_hex('select count(*) from ('||aux1||') bit '));
+                
+		fecha_in1:=genera_in_fechas(fecha1::integer,fecha2::integer);
+                json2:=logjson(json2,'busqueda Local-RDS offset ='||v_in_offset1::varchar||' limit '||v_in_cant_reg||' count_local='||count_local1::varchar);
+        end if;
+        RETURN json2;
+
 end
 $$ LANGUAGE plpgsql;
 

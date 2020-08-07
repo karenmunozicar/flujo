@@ -86,6 +86,7 @@ declare
     v_encontrado        varchar;
 
     v_campo             record;
+    v_resp_oc           json;
 begin
     json2:=json1;
     
@@ -105,8 +106,10 @@ begin
     END;
 
     if length(get_json('Listado', v_respuesta::json)) > 3 then
-        perform mp_ingresa_oc(v_respuesta::json);
-        json2:=response_requests_6000('1', '', '', json2);
+        --perform mp_ingresa_oc(v_respuesta::json);
+	v_resp_oc:=mp_ingresa_oc(v_respuesta::json);
+	json2:=response_requests_6000('1', 'Se Recibió información desde MP.  OC Recibidas: ' || get_json('num_oc', v_resp_oc) || ', RC Recibidas: ' || get_json('num_rc', v_resp_oc), '', json2);
+	--json2:=response_requests_6000('1', '', '', json2);
     else
         json2:=response_requests_6000('1', 'No se Encontró la OC.', '', json2);
     end if;

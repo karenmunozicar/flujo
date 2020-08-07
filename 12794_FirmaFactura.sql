@@ -514,7 +514,7 @@ BEGIN
 	producto1:=escape_xml_characters_simple(substring(producto1,1,40));
         razon_rec1:=escape_xml_characters_simple(substring(get_json('RznSocRecep',get_json_upper('formEmitirdocumento',json2)::json),1,40));
 
-	fecha1:=to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MM:SS');
+	fecha1:=to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MI:SS');
 
 	-- NBV_201705 801
         ted1:='';
@@ -644,13 +644,14 @@ BEGIN
                 json2:=logjson(json2,'MVG texto sin PrcItem= '||texto);
           end if;
 
-          json2:=logjson(json2, 'TEXTO DETALLE = '||texto::varchar);
-          patron_dte1:=replace(patron_dte1,chr(36)||chr(36)||chr(36)||'DETALLE_PRODUCTOS'||chr(36)||chr(36)||chr(36),texto);
+        json2:=logjson(json2, 'TEXTO DETALLE = '||texto::varchar);
+        patron_dte1:=replace(patron_dte1,chr(36)||chr(36)||chr(36)||'DETALLE_PRODUCTOS'||chr(36)||chr(36)||chr(36),texto);
 
         dte1:=remplaza_tags_json_c(json3,patron_dte1);
 	dte1:=replace(dte1,'#-#DscRcgGlobal#-#','');
         dte1:=limpia_tags(dte1);
 
+	--json2:=logjson(json2,'TED='||ted1);
         dte1:=replace(dte1,'REEMPLAZA_TED_TAG',ted1);
 
 	--perform logfile('DAO dte1='||replace(str2latin12base64(dte1),chr(10),''));

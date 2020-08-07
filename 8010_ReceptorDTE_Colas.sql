@@ -362,7 +362,8 @@ BEGIN
         json1 := put_json(json1,'PARAMETRO2',get_xml('Parametro2',data_anulacion));
         json1 := put_json(json1,'PARAMETRO3',get_xml('Parametro3',data_anulacion));
         json1 := put_json(json1,'PARAMETRO4',get_xml('Parametro4',data_anulacion));
-	
+
+	xml2:=logapp(xml2,'select eliminar_rango_folios_ca4anula('''||json1::varchar||''');');
 	json1 := eliminar_rango_folios_ca4anula(json1);
 	xml2:=logapp(xml2,'LOG_GF '||get_json('_LOG_',json1));
 	xml2:=logapp(xml2,'CA4ANULA: STATUS_ELIMINA_RANGO='||get_json('STATUS_ELIMINA_RANGO',json1)||' MSG_ELIMINA_RANGO='||get_json('MSG_ELIMINA_RANGO',json1));

@@ -135,6 +135,7 @@ BEGIN
 	else
 		flag_pendiente1:=false;
 	end if;	
+	json2:=logjson(json2,'CONTROLLER: '||get_json('URI_IN',json2));
 
 	json3:='{}';
 	json3:=put_json(json3,'subject','ACEPTA-CONTROLLER: '|| get_json('C_SUBJECT',json2));
@@ -161,8 +162,8 @@ BEGIN
 				v_caratula:=v_caratula||chr(10)||'<SetDTE ID="ID'||get_json('RUT_EMISOR',json2)||'_'||get_json('TIPO_DTE',json2)||'_'||get_json('FOLIO',json2)||'">'||chr(10)||'<Caratula version="1.0">'||chr(10)||'<RutEmisor>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEmisor>'||chr(10);
 				v_caratula:=v_caratula||'<RutEnvia>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEnvia>'||chr(10);
 				v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
-				v_caratula:=v_caratula||'<FchResol></FchResol>'||chr(10);	
-				v_caratula:=v_caratula||'<NroResol></NroResol>'||chr(10);
+				v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);
+				v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
 				v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DDTHH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
 				v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			else
@@ -170,8 +171,8 @@ BEGIN
 				v_caratula:=v_caratula||chr(10)||'<SetDTE ID="ID'||get_json('RUT_EMISOR',json2)||'_'||get_json('TIPO_DTE',json2)||'_'||get_json('FOLIO',json2)||'">'||chr(10)||'<Caratula version="1.0">'||chr(10)||'<RutEmisor>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEmisor>'||chr(10);
 				v_caratula:=v_caratula||'<RutEnvia>'||get_json('RUT_EMISOR',json2)||'-'||modulo11(get_json('RUT_EMISOR',json2))||'</RutEnvia>'||chr(10);
 				v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
-				v_caratula:=v_caratula||'<FchResol></FchResol>'||chr(10);	
-				v_caratula:=v_caratula||'<NroResol></NroResol>'||chr(10);
+				v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);	
+				v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
 				v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DDTHH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
 				v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			end if;

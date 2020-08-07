@@ -53,8 +53,6 @@ DECLARE
         nuevas_referencias              varchar;
         record1                         record;
 	aux1	varchar;
-	tipo_aux1       varchar;
-        folio_aux1      varchar;
 BEGIN
 	xml2:=xml1;
 	xml_c := reglas.parseo_datos(xml2);
@@ -97,19 +95,10 @@ BEGIN
 			xml2 := put_campo(xml2, 'RUT_USUARIO_ACCION', get_campo('RUT_USUARIO_ACCION', xml_c));
 			xml2 := logapp(xml2, 'RUT_USUARIO_ACCION-->>>>>'|| get_campo('RUT_USUARIO_ACCION',xml2));
 
-			--DAO 20200713 - Si no es ENTEL(nro_cuenta) buscamos por rut,tipo,folio
-			if aux1!='' then
-				tipo_aux1:=get_campo('TIPO_DTE',xml2);
-                                folio_aux1:=get_campo('FOLIO',xml2);
-                                select id_referencia_facturacion into v_id_referencia_facturacion from referencia_facturacion where rut_emisor=v_rut_emisor and rut_receptor=v_rut_receptor and periodo=v_periodo1 and coalesce(nro_cuenta,'')<>'' limit 1;
-                                if not found then
-                                        select id_referencia_facturacion into v_id_referencia_facturacion from referencia_facturacion where rut_emisor=v_rut_emisor and rut_receptor=v_rut_receptor and periodo=v_periodo1 and tipo_dte=tipo_aux1 and folio=folio_aux1 limit 1;
-                                end if;
-			else
-				select id_referencia_facturacion into v_id_referencia_facturacion
-				from referencia_facturacion
-				where rut_emisor=v_rut_emisor and rut_receptor=v_rut_receptor and nro_cuenta=v_nro_cuenta and periodo=v_periodo1 limit 1;
-			end if;
+                        select id_referencia_facturacion into v_id_referencia_facturacion
+                        from referencia_facturacion
+                        where rut_emisor=v_rut_emisor and rut_receptor=v_rut_receptor and nro_cuenta=v_nro_cuenta and periodo=v_periodo1 limit 1;
+
                         if found then
                                 xml2 := logapp(xml2, 'Tiene referencias cargadas');
                                 xml_referencias := '';
@@ -130,24 +119,13 @@ BEGIN
 					end if;
 	                                xml_referencias := xml_referencias || '</Referencia>';
                                 end loop;
-                                xml2 := logapp(xml2, 'Referencias a agregar: ' || xml_referencias||' RUT_USUARIO_ACCION='||get_campo('RUT_USUARIO_ACCION',xml2));
+                                xml2 := logapp(xml2, 'Referencias a agregar: ' || xml_referencias);
                                 xml2 := put_campo(xml2, 'ADD_REFERENCIAS', xml_referencias);
 				--xml2 := put_campo(xml2, 'INPUT_REF',get_campo('INPUT',xml2));
                                 xml2 := put_campo(xml2, '__SECUENCIAOK__', '35');
                         else
-				--DAO 20200713 Dado que las referencias se suben luego de retenido el doc. Marcamos que ya se retuvo una vez y lo dejamos en la cola
-				if strpos(get_campo('XML_FLAGS',xml2),'RETENIDO1VEZ-')=0 then
-					xml2 := put_campo(xml2,'MENSAJE_XML_FLAGS','RETENIDO1VEZ-'||get_campo('FECHA_INGRESO_COLA',xml2));
-					xml2 := put_campo(xml2,'__FECHA_FUTURO_COLA__',get_campo('FECHA_RETENCION_CONTROLLER',xml_c));
-					xml2 := put_campo(xml2, 'RUT_USUARIO_ACCION', get_campo('RUT_USUARIO_ACCION', xml_c));
-					--Seteamos que ponga el dte a futuro
-					xml2 := put_campo(xml2,'__RETIENE_DTE__','SI');
-					xml2 := put_campo(xml2, '__SECUENCIAOK__', '0');
-				else
-					--DAO 20200713 si ya fue retenido una vez y no encontramos las referencias, emitimos
-                                	xml2 := logapp(xml2, 'No tiene referencias cargadas, se emite el documento');
-                                	xml2 := put_campo(xml2,'__SECUENCIAOK__', '40');
-				end if;
+                                xml2 := logapp(xml2, 'No tiene referencias cargadas, se emite el documento');
+                                xml2 := put_campo(xml2,'__SECUENCIAOK__', '40');
                         end if;
                 else
 			 -- 20180806 AVC

@@ -458,7 +458,7 @@ if json_dte['impuestos'] != None:
         monto_otros_impuestos += int(otro_impuesto['MONTO'])
 impuesto_devengo = {}
 impuesto_devengo['codigo'] = '1'
-impuesto_devengo['monto'] = str(json_dte['monto_neto']+json_dte['monto_excento'])
+impuesto_devengo['monto'] = str(json_dte['monto_neto'])
 impuesto_devengo['montoImpuesto'] = str(int(json_dte['monto_iva']) + monto_otros_impuestos)
 # FGE - 20200630 - Revision por reversa y NC/ND
 if str(json_devengo['tipo_dte']) == '61':
@@ -472,13 +472,8 @@ if str(json_devengo['tipo_dte']) == '0':
     if str(json_dte['tipo_dte']) != '61':
         #impuesto_devengo['monto'] = int(impuesto_devengo['monto']) * -1
         impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1 
-
-if str(json_dte['tipo_dte']) == '33':
-    impuesto.append(impuesto_devengo)
-    impuestos['impuesto'] = impuesto
-else:
-    impuestos['impuesto'] = []
-
+impuesto.append(impuesto_devengo)
+impuestos['impuesto'] = impuesto
 if json_devengo['contabilizar_iva'] == 'Y' or json_devengo['contabiliza_referencia'] == 'Y':
     impuestos['contabilizaImpuestos'] = 'true'
 else:

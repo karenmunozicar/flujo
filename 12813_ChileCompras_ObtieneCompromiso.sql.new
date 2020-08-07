@@ -75,11 +75,12 @@ begin
         json2:=put_json(json2,'__SECUENCIAOK__','12813');
         if v_tipo='COM' then
                 json2:=get_parametros_motor_json(json2,'OBTIENECOMPROMISOS_CHC');
+                json2:=put_json(json2,'URI_MS','chilecompras/obtienecompromiso');
         else
                 json2:=get_parametros_motor_json(json2, 'OBTIENEREQUERIMIENTOS_CHC');
+                json2:=put_json(json2,'URI_MS','chilecompras/obtienerequerimiento');
         end if;
-        json2:=put_json(json2,'HOST_MS',get_json('__IP_CONEXION_CLIENTE__', json2));
-        json2:=put_json(json2,'URI_MS',get_json('PARAMETRO_RUTA', json2));
+        json2:=put_json(json2,'HOST_MS','servicios-cert.acepta.com');
         json2:=put_json(json2,'__TIMEOUT_SERV_PXML__','100');
         json2:=put_json(json2,'DATA_JSON',encode_hex(json3::varchar));
         json2:=put_json(json2,'LARGO_JSON',(length(encode_hex(json3::varchar))/2)::varchar);
@@ -320,7 +321,7 @@ if 1==1:
                         #json_out['tipoDemanda'] = json1['compromiso']['tipoDemanda']
                         # FGE - 20200712 - Info del tipo de demanda si no se encuentra suponemos que es tipo 01
                         if 'tipoDemanda' in json1['compromiso']:
-			    json_out['tipoDemanda'] = str(json1['compromiso']['tipoDemanda'])
+			    json_out['tipoDemanda'] = json1['compromiso']['tipoDemanda']
                         else:
                             json_out['tipoDemanda'] = '01'
 

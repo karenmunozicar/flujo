@@ -164,6 +164,7 @@ declare
 
     v_campo             record;
 	xml3	varchar;
+	v_resp_oc           json;
 begin
     json2:=json1;
     v_id_solicitud:=get_json('id_solicitud', json2)::bigint;
@@ -198,7 +199,8 @@ begin
         xml3:=put_campo(xml3,'COMENTARIO2','Aplica Regla RCS');
 	xml3:=graba_bitacora(xml3,'CONTROLLER');
     else
-        perform mp_ingresa_oc(v_respuesta::json);
+        --perform mp_ingresa_oc(v_respuesta::json);
+	v_resp_oc:=mp_ingresa_oc(v_respuesta::json);
 
         ---  PONER LOGICA DE RC ---
         v_rut_emisor:=replace(split_part(get_campo('RUT_RECEPTOR_DV', v_campo.xml2), '-', 1), '.', '')::integer;
@@ -229,8 +231,8 @@ begin
     if (datos_wf is not null) then
         update dte_recibidos set data_dte=put_data_dte(data_dte,'WF_TAREA_ACTUAL',get_json('wf_desc_tarea_actual',datos_wf)) where codigo_txel=v_codigo_txel;
     end if;
-
-    json2:=response_requests_6000('1', '', '', json2);
+    json2:=response_requests_6000('1', 'Completado Exitosamente, OC Recibidas: ' || get_json('num_oc', v_resp_oc) || ', RC Recibidas: ' || get_json('num_rc', v_resp_oc), '', json2);
+    --json2:=response_requests_6000('1', '', '', json2);
     return json2;
 end;
 $function$ language plpgsql;

@@ -46,6 +46,13 @@ BEGIN
 
 	json2 := logjson(json2,'F 13795 Rut firma-->'|| v_rut_firma); 		
 
+	if v_rut_firma='' and v_rut_emisor_int='96697410' then
+		if (select count(*) from rut_firma_clave where rut_emisor=v_rut_emisor_int)=1 then
+			json2 := logjson(json2,'Buscamos en rut_firma_clave dado que v_rut_firma vacio '||get_json('URI_IN', json2));
+			json2:=put_json(json2,'RUT_USUARIO_ACCION',(select rut_firmante from rut_firma_clave where rut_emisor=v_rut_emisor_int)::varchar);
+        		v_rut_firma := get_json('RUT_USUARIO_ACCION', json2);
+		end if;
+	end if;
 --        select rut_firmante, decode(clave, 'hex')  into v_rut_firma, v_clave from rut_firma_clave where rut_emisor=v_rut_emisor::integer ;
         select decode(clave, 'hex') into v_clave from rut_firma_clave where rut_emisor=v_rut_emisor_int and rut_firmante=v_rut_firma;
         if not found then
@@ -152,6 +159,7 @@ BEGIN
 			--FAY 20190602 si lo encuentra
 			v_data:=get_json('data',jaux);
 			json2 := put_json(json2, 'INPUT', get_campo('INPUT', v_data));
+			json2:=logjson(json2,'RUT_USUARIO_ACCION v_data='||get_campo('RUT_USUARIO_ACCION',v_data));
 		end if;
 	end if;	
 
@@ -167,6 +175,7 @@ BEGIN
 	v_clave := corrige_pass(v_clave);
 	json2 := put_json(json2, 'rut_firma', v_rut_firma);
 */	
+	json2:=logjson(json2,'RUT_USUARIO_ACCION json2='||get_json('RUT_USUARIO_ACCION',json2));
 	if get_json('RUT_USUARIO_ACCION',json2) ='' then
 		json2 := logjson(json2, 'Pisamos el RUT_USUARIO_ACCION con el de la cola');
 		json2 := put_json(json2, 'RUT_USUARIO_ACCION', get_campo('RUT_USUARIO_ACCION', v_data));

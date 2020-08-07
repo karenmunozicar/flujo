@@ -388,7 +388,8 @@ BEGIN
 
 	--json2:=logjson(json2,'DND - Verificamos '||get_json('RUT_RECEPTOR',json2));
 	--DAO 20180418 Para RUTs que estan con el DND antiguo
-	if (get_json('RUT_RECEPTOR',json2) in ('78549950','90703000','90266000','76041871')) then
+	--MDA 20200806 se da de baja la insercion en la base de mordor
+	/*if (get_json('RUT_RECEPTOR',json2) in ('78549950','90703000','90266000','76041871')) then
 		json2:=logjson(json2,'DND - Encolamos el Insert a Mordor'); 
                 xml3:=put_campo('','TX','8060');
                 xml3:=put_campo(xml3,'CATEGORIA','DND');
@@ -407,7 +408,7 @@ BEGIN
 			json2:=put_json(json2,'__SECUENCIAOK__','1000');
 			return json2;
 		end if;
-	end if;
+	end if;*/
 	json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
 	json2:=put_json(json2,'__SECUENCIAOK__','1000');
 	return json2;

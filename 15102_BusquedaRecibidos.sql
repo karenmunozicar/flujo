@@ -785,7 +785,7 @@ BEGIN
 	end if; 
         if(vin_tipo_fecha='recepcion_sii') then
                 select * into rc from rc_no_autorizados where rut_emisor=rut1::integer;
-                if found then
+                if found and get_json('gubernamental',json2)<>'S' then
 			--Verificamos si tiene la nueva recepcion consolidada
 			select flag_rcv_rconsolidao into rc from maestro_clientes where rut_emisor=rut1::integer and flag_rcv_rconsolidao is not null;
 			if not found then

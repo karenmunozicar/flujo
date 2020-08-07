@@ -52,7 +52,6 @@ DECLARE
 	json3	json;
 	query1	varchar;
 	id1	bigint;
-	flag1	boolean;
 BEGIN
     xml2:=xml1; 
     --POr defecto paramos la ejecucion
@@ -94,7 +93,7 @@ BEGIN
  	xml2:=logapp(xml2,'Reporte_consolidado_datos_recibidos '||rutEmisor1||' '||tipodoc1||' '||folio1||' '||montototal1||' '||fechaEmitido1||' '||fechaRecepcion1||' '||rutReceptor1);
 	perform logfile_rc('Reporte_consolidado_datos_recibidos '||rutEmisor1||' - '||tipodoc1||' - '||folio1||' - '||montototal1||' - '||fechaEmitido1||' - '||fechaRecepcion1||' - '||rutReceptor1);
 	--Validar si son integer
-	if( is_number(rutEmiSDV) is false or is_number(rutRecSDV) is false or is_number(tipodoc1) is false or is_number(folio1) is false or is_numeric(montototal1) is false) then
+	if( is_number(rutEmiSDV) is false or is_number(rutRecSDV) is false or is_number(tipodoc1) is false or is_number(folio1) is false) then
 		--xml2:=logapp(xml2,'Reporte consolidado _DOEMPRUT '||rutEmisor1);
  	        --xml2:=logapp(xml2,'Reporte consolidado _TIPDOC '||tipodoc1);
        		--xml2:=logapp(xml2,'Reporte consolidado _DORFOL '||folio1);
@@ -118,15 +117,8 @@ BEGIN
 	
 	--consulta si el documento esta informado en cuadratura
 	--FAY-DAO2018-0419 Si el dte detectado tiene ademas la misma fecha de emision y el mismo monto, entonces podemos marcar el ASI
-	--select * into stDteRecibido from dte_recibidos where rut_emisor=rutEmiSDV::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer and rut_receptor=rutRecSDV::integer and fecha_emision=split_part(fechaEmitido1,' ',1) and monto_total=montototal1::bigint;
-	--FAY-DAO 20200611 buscamos por rut tipo folio debido a algunas inconsistencias del RC
-	select * into stDteRecibido from dte_recibidos where rut_emisor=rutEmiSDV::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer;
-	flag1:=False;
-	if found then
-		flag1:=True;
-	end if;
-	--Si no lo encuentro o tiene algun dato distinto, lo insertamos
-	if not flag1 or (stDteRecibido.rut_receptor<>rutRecSDV::integer or stDteRecibido.fecha_emision<>split_part(fechaEmitido1,' ',1) or stDteRecibido.monto_total<>montototal1::bigint) then
+	select * into stDteRecibido from dte_recibidos where rut_emisor=rutEmiSDV::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer and rut_receptor=rutRecSDV::integer and fecha_emision=split_part(fechaEmitido1,' ',1) and monto_total=montototal1::bigint;
+	if not found then
 		--xml2:=logapp(xml2,'RC No existe en dte_recibidos');
 		perform logfile_rc('RC No existe en dte_recibidos');
 		--Si el documento ya esta, se ignora
@@ -167,19 +159,7 @@ BEGIN
         	xml3:=put_campo(xml3,'FECHA_RECEPCION_SII',fechaRecepcion1::varchar);
 		xml3:=put_campo(xml3,'MONTO_TOTAL',montototal1::varchar);	
 	        xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Documento Existe en SII y no Recibido en Acepta.'||chr(10)||'Recepción SII:'||fechaRecepcion1);
-		BEGIN
-			insert into dte_pendientes_recibidos (fecha_ingreso,tipo_dte,folio,fecha_emision,fecha_recepcion_sii,dia_recepcion_sii,rut_emisor,rut_receptor,nombre_emisor,monto_total,dia,dia_emision,data_dte,uri) values (now(),tipodoc1::integer,folio1::bigint,fechaEmitido1,fechaRecepcion1,to_char(fechaRecepcion1::timestamp,'YYYYMMDD')::integer,rutEmisor1,split_part(rutReceptor1,'-',1)::bigint,(select nombre from contribuyentes where rut_emisor=rutEmiSDV::bigint),montototal1::bigint,to_char(now(),'YYYYMMDD')::integer,split_part(replace(fechaEmitido1,'-',''),' ',1)::integer,trackid1,uri1) returning id into id_pend1;
-		EXCEPTION WHEN OTHERS THEN
-			xml2:=logapp(xml2,'Falla Insert datos invalidos');
-			respuesta1:='<b>FALLA</b>';
-           		status1:='Status: 444 NK'||chr(10)||
-			 'Content-type: text/html'||chr(10)||
-			 'Content-length: '||length(respuesta1)||chr(10)||chr(10)||respuesta1;
-        		xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
-	        	xml2:=put_campo(xml2,'RESPUESTA',status1);
-			xml2:=sp_procesa_respuesta_cola_motor(xml2);
-			return xml2;
-		END;
+		insert into dte_pendientes_recibidos (fecha_ingreso,tipo_dte,folio,fecha_emision,fecha_recepcion_sii,dia_recepcion_sii,rut_emisor,rut_receptor,nombre_emisor,monto_total,dia,dia_emision,data_dte,uri) values (now(),tipodoc1::integer,folio1::bigint,fechaEmitido1,fechaRecepcion1,to_char(fechaRecepcion1::timestamp,'YYYYMMDD')::integer,rutEmisor1,split_part(rutReceptor1,'-',1)::bigint,(select nombre from contribuyentes where rut_emisor=rutEmiSDV::bigint),montototal1::bigint,to_char(now(),'YYYYMMDD')::integer,split_part(replace(fechaEmitido1,'-',''),' ',1)::integer,trackid1,uri1) returning id into id_pend1;
 		xml3:=put_campo(xml3,'ID_PENDIENTE',id_pend1::varchar);
         	xml3:=put_campo(xml3,'EVENTO','DNR');
 		xml3:=graba_bitacora(xml3,'DNR');
@@ -196,24 +176,6 @@ BEGIN
 
 		--Revisamos si existe al menos 1 regla con filtro fecha_sii e insertamos en las colas hacia el futuro
 		rut_receptor1:=split_part(rutReceptor1,'-',1)::bigint;
-
-		if (flag1 and coalesce(stDteRecibido.estado_sii,'') in ('ACEPTADO_POR_EL_SII','ACEPTADO_CON_REPAROS_POR_EL_SII')) then
-			xml2:=logapp(xml2,'DTE ya esta en dte recibidos con otro monto,fecha,rut_rec');
-                        perform logfile_rc('DTE ya esta en dte recibidos con otro monto,fecha,rut_rec');
-			xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Ya existe otro documento con otros datos(Recepción Consolidada)');
-			xml3:=graba_bitacora(xml3,'ERROR_DTE');
-			xml2:=logapp(xml2,get_campo('_LOG_',xml3));
-                        --Salgo
-                        respuesta1:='DTE ya se encuentra aceptado';
-                        status1:='Status: 200 OK'||chr(10)||
-                                 'Content-type: application/json;charset=UTF-8;'||chr(10)||
-                         'Content-length: '||length(respuesta1)||chr(10)||chr(10)||respuesta1;
-                         xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
-                         xml2:=put_campo(xml2,'RESPUESTA',status1);
-                        xml2:=sp_procesa_respuesta_cola_motor(xml2);
-                        return xml2;
-		end if;
-
 		--FAY-DAO 2018-11-20 REcorremos todas las reglas que tengan ese filtro para evaluarlas de forma individual en el futuro
 		for campo in select * from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII' loop
 		--select * into campo from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII';
@@ -334,17 +296,7 @@ BEGIN
 
 		--se inserta en la tabla cuando fue exitoso el ultimo evento ISI
 		rutEmiSDV:=split_part(get_campo('RUT_EMISOR',xml2),'-',1);
-		BEGIN
-			insert into dte_pendientes_recibidos (fecha_ingreso,tipo_dte,folio,fecha_emision,fecha_recepcion_sii,rut_emisor,rut_receptor,nombre_emisor,monto_total,dia,dia_emision) select now(),get_campo('TIPO_DTE',xml2),get_campo('FOLIO',xml2),get_campo('FECHA_EMI',xml2),get_campo('FECHA_REC_SII',xml2),get_campo('RUT_EMISOR',xml2),split_part(get_campo('RUT_RECEPTOR',xml2),'-',1)::bigint,name,get_campo('MONTO_TOTAL',xml2),replace(get_campo('FECHA_EMI',xml2),'-','')::integer,to_char(now(),'YYYYMMDD')::integer from recipient_traza_historico where rut=rutEmiSDV::bigint limit 1;
-		EXCEPTION WHEN OTHERS THEN
-			xml2:=logapp(xml2,'Falla Insert datos invalidos');
-			respuesta1:='<b>FALLA</b>';
-           		status1:='Status: 444 NK'||chr(10)||
-			 'Content-type: text/html'||chr(10)||
-			 'Content-length: '||length(respuesta1)||chr(10)||chr(10)||respuesta1;
-			xml2:=put_campo(xml2,'RESPUESTA',status1||chr(10)||respuesta1);
-			RETURN xml2;
-		END;
+		insert into dte_pendientes_recibidos (fecha_ingreso,tipo_dte,folio,fecha_emision,fecha_recepcion_sii,rut_emisor,rut_receptor,nombre_emisor,monto_total,dia,dia_emision) select now(),get_campo('TIPO_DTE',xml2),get_campo('FOLIO',xml2),get_campo('FECHA_EMI',xml2),get_campo('FECHA_REC_SII',xml2),get_campo('RUT_EMISOR',xml2),split_part(get_campo('RUT_RECEPTOR',xml2),'-',1)::bigint,name,get_campo('MONTO_TOTAL',xml2),replace(get_campo('FECHA_EMI',xml2),'-','')::integer,to_char(now(),'YYYYMMDD')::integer from recipient_traza_historico where rut=rutEmiSDV::bigint limit 1;
 	   respuesta1:='<b>OK</b>';
 	   status1:='Status: 200 OK'||chr(10)||
                  'Content-type: text/html'||chr(10)||

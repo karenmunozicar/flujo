@@ -41,19 +41,12 @@ begin
     v_descripcion_devengo:=coalesce(get_json('descripcion_devengo', json2), '');
     v_catalogo_propio:=get_json('catalogo_propio', json2);
     v_catalogo_propio_inversion:=get_json('catalogo_propio_inversion', json2);
- 
-    raise notice '12814 -> v_codigo_dv: %', v_codigo_dv;
 
-    if v_codigo_dv in ('0', '') then
+
+    if v_codigo_dv = '' then
 	v_id_solicitud:=nullif(get_json('id_solicitud', json2), '')::bigint;
-        -- FGE - 20200723 - Mejoramos la parte de busqueda de codigo_dv, validamos el select y devolvemos error si no se encuentra
 	select get_xml('CODIGO_DEVENGO', data_dte),codigo_txel::varchar into v_codigo_dv,cod1 from dte_recibidos where codigo_txel = (select get_campo('CODIGO_TXEL', xml2) from workflow_controller where id_solicitud = v_id_solicitud)::bigint;
-        if found then
-	    json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
-        else
-            json2:=response_requests_6000('2', 'Imposible localizar el codigo devengo', '', json2);
-            return json2;
-        end if;
+	json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
     end if;
     json2:=put_json(json2,'LLAMA_FLUJO','NO');
 
@@ -458,7 +451,7 @@ if json_dte['impuestos'] != None:
         monto_otros_impuestos += int(otro_impuesto['MONTO'])
 impuesto_devengo = {}
 impuesto_devengo['codigo'] = '1'
-impuesto_devengo['monto'] = str(json_dte['monto_neto']+json_dte['monto_excento'])
+impuesto_devengo['monto'] = str(json_dte['monto_neto'])
 impuesto_devengo['montoImpuesto'] = str(int(json_dte['monto_iva']) + monto_otros_impuestos)
 # FGE - 20200630 - Revision por reversa y NC/ND
 if str(json_devengo['tipo_dte']) == '61':
@@ -472,13 +465,8 @@ if str(json_devengo['tipo_dte']) == '0':
     if str(json_dte['tipo_dte']) != '61':
         #impuesto_devengo['monto'] = int(impuesto_devengo['monto']) * -1
         impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1 
-
-if str(json_dte['tipo_dte']) == '33':
-    impuesto.append(impuesto_devengo)
-    impuestos['impuesto'] = impuesto
-else:
-    impuestos['impuesto'] = []
-
+impuesto.append(impuesto_devengo)
+impuestos['impuesto'] = impuesto
 if json_devengo['contabilizar_iva'] == 'Y' or json_devengo['contabiliza_referencia'] == 'Y':
     impuestos['contabilizaImpuestos'] = 'true'
 else:

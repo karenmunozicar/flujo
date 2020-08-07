@@ -41,19 +41,12 @@ begin
     v_descripcion_devengo:=coalesce(get_json('descripcion_devengo', json2), '');
     v_catalogo_propio:=get_json('catalogo_propio', json2);
     v_catalogo_propio_inversion:=get_json('catalogo_propio_inversion', json2);
- 
-    raise notice '12814 -> v_codigo_dv: %', v_codigo_dv;
 
-    if v_codigo_dv in ('0', '') then
+
+    if v_codigo_dv = '' then
 	v_id_solicitud:=nullif(get_json('id_solicitud', json2), '')::bigint;
-        -- FGE - 20200723 - Mejoramos la parte de busqueda de codigo_dv, validamos el select y devolvemos error si no se encuentra
 	select get_xml('CODIGO_DEVENGO', data_dte),codigo_txel::varchar into v_codigo_dv,cod1 from dte_recibidos where codigo_txel = (select get_campo('CODIGO_TXEL', xml2) from workflow_controller where id_solicitud = v_id_solicitud)::bigint;
-        if found then
-	    json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
-        else
-            json2:=response_requests_6000('2', 'Imposible localizar el codigo devengo', '', json2);
-            return json2;
-        end if;
+	json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
     end if;
     json2:=put_json(json2,'LLAMA_FLUJO','NO');
 
@@ -165,8 +158,8 @@ begin
     json2:=put_json(json2,'LLAMA_FLUJO','SI');
     json2:=put_json(json2,'__SECUENCIAOK__','12814');
     json2:=get_parametros_motor_json(json2,'REGISTRADEVENGO_CHC');
-    json2:=put_json(json2,'HOST_MS',get_json('__IP_CONEXION_CLIENTE__', json2));
-    json2:=put_json(json2,'URI_MS',get_json('PARAMETRO_RUTA', json2));
+    json2:=put_json(json2,'HOST_MS','servicios.acepta.com');
+    json2:=put_json(json2,'URI_MS','chilecompra/registradevengo');
     json2:=put_json(json2,'DATA_JSON',encode_hex(v_json_devengo_sigfe::varchar));
     json2:=put_json(json2,'LARGO_JSON',(length(encode_hex(v_json_devengo_sigfe::varchar))/2)::varchar);
 
@@ -274,8 +267,8 @@ devengos = []
 devengo = {}
 catalogos_imputados = {"imputacion": []}
 devengo['id'] = json_devengo['codigo_dv']
-devengo['titulo'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['titulo'])[:79] 
-devengo['descripcion'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['descripcion'])[:249]
+devengo['titulo'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['titulo']) 
+devengo['descripcion'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['descripcion'])
 devengo['origenTransaccion'] = 'VERTICALES_DTE'
 # Documentos
 documentos = {}
@@ -302,7 +295,7 @@ if json_devengo['tipo_dte'] != 0:
     documento_devengo['fechaIngreso'] = fecha_ingreso
 if json_devengo['tipo_dte'] in [33, 34]:
     documento_devengo['fechaRecepcionConforme'] = fecha_recepcion_conforme
-documento_devengo['descripcion'] = json_devengo['descripcion'][:249]
+documento_devengo['descripcion'] = json_devengo['descripcion']
 #documento_devengo['fechaRecepcionConforme'] = json_dte['fecha_sii'][:10]
 if str(json_devengo['codigo_oc']) <> '' and str(json_devengo['codigo_oc']) != 'None':
     documento_devengo['numeroOrdenCompra'] = str(json_devengo['codigo_oc'])
@@ -349,8 +342,7 @@ transaccion = []
 transaccion_lista = []
 for cuenta in json_devengo_detalle:
     transaccion_temp = None
-    #if json_devengo['tipo_dte'] <> 0:
-    if 1==1:
+    if json_devengo['tipo_dte'] <> 0:
         for transaccion in transaccion_lista:
             if cuenta['tipo_detalle'] == 2:
                 if transaccion['folio'] == cuenta['folio'] and transaccion['tipo'] == str(cuenta['tipo_detalle']) and transaccion['idAgrupacionDeReferencia'] == cuenta['cod_combinacion']:
@@ -458,27 +450,10 @@ if json_dte['impuestos'] != None:
         monto_otros_impuestos += int(otro_impuesto['MONTO'])
 impuesto_devengo = {}
 impuesto_devengo['codigo'] = '1'
-impuesto_devengo['monto'] = str(json_dte['monto_neto']+json_dte['monto_excento'])
+impuesto_devengo['monto'] = str(json_dte['monto_neto'])
 impuesto_devengo['montoImpuesto'] = str(int(json_dte['monto_iva']) + monto_otros_impuestos)
-# FGE - 20200630 - Revision por reversa y NC/ND
-if str(json_devengo['tipo_dte']) == '61':
-    # FGE - 20200707 - Ajuste para el json de nc
-    del impuesto_devengo['codigo']
-    del impuesto_devengo['monto']
-    impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1
-if str(json_devengo['tipo_dte']) == '0':
-    del impuesto_devengo['monto']
-    impuesto_devengo['codigo'] = '' 
-    if str(json_dte['tipo_dte']) != '61':
-        #impuesto_devengo['monto'] = int(impuesto_devengo['monto']) * -1
-        impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1 
-
-if str(json_dte['tipo_dte']) == '33':
-    impuesto.append(impuesto_devengo)
-    impuestos['impuesto'] = impuesto
-else:
-    impuestos['impuesto'] = []
-
+impuesto.append(impuesto_devengo)
+impuestos['impuesto'] = impuesto
 if json_devengo['contabilizar_iva'] == 'Y' or json_devengo['contabiliza_referencia'] == 'Y':
     impuestos['contabilizaImpuestos'] = 'true'
 else:
@@ -619,5 +594,4 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
-
 

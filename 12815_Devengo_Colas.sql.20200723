@@ -56,7 +56,7 @@ begin
         v_rut_receptor_devengo:=get_campo('RUT_EMISOR',xml2);
         v_cod_oc:=get_campo('DP_COD_OC',xml2);
 	-- FGE - 20200617 - Revisamos si podemos obtener la OC si faltase
-        if v_cod_oc = '' or not v_cod_oc ~ '\d+\-\d+\-(CM|SE|MC|AG|D1|CC)\d{2}' then
+        if v_cod_oc = '' or not v_cod_oc ~ '\d+\-\d+\-(CM|SE|MC|AG)\d{2}' then
         	select dp_obtiene_oc_flujo(get_xml('ID_SOLICITUD_WF', data_dte)) into v_cod_oc from dte_recibidos where codigo_txel = v_codigo_txel::bigint;
         end if;
 
@@ -276,13 +276,9 @@ begin
 
         resp1:=get_json('RESPUESTA_COLA',json2);
         if (resp1<>'OK') then
-                -- FGE - 20200723 - Vamos a reintentar en lugar de pasarlo a manual
-                json2:=logjson(json2,'no trae respuesta de 12813, volvemos a intentar despues en dp_devengo para codigo_dv='||cod_devengo_num1::varchar);
-                json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
-                return sp_procesa_respuesta_cola_motor_json(json2);
-                -- json2:=logjson(json2,'Falla Servicio en Flujo 12813, Devengo Manual');
-                -- json2:=put_json(json2,'__SECUENCIAOK__','1000');
-                -- return json2;
+                json2:=logjson(json2,'Falla Servicio en Flujo 12813, Devengo Manual');
+                json2:=put_json(json2,'__SECUENCIAOK__','1000');
+                return json2;
         end if;
 
         --Se validan la cantidad de registros grabados en dp_devengo_detalle para el devengo. Si hay mas de uno, es Manual.
@@ -415,5 +411,4 @@ begin
         --return json2;
 end;
 $$ LANGUAGE plpgsql;
-
 

@@ -78,7 +78,7 @@ begin
 				insert into send_mail_detalle(id,fecha_ingreso,dia,estado) values (campo_aux.id,now(),to_char(now(),'YYYYMMDD')::integer,get_json('EVENTO',json2)) returning id_detalle into id_detalle1;
 			end loop;
 			--json2:=logjson(json2,'EVENTO_LMA_ENTEL'||uri1||' ID='||id_detalle1::varchar);
-			json2:=put_json(json2,'RESPUESTA','Status: 302 Found'||chr(10)||'Location: http://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
+			json2:=put_json(json2,'RESPUESTA','Status: 302 Found'||chr(10)||'Location: https://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
 			json2:=put_json(json2,'__SECUENCIAOK__','0');
 			RETURN json2;
     	end if;
@@ -117,7 +117,7 @@ begin
 
     --Se contesta OK para que se borre el evento
     if get_json('EVENTO',json2) = 'LMA' then
-    	json2:=put_json(json2,'RESPUESTA','Status: 302 Found'||chr(10)||'Location: http://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
+    	json2:=put_json(json2,'RESPUESTA','Status: 302 Found'||chr(10)||'Location: https://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
     else
     	json2:=put_json(json2,'RESPUESTA','Status: 200 OK'||chr(10)||
 		 'Content-type: text/html; charset=iso-8859-1'||chr(10)||
@@ -413,7 +413,7 @@ BEGIN
 		 'Vary: Accept-Encoding'||chr(10)||chr(10));
 		if get_campo('EVENTO',xml2) = 'LMA' then
 			xml2:=put_campo(xml2,'RESPUESTA','Status: 302 Found'||chr(10)||
-                	 'Location: http://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
+                	 'Location: https://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
 		end if;
                 return xml2;
         end if;
@@ -426,7 +426,7 @@ BEGIN
                 'Vary: Accept-Encoding'||chr(10)||chr(10));
 	if get_campo('EVENTO',xml2) = 'LMA' then
 		xml2:=put_campo(xml2,'RESPUESTA','Status: 302 Found'||chr(10)||
-               	 'Location: http://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
+               	 'Location: https://traza.acepta.com/imgs/blank.png'||chr(10)||chr(10));
 
 	end if;
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
