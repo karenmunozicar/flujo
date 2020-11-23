@@ -188,6 +188,7 @@ BEGIN
                         json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','2');
                 else
                         json2:=put_json(json2,'QUERY_DATA','SELECT array_to_json(array_agg(row_to_json(sql))) FROM (select '||campos1||' from '||from_where_rds1||')sql ');
+			json2:=logjson(json2,'QUERY='||get_json('QUERY_DATA',json2));
                         json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
                 end if;
                 json2:=put_json(json2,'__TIMEOUT_SERV_PXML__','10');
@@ -374,6 +375,7 @@ declare
 	accion_compartir        json;
         accion_reenviar         json;
         accion_ver_doc          json;
+	filtro1	varchar;
 BEGIN
         json2:=json1;
         rutUsuario1:=get_json('rutUsuario',json2);
@@ -404,34 +406,43 @@ BEGIN
         categoria1:=campo.categoria;
         rut1:=get_json('rutUsuario',json2)::bigint;
 
+	filtro1:='';
+	if get_json('host_canal',json2)<>'portal.casilladigital.com' then
+		if get_json('host_canal',json2)='portal.casilladigital.cl' then
+			filtro1:=' and (pais is null or pais='''' or pais='''||split_part(get_json('host_canal',json2),'portal.casilladigital.',2)||''') ';
+		else
+			filtro1:=' and pais='''||split_part(get_json('host_canal',json2),'portal.casilladigital.',2)||''' ';
+		end if;
+	end if;
+
         json2:=put_json(json2,'EJECUTO_LOCAL','SI');
         json2:=put_json(json2,'EJECUTO_RDS','SI');
         if(categoria1='BOLETAS_DIRECTV') then
                 json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' desde as info__from__off,to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__on,case when fecha_vencimiento is null or fecha_vencimiento='''' then ''Sin Fecha'' else to_char(cd_format_fecha_vcto(fecha_vencimiento),''YYYY/MM/DD HH24:MI'') end as info__fecha_vcto__on, nro_cliente as info__nro_de_suscriptor__on,case when strpos(monto,''$'')>0 then replace(monto,''$'',''$ '') else formatea_monto(monto) end as info__monto_a_pagar__on, categoria as info__categoria__off,id as info__id__off,(''[''||'''||accion_reenviar::varchar||','||accion_compartir::varchar||',''||replace('''||accion_ver_doc::varchar||''',''###HREF###'',replace(coalesce(url,url_html,url_text),''\\/'',''/''))||'']'')::json as DROPDOWN__ACCIONES__ON '));
-                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from  cd_lista_mail where rut='''||rut1::varchar||''') x where dia>='||get_json('periodo_hasta_rds',json2)||' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+                json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' (select * from  cd_lista_mail where rut='''||rut1::varchar||''') x where dia>='||get_json('periodo_hasta_rds',json2)||' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
                 --json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
-                json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+                json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
         else
                 --Para DEMO en empresa ACEPTA
                 if get_json('rutCliente',json2)='1096919050' then 
-                        json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
-                        json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+                        json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
+                        json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
                         json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' desde as info__from__off,to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__on,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,categoria as info__categoria__off,''Acepta'' as info__de__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,id as info__id__off, (''[''||'''||accion_reenviar::varchar||','||accion_compartir::varchar||',''||replace('''||accion_ver_doc::varchar||''',''###HREF###'',replace(coalesce(url,url_html,url_text),''\\/'',''/''))||'']'')::json as DROPDOWN__ACCIONES__ON '));
                 -- para la carpeta legal el usuario esta en el campo nro_cliente y se busca en otra tabla y la empresa viene en cpt
                 elsif get_json('host_canal',json2)='legal.casilladigital.cl' then       
                         empresa1:=get_json('cpt',json2);
-                        json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_carpeta_legal where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||empresa1::varchar||''' and nro_cliente='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
-                        json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_carpeta_legal where rut='''||empresa1::varchar||''' and nro_cliente='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+                        json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_carpeta_legal where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||empresa1::varchar||''' and nro_cliente='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
+                        json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_carpeta_legal where rut='''||empresa1::varchar||''' and nro_cliente='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
                         json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' desde as info__from__off,to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__on,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,categoria as info__categoria__off,desde as info__de__on, coalesce(decode_utf8_amz(subject),caption_usuario,''-'')||''__''||coalesce(url,url_html,url_text) as urlbutton__documento__on,coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,id as info__id__off '));
                 else
 			if get_json('rutCliente',json2)='89802200' then
-				json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
-				json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+				json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
+				json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
 			else
-				json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
-				json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 order by fecha desc'));
+				json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail where dia>='||get_json('periodo_hasta_rds',json2)||' and rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
+				json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail where rut='''||rut1::varchar||''' and categoria='''||categoria1||''' and size>300 '||filtro1||' order by fecha desc'));
 			end if;
-                        json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' desde as info__from__off,to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__on,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,categoria as info__categoria__off,desde as info__de__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,id as info__id__off , (''[''||'''||accion_reenviar::varchar||','||accion_compartir::varchar||',''||replace('''||accion_ver_doc::varchar||''',''###HREF###'',replace(coalesce(url,url_html,url_text),''\\/'',''/''))||'']'')::json as DROPDOWN__ACCIONES__ON '));
+                        json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' desde as info__from__off,to_char(case when pais=''pe'' then fecha at time zone ''america/santiago'' at time zone ''america/lima'' else fecha end,''YYYY/MM/DD HH24:MI'') as info__fecha__on,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,categoria as info__categoria__off,desde as info__de__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,id as info__id__off , (''[''||'''||accion_reenviar::varchar||','||accion_compartir::varchar||',''||replace('''||accion_ver_doc::varchar||''',''###HREF###'',replace(coalesce(url,url_html,url_text),''\\/'',''/''))||'']'')::json as DROPDOWN__ACCIONES__ON '));
                 end if;
         end if;
         return json2;
@@ -484,8 +495,8 @@ BEGIN
 		json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail join cd_compartidos b on cd_lista_mail.id=b.id_mail and cd_lista_mail.rut=b.casilla_from  where b.casilla_from='''||rut1::varchar||''' order by fecha desc '));
 		json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__off,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,rut_empresa||''-''||modulo11(rut_empresa::varchar) as info__empresa__off,cd_lista_mail.categoria as info__categoria__off,desde as info__de__off, case when categoria_envio=''COMPARTIR'' then b.casilla_to||''-''||modulo11(b.casilla_to::varchar) else lista_mail end as info__compartido_para__on,to_char(b.dia_desde,''YYYY/MM/DD HH24:MI'') as info__compartido_desde__on,to_char(b.dia_hasta,''YYYY/MM/DD HH24:MI'') as info__compartido_hasta__on,b.categoria as info__categoria_documento__off, categoria_envio as info__categoria__on, coalesce(decode_utf8_amz(subject),caption_usuario,''-'')||''__''||coalesce(url,url_html,url_text) as urlbutton__documento__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,cd_lista_mail.id as info__id__off '));
 	else
-		json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail join cd_compartidos b on cd_lista_mail.id=b.id_mail and cd_lista_mail.rut=b.casilla_from and now()>=b.dia_desde and now()<=b.dia_hasta where b.casilla_to='''||rut1::varchar||''' order by fecha desc'));
-		json2:=put_json(json2,'__FW_RDS__',encode_hex(' cd_lista_mail join cd_compartidos b on cd_lista_mail.id=b.id_mail and cd_lista_mail.rut=b.casilla_from and now()>=b.dia_desde and now()<=b.dia_hasta where b.casilla_to='''||rut1::varchar||''' order by fecha desc'));
+		json2:=put_json(json2,'__FW_LOCAL__',encode_hex(' cd_lista_mail join cd_compartidos b on cd_lista_mail.id=b.id_mail and cd_lista_mail.rut=b.casilla_from and now()::timestamp at time zone ''UTC'' at time zone ''america/santiago'' >=b.dia_desde and now()::timestamp at time zone ''UTC'' at time zone ''america/santiago''<=b.dia_hasta where b.casilla_to='''||rut1::varchar||''' order by fecha desc'));
+		json2:=put_json(json2,'__FW_RDS__',encode_hex(' (select * from cd_compartidos where casilla_to='''||rut1::varchar||''') b join cd_lista_mail on cd_lista_mail.id=b.id_mail and cd_lista_mail.rut=b.casilla_from and now()::timestamp at time zone ''UTC'' at time zone ''america/santiago''>=b.dia_desde and now()::timestamp at time zone ''UTC'' at time zone ''america/santiago''<=b.dia_hasta where b.casilla_to='''||rut1::varchar||''' order by fecha desc'));
 		json2:=put_json(json2,'__CAMPOS_BUSQUEDA__',encode_hex(' to_char(fecha,''YYYY/MM/DD HH24:MI'') as info__fecha__off,periodo as info__periodo__off, fecha_vencimiento as info__fecha_pago__off,rut_empresa||''-''||modulo11(rut_empresa::varchar) as info__empresa__off,cd_lista_mail.categoria as info__categoria__off,desde as info__de__off,b.casilla_from||''-''||modulo11(b.casilla_from::varchar) as info__compartido_por__on,to_char(b.dia_desde,''YYYY/MM/DD HH24:MI'') as info__compartido_desde__on,to_char(b.dia_hasta,''YYYY/MM/DD HH24:MI'') as info__compartido_hasta__on,b.categoria as info__categoria_documento__off, coalesce(decode_utf8_amz(subject),caption_usuario,''-'')||''__''||coalesce(url,url_html,url_text) as urlbutton__documento__on, coalesce(caption_usuario,replace(replace(replace(filename,chr(10),''''),chr(13),''''),chr(9),''''),subject) as info__doc__off,'''' as info__nuevo_nombre__off,titulo as info__empresa__off,cd_lista_mail.id as info__id__off '));
 	end if;
         return json2;

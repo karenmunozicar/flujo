@@ -60,6 +60,7 @@ BEGIN
         if (strpos(decode(get_json('texto_html',j1),'hex')::varchar,'directv')>0) then
 		json2:=logjson(json2,'Ejecutamos funcion de directv');
 		j3:=finput_directv(put_json(j3,'texto_html',get_json('texto_html',j1)));
+		json2:=logjson(json2,get_json('_LOG_',j3));
 		if get_json('STATUS_XML',j3)='FALLA' then
 			json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
                 	json2:=sp_procesa_respuesta_cola_motor_original_json(json2);

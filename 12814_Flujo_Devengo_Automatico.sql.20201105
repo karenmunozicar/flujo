@@ -31,9 +31,9 @@ declare
     v_json_devengo_sigfe      json;
     v_json_rc                 json;
     v_id_solicitud bigint;
-        cod1    varchar;
-        v_iva_pantalla            varchar;
-        v_catalogo_propio_inversion  varchar;
+	cod1	varchar;
+	v_iva_pantalla            varchar;
+	v_catalogo_propio_inversion  varchar;
 begin
     json2:=json1;
     v_codigo_dv:=coalesce(get_json('codigo_dv', json2), '0');
@@ -41,15 +41,15 @@ begin
     v_descripcion_devengo:=coalesce(get_json('descripcion_devengo', json2), '');
     v_catalogo_propio:=get_json('catalogo_propio', json2);
     v_catalogo_propio_inversion:=get_json('catalogo_propio_inversion', json2);
-
+ 
     raise notice '12814 -> v_codigo_dv: %', v_codigo_dv;
 
     if v_codigo_dv in ('0', '') then
-        v_id_solicitud:=nullif(get_json('id_solicitud', json2), '')::bigint;
+	v_id_solicitud:=nullif(get_json('id_solicitud', json2), '')::bigint;
         -- FGE - 20200723 - Mejoramos la parte de busqueda de codigo_dv, validamos el select y devolvemos error si no se encuentra
-        select get_xml('CODIGO_DEVENGO', data_dte),codigo_txel::varchar into v_codigo_dv,cod1 from dte_recibidos where codigo_txel = (select get_campo('CODIGO_TXEL', xml2) from workflow_controller where id_solicitud = v_id_solicitud)::bigint;
+	select get_xml('CODIGO_DEVENGO', data_dte),codigo_txel::varchar into v_codigo_dv,cod1 from dte_recibidos where codigo_txel = (select get_campo('CODIGO_TXEL', xml2) from workflow_controller where id_solicitud = v_id_solicitud)::bigint;
         if found then
-            json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
+	    json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
         else
             json2:=response_requests_6000('2', 'Imposible localizar el codigo devengo', '', json2);
             return json2;
@@ -83,10 +83,10 @@ begin
     update dp_devengo set contabilizar_iva = case when v_iva_pantalla = 'on' then true else false end where codigo_dv = v_codigo_dv::bigint;
 
     if get_json('STATUS', v_completitud) = 'NK' then
-        if cod1 is null then
-                select dte_codigo_txel into cod1 from dp_devengo where codigo_dv = v_codigo_dv::bigint;
-        end if;
-        update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = cod1::bigint;
+	if cod1 is null then
+        	select dte_codigo_txel into cod1 from dp_devengo where codigo_dv = v_codigo_dv::bigint;
+	end if;
+	update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = cod1::bigint;
         json2:=response_requests_6000('2', get_json('ERRORES', v_completitud), '', json2);
         return json2;
     end if;
@@ -106,7 +106,7 @@ begin
 
     if v_reg_devengo.tipo_dte in (0, 56, 61) and coalesce(v_reg_devengo.ref_codigo_dv::varchar, '') <> '' then
         --select to_char(to_date(fecha_emision, 'YYYY-MM-DD') + interval '30 days', 'YYYY-MM-DD') into v_fecha_cumplimiento from dte_recibidos where codigo_txel = (select dte_codigo_txel from dp_devengo where codigo_dv = v_reg_devengo.ref_codigo_dv)::bigint;
-        select to_char(fecha_sii::date + interval '30 days', 'YYYY-MM-DD') into v_fecha_cumplimiento from dte_recibidos where codigo_txel = (select dte_codigo_txel::bigint from dp_devengo where codigo_dv = v_reg_devengo.ref_codigo_dv);
+	select to_char(fecha_sii::date + interval '30 days', 'YYYY-MM-DD') into v_fecha_cumplimiento from dte_recibidos where codigo_txel = (select dte_codigo_txel::bigint from dp_devengo where codigo_dv = v_reg_devengo.ref_codigo_dv);
         select case when contabilizar_iva = true then 'Y' else 'N' end, id_documento_ajustado, id_agrupacion_ajustada, folio, tipo_dte into v_contabiliza_iva, v_id_documento_ajustado, v_id_agrupacion_ajustada, v_ref_folio, v_ref_tipo_dte from dp_devengo where codigo_dv = v_reg_devengo.ref_codigo_dv;
     end if;
 
@@ -240,8 +240,8 @@ elif fecha_recepcion_conforme < fecha_ingreso:
         escribe_log("fecha_recepcion_conforme < fecha_ingreso")
         fecha_recepcion_conforme = fecha_ingreso
 #FGE - 20200131 - Evito que Fecha RC sea del ejercicio anterior
-if fecha_recepcion_conforme < datetime.date.strftime(datetime.datetime.now().replace(month=1, day=1), '%Y-%m-%d'):
-        fecha_recepcion_conforme = datetime.date.strftime(datetime.datetime.now().replace(month=12, day=31), '%Y-%m-%d')
+if fecha_recepcion_conforme < datetime.date.strftime(datetime.datetime.now().replace(month=1, day=1), '%Y-%m-%d'):	
+	fecha_recepcion_conforme = datetime.date.strftime(datetime.datetime.now().replace(month=12, day=31), '%Y-%m-%d')
 
 escribe_log("Fecha="+str(fecha)+" fecha_ingreso="+str(fecha_ingreso)+" fecha_recepcion_conforme="+str(fecha_recepcion_conforme))
 
@@ -274,7 +274,7 @@ devengos = []
 devengo = {}
 catalogos_imputados = {"imputacion": []}
 devengo['id'] = json_devengo['codigo_dv']
-devengo['titulo'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['titulo'])[:79]
+devengo['titulo'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['titulo'])[:79] 
 devengo['descripcion'] = re.sub(r'[^\x20-\x7f\x0d\x1b\xf1\xd1]', '', json_devengo['descripcion'])[:249]
 devengo['origenTransaccion'] = 'VERTICALES_DTE'
 # Documentos
@@ -370,16 +370,8 @@ for cuenta in json_devengo_detalle:
             transaccion_temp['idAgrupacionDeReferencia'] = cuenta['cod_combinacion']
 
         if json_devengo['tipo_dte'] in [0, 56, 61]:
-            # FGE - 20201002 - Correccion para NC con multiples compromisos / requerimientos
-            if json_devengo['tipo_dte'] <> 0:
-                if cuenta['tipo_detalle'] == 2:
-                    transaccion_temp['folio'] = cuenta['folio']
-                else:
-                    transaccion_temp['folio'] = cuenta['requerimiento']
             # FGE - 20190621 - Agrego campos para la NC / ND
-            transaccion_temp['tipo'] = str(cuenta['tipo_detalle'])
-            transaccion_temp['idAgrupacionDeReferencia'] = cuenta['cod_combinacion'] 
-            transaccion_temp['idAgrupacionAjustada'] = cuenta['id_agrupacion_ajustada']   
+            transaccion_temp['idAgrupacionAjustada'] = cuenta['id_agrupacion_ajustada']
         transaccion_temp['agrupacionesDeImputacionesACatalogos'] = {'agrupacion': []}
         transaccion_lista.append(transaccion_temp)
 
@@ -440,16 +432,10 @@ for cuenta in json_devengo_detalle:
         if catalogo_found == 'false' and cuenta['catalogo_tipo'] != '' and cuenta['catalogo_tipo'] != '':
             catalogos_imputados['imputacion'].append({"catalogo": cuenta['catalogo_tipo'], "elemento": cuenta['cod_catalogo']})
 
-        # FGE - 20200616 - Agregamos catalogo iniciativaInversion
+	# FGE - 20200616 - Agregamos catalogo iniciativaInversion
         if json_devengo['flag_catalogo_propio'] == 'S':
             transaccion_temp['agrupacionesDeImputacionesACatalogos']['agrupacion'][0]['imputacionesACatalogosDeReagrupacion']['imputacion'].append({"catalogo": 'iniciativaInversion', "elemento": json_devengo['catalogo_propio_inversion']})
-            catalogos_imputados['imputacion'].append({"catalogo": 'iniciativaInversion', "elemento": json_devengo['catalogo_propio_inversion']})
-
-# FGE - 20201113 - Sacamos el tipo y folio de las NC y ND y reversas
-if json_devengo['tipo_dte'] in [0, 56, 61]:
-    for trx_temp in transaccion_lista:
-        del trx_temp['folio']
-        del trx_temp['tipo']
+	    catalogos_imputados['imputacion'].append({"catalogo": 'iniciativaInversion', "elemento": json_devengo['catalogo_propio_inversion']})
 
 transacciones_previas['transaccion'] = transaccion_lista
 ####################################################################
@@ -476,21 +462,18 @@ impuesto_devengo['monto'] = str(json_dte['monto_neto']+json_dte['monto_excento']
 impuesto_devengo['montoImpuesto'] = str(int(json_dte['monto_iva']) + monto_otros_impuestos)
 # FGE - 20200630 - Revision por reversa y NC/ND
 if str(json_devengo['tipo_dte']) == '61':
-    # # FGE - 20200707 - Ajuste para el json de nc
-    # del impuesto_devengo['codigo']
-    # del impuesto_devengo['monto']
-    # FGE - 20201104 - Se declaran impuestos, pero vacios
-    impuesto_devengo['codigo'] = ''
-    impuesto_devengo['monto'] = ''
+    # FGE - 20200707 - Ajuste para el json de nc
+    del impuesto_devengo['codigo']
+    del impuesto_devengo['monto']
     impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1
 if str(json_devengo['tipo_dte']) == '0':
     del impuesto_devengo['monto']
-    impuesto_devengo['codigo'] = ''
+    impuesto_devengo['codigo'] = '' 
     if str(json_dte['tipo_dte']) != '61':
         #impuesto_devengo['monto'] = int(impuesto_devengo['monto']) * -1
-        impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1
+        impuesto_devengo['montoImpuesto'] = int(impuesto_devengo['montoImpuesto']) * -1 
 
-if str(json_dte['tipo_dte']) in ['33', '61']:
+if str(json_dte['tipo_dte']) == '33':
     impuesto.append(impuesto_devengo)
     impuestos['impuesto'] = impuesto
 else:
@@ -591,7 +574,7 @@ begin
         perform dp_act_estado_devengo(v_codigo_dv::bigint, 'EN_PROCESO', '');
         update dp_devengo set ticket_id = v_track_id, fecha_creacion = now(), fecha_emision = now() where codigo_dv = v_codigo_dv::bigint;
         update dte_recibidos set data_dte = put_data_dte(data_dte, 'TICKET_DEVENGO', v_track_id) where codigo_txel = v_dte_codigo_txel::bigint;
-        select codigo_rc, codigo_oc, rut_emisor, rut_receptor, dte_codigo_txel, tipo_devengo from dp_devengo where codigo_dv = v_codigo_dv::bigint into v_reg_devengo;
+        select codigo_rc, codigo_oc, rut_emisor, rut_receptor, dte_codigo_txel from dp_devengo where codigo_dv = v_codigo_dv::bigint into v_reg_devengo;
 
         select folio, tipo_dte, uri from dte_recibidos where codigo_txel = v_reg_devengo.dte_codigo_txel::bigint into v_reg_dte;
 
@@ -608,12 +591,7 @@ begin
         xml3:=put_campo(xml3,'TIPO_DTE', v_reg_dte.tipo_dte::varchar); --'52');
         xml3:=put_campo(xml3,'CANAL','RECIBIDOS');
         xml3:=put_campo(xml3,'URI_IN', v_reg_dte.uri); -- 'http://pruebasacepta1705.acepta.com/v01/00000000000000_1721614117_1812593659_72_?k=71954f57f2bdbaf140312c054a6513a1');
-        -- FGE - 20201102 - Adicion del rut que envia el devengo
-        if v_reg_devengo.tipo_devengo = 'MAN' then
-            xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id || ', Enviado por: ' || get_json('rutUsuario', json2));
-        else
-            xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id || ', Devengo Automatico');
-        end if;
+        xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id);
         xml3:=put_campo(xml3,'EVENTO','ENVIO_DEVENGO');
         xml3:=graba_bitacora(xml3,'ENVIO_DEVENGO');
     elsif v_descripcion = 'Periodo No Abierto' then
@@ -641,4 +619,5 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
+
 

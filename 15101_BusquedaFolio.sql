@@ -49,9 +49,9 @@ insert into isys_querys_tx values ('15101','140',25,1,'$$QUERY_DATA$$',0,0,0,9,1
 --Base Local Emitidos Errores
 insert into isys_querys_tx values ('15101','150',9,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
 --Base Colas (Encolados)
-insert into isys_querys_tx values ('15101','160',1901,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
+insert into isys_querys_tx values ('15101','160',1913,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
 insert into isys_querys_tx values ('15101','170',1914,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
-insert into isys_querys_tx values ('15101','180',1913,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
+--insert into isys_querys_tx values ('15101','180',1901,1,'$$QUERY_DATA$$',0,0,0,9,1,15,15);
 
 
 CREATE or replace FUNCTION pivote_15101(json) RETURNS json AS $$
@@ -104,6 +104,10 @@ begin
 	json2:=put_json(json2,'TOTAL_RES_JSON','');
 	json2:=put_json(json2,'RES_JSON_1','');
 	--Saco la anterior 
+	--DAO 20201110 Si viene el flag nos saltamos la busqueda en la tabla de errores
+	if (get_json('CONTADOR_SECOK',json2)='140' and get_json('busca_errores',json2)='NO') then
+		json2:=put_json(json2,'CONTADOR_SECOK','160');
+	end if;
 	
 	if (get_json('CONTADOR_SECOK',json2) in ('30') and get_json('FLAG_OC',json2)<>'SI') then
 		json5:=decode_hex(get_json('JSON5',json2))::json;
@@ -256,25 +260,17 @@ begin
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Colas');
 		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS');
 	elsif (get_json('CONTADOR_SECOK',json2)='170') then
-                /*json5:=decode_hex(get_json('JSON5',json2))::json;
-		query2:=decode_hex(get_json('QUERY_PATRON',json2));
-   	     	query1:=remplaza_tags_json_c(json5,query1);
-	        json2:=put_json(json2,'QUERY_DATA',query1);
-                json2:=put_json(json2,'JSON5',encode_hex(json5::varchar));*/
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Colas (Encolados) 14');
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Colas 14');
 		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS');
+	/*
 	elsif (get_json('CONTADOR_SECOK',json2)='180') then
-                /*json5:=decode_hex(get_json('JSON5',json2))::json;
-		query2:=decode_hex(get_json('QUERY_PATRON',json2));
-   	     	query1:=remplaza_tags_json_c(json5,query1);
-	        json2:=put_json(json2,'QUERY_DATA',query1);
-                json2:=put_json(json2,'JSON5',encode_hex(json5::varchar));*/
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Colas (Encolados) 14');
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Colas 14');
 		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS');
+	*/
 	--Finalmente
-	elsif (get_json('CONTADOR_SECOK',json2)='190' or get_json('FLAG_OC',json2)='SI') then
+	elsif (get_json('CONTADOR_SECOK',json2)='180' or get_json('FLAG_OC',json2)='SI') then
 		json2:=put_json(json2,'__SECUENCIAOK__','0');
 		 --Si no es nulo el resultado, cuente.
 		if (get_json('v_out_resultado',json2)='') then 
@@ -662,6 +658,9 @@ BEGIN
 	end if;
 	json5:=put_json(json5,'FILTRO_FECHA','');
         query1:=remplaza_tags_json_c(json5,query2);
+
+--	json2:=logjson(json2,'CONSULTA COMPLETA-->'||query1);
+
 	json2:=put_json(json2,'QUERY_DATA',query1);
 	json2:=put_json(json2,'QUERY_DATA_HEX',encode_hex(query1));
 	json2:=put_json(json2,'QUERY_PATRON',encode_hex(query2));

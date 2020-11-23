@@ -46,11 +46,13 @@ BEGIN
         end if;
         	
 	json2:=put_json(json2,'LLAMA_FLUJO','SI');
-	if (get_json('rutUsuario',json2)='17597643') then
-		json2:=put_json(json2,'__SECUENCIAOK__','14730');
-	else
-		json2:=put_json(json2,'__SECUENCIAOK__','14710');
-	end if;
+	--if (get_json('rutUsuario',json2)='17597643') then
+	--	json2:=put_json(json2,'__SECUENCIAOK__','14730');
+	--else
+	--DAO 20201020 todos vamos a la 14730
+	--json2:=put_json(json2,'__SECUENCIAOK__','14710');
+	json2:=put_json(json2,'__SECUENCIAOK__','14730');
+	--end if;
 	return json2;
 END;
 $$ LANGUAGE plpgsql;
@@ -101,11 +103,11 @@ BEGIN
                 return json2;
         end if;
         json2:=put_json(json2,'LLAMA_FLUJO','SI');
-	if (get_json('rutUsuario',json2)='17597643') then
-		json2:=put_json(json2,'__SECUENCIAOK__','14730');
-	else
-		json2:=put_json(json2,'__SECUENCIAOK__','14710');
-	end if;
+	--if (get_json('rutUsuario',json2)='17597643') then
+	--	json2:=put_json(json2,'__SECUENCIAOK__','14730');
+	--else
+	json2:=put_json(json2,'__SECUENCIAOK__','14710');
+	--end if;
 	return json2;
 
 END;
@@ -274,6 +276,9 @@ BEGIN
         	        json5:=select_suma_emision_actual_14710(json2);
 	                if (json5 is not null) then
         	                lista_bol:=suma_json2(lista_bol,json5,'["count"]','["tipo_dte"]');
+				if get_json('rutUsuario',json2)='17597643' then
+					perform logfile('QUERY_14710 '||lista_bol::varchar||' '||json5::varchar||' '||lista_bol::varchar);
+				end if;
                 	end if;
 		end if;
         end if;
@@ -887,6 +892,9 @@ BEGIN
 	        	--query1:='select array_to_json(array_agg(row_to_json(sql))) from (select '||monto_cantidad1||',tipo_dte::varchar from dte_boletas_generica where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2 order by 1) sql';
 			--FAY dia1 es hoy que se guarda en la tabla de boletas diarias
 	        	query1:='select array_to_json(array_agg(row_to_json(sql))) from (select '||monto_cantidad1||',tipo_dte::varchar from dte_boletas_diarias where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2 order by 1) sql';
+			if get_json('rutUsuario',json2)='17597643' then
+				perform logfile('QUERY_14710 '||query1);
+			end if;
 	else
 		--Si es un error (cuadro1 o cuadro2) 
 		--perform logfile('evento_tot='||get_json('evento_tot',json2)||' '||get_json('flag_excepciones',json2));
@@ -1288,6 +1296,9 @@ BEGIN
 	        query1:='select sum(monto_total) as count,tipo_dte from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2';
 	else
 	        query1:='select count(*),tipo_dte from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2';
+		if get_json('rutUsuario',json2)='17597643' then
+			perform logfile('QUERY_14710 '||query1);
+		end if;
 	end if;
 
         json_par1:=get_parametros_motor_json('{}','BASE_REDSHIFT_BOLETAS');

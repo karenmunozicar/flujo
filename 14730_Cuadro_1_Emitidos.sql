@@ -362,8 +362,8 @@ BEGIN
 				json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 			elsif (evento_tot1='Aceptados') then
 				if(get_json('estado_sii',json_aux1) in ('ACEPTADO_CON_REPAROS_POR_EL_SII')) then
-					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_sii',json_aux1) in ('ACEPTADO_POR_EL_SII')) then
 					json_resp:=put_json(json_resp,texto1,(get_json(texto1,json_resp)::bigint+get_json('count',json_aux1)::bigint)::varchar);
@@ -375,28 +375,28 @@ BEGIN
 					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_CON_NOTIFICACION_TECNICA'))  then
-					json_resp3:=put_json(json_resp3,texto1,(get_json(texto1,json_resp3)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp3:=put_json(json_resp3,'total',(get_json('total',json_resp3)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp3:=put_json(json_resp3,texto1,(get_json(texto1,json_resp3)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp3:=put_json(json_resp3,'total',(get_json('total',json_resp3)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_POR_SERVIDOR_CORREO'))  then
-					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_inter',json_aux1) in ('RECHAZADO_CON_NOTIFICACION_COMERCIAL'))  then
-					json_resp2:=put_json(json_resp2,texto1,(get_json(texto1,json_resp2)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp2:=put_json(json_resp2,'total',(get_json('total',json_resp2)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp2:=put_json(json_resp2,texto1,(get_json(texto1,json_resp2)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp2:=put_json(json_resp2,'total',(get_json('total',json_resp2)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_nar',json_aux1) in ('RECHAZO_DE_CONTENIDO_DE_DOCUMENTO'))  then
-					json_resp4:=put_json(json_resp4,texto1,(get_json(texto1,json_resp4)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp4:=put_json(json_resp4,'total',(get_json('total',json_resp4)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp4:=put_json(json_resp4,texto1,(get_json(texto1,json_resp4)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp4:=put_json(json_resp4,'total',(get_json('total',json_resp4)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_reclamo',json_aux1) in ('RECLAMO_FALTA_TOTAL_DE_MERCADERIA'))  then
-					json_resp5:=put_json(json_resp5,texto1,(get_json(texto1,json_resp5)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp5:=put_json(json_resp5,'total',(get_json('total',json_resp5)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp5:=put_json(json_resp5,texto1,(get_json(texto1,json_resp5)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp5:=put_json(json_resp5,'total',(get_json('total',json_resp5)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_reclamo',json_aux1) in ('RECLAMO_FALTA_PARCIAL_DE_MERCADERIA'))  then
-					json_resp6:=put_json(json_resp6,texto1,(get_json(texto1,json_resp6)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp6:=put_json(json_resp6,'total',(get_json('total',json_resp6)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp6:=put_json(json_resp6,texto1,(get_json(texto1,json_resp6)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp6:=put_json(json_resp6,'total',(get_json('total',json_resp6)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 			elsif (tipo_dte1 not in ('110','111','112','39','41') and evento_tot1='Pendientes') then
 				if (get_json('estado_inter',json_aux1) in ('ENVIADO_POR_INTERCAMBIO','ENTREGA_DE_DTE_POR_INTERCAMBIO_EXITOSA')) then
@@ -404,8 +404,8 @@ BEGIN
 					json_resp:=put_json(json_resp,'total',(get_json('total',json_resp)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 				if (get_json('estado_sii',json_aux1) in ('PROCESADO_POR_EL_SII','ENVIADO_AL_SII','')) then
-					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
-					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::integer+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,texto1,(get_json(texto1,json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
+					json_resp1:=put_json(json_resp1,'total',(get_json('total',json_resp1)::bigint+get_json('count',json_aux1)::bigint)::varchar);
 				end if;
 			--DAO Agregamos los Documentos Rechazados por ACEPTA
 			elsif (evento_tot1='Rechazados por Acepta' and estado1 in ('NOTA_CREDITO_SIN_REFERENCIA','NOTA_CREDITO_REFERENCIA_RECHAZADA')) then

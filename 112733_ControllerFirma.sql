@@ -164,7 +164,7 @@ BEGIN
 				v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
 				v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);
 				v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
-				v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DDTHH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
+				v_caratula:=v_caratula||'<TmstFirmaEnv>'||replace(to_char(now(),'YYYY-MM-DD HH24:MI:SS'),' ','T')||'</TmstFirmaEnv>'||chr(10);	
 				v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			else
 				v_caratula := '<EnvioDTE version="1.0" xmlns="http://www.sii.cl/SiiDte" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sii.cl/SiiDte EnvioDTE_v10.xsd">';
@@ -173,7 +173,7 @@ BEGIN
 				v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
 				v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);	
 				v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
-				v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DDTHH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
+				v_caratula:=v_caratula||'<TmstFirmaEnv>'||replace(to_char(now(),'YYYY-MM-DD HH24:MI:SS'),' ','T')||'</TmstFirmaEnv>'||chr(10);	
 				v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			end if;
 			json3:=put_json(json3,'caratula_hex_ini',encode(v_caratula::bytea,'hex')::varchar);

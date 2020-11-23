@@ -5,12 +5,13 @@ delete from isys_querys_tx where llave='6000';
 insert into isys_querys_tx values ('6000',5,9,16,'LOG_JSON',0,0,0,1,1,10,10);
 --insert into isys_querys_tx values ('6000',5,9,1,'select log_generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,10);
 
-insert into isys_querys_tx values ('6000',10,9,1,'select generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
+insert into isys_querys_tx values ('6000',10,9,1,'/*$$__JSONCOMPLETO__["tipo_tx","app_dinamica"]$$*/ select generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 --Para Test
 insert into isys_querys_tx values ('6000',12,9,1,'select generico10k_6000_test(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 insert into isys_querys_tx values ('6000',13,1,3,'Llamada a 6002 de Test',6002,0,0,0,0,0,0);
 
-insert into isys_querys_tx values ('6000',15,9,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
+--Se registra y se contesta el timeout
+insert into isys_querys_tx values ('6000',15,19,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 
 
 --Parser XML Emitir
@@ -456,7 +457,12 @@ BEGIN
 			end if;
 		end if; 
 		--2017-12-26 DAO-FAY se agregan los campos flag_ como funcionalidades del escritorio
-		funcionalidad1:=get_json('FUNCIONALIDAD',json_menu1)||' '||get_json('FUNCIONALIDADES_MAESTRO',json2);
+		BEGIN
+			funcionalidad1:=get_json('FUNCIONALIDAD',json_menu1)||' '||get_json('FUNCIONALIDADES_MAESTRO',json2)||' '||get_json('funcionalidades_persona',get_json_index(stSesion.json_menu,0)::json);
+		EXCEPTION WHEN OTHERS THEN
+			json2:=logjson(json2,'Falla cargar funcionalidades_persona '||coalesce(stSesion.json_menu::varchar,'NULO'));
+			funcionalidad1:=get_json('FUNCIONALIDAD',json_menu1)||' '||get_json('FUNCIONALIDADES_MAESTRO',json2);
+		END;
 		json2:=put_json(json2,'FUNCIONALIDAD',funcionalidad1);
 		json2:=logjson(json2,'Funcionalidad '||coalesce(funcionalidad1,''));
 	end if;

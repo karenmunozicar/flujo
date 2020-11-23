@@ -84,7 +84,6 @@ BEGIN
                	xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
 		return xml2;
 	end if;
-	--perform logfile('DAO_SII_EMI '||get_first_key_json(get_first_key_json(json_out::varchar)));
 	--Verificamos si el envio fue aceptado
 	--j1:=get_first_key_json(json_out::varchar);
 	xml2:=logapp(xml2,'Json '||j4::varchar);
@@ -123,7 +122,6 @@ BEGIN
 	while n1::varchar<>'' loop
 		j1:=n1::json;
 		xml2:=logapp(xml2,'Procesando J1='||j1::varchar);
-		perform logfile('16102: '||l::varchar||' Proceso');
 
 		evento1:=null;
 		if (get_json('INFORMADOS',j1)='') then
@@ -158,7 +156,6 @@ BEGIN
 			aux:=get_json_index(lista1::json,i);
 			-- recorro los Documentos Pendientes
 			while length(aux)>0 loop
-				perform logfile('16102: '||i::varchar||' Recorro');
 				if(get_json('TIPO_DOCTO',j1)<>get_json('TIPO_DTE',aux::json)) then
 					i:=i+1;
 					aux:=get_json_index(lista1::json,i);
@@ -178,7 +175,6 @@ BEGIN
 					tx1:='30';
                 			cola1:=nextval('id_cola_procesamiento');
                 			nombre_tabla1:='cola_motor_'||cola1::varchar;
-					--perform logfile('16102: '||i::varchar||' graba en cola88');
 					if (evento1 in ('CSI','ASI')) then
 						query1:=query1||' insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria,nombre_cola) values ( now(),'||quote_literal(lower_dominio_uri(get_json('URI',aux::json)))||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(get_campo('RUT_EMISOR',xml2))||',''NO'',''REENVIO_INTER'','||quote_literal(nombre_tabla1)||');';
 					end if;
@@ -189,7 +185,6 @@ BEGIN
 						return xml2;
 					end if;
 					*/
-					--perform logfile('16102: '||i::varchar||' fin graba en cola88');
 				else
 					xml2:=logapp(xml2,'Intercambio ya enviado');
 				end if;

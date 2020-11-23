@@ -4,18 +4,22 @@ delete from isys_querys_tx where llave='8010';
 insert into isys_querys_tx values ('8010',10,1,8,'Publica DTE',112704,0,0,0,0,20,20);
 
 -- Prepara llamada al AML
-insert into isys_querys_tx values ('8010',20,45,1,'select proc_procesa_input_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1010);
+--20201027 Se cambia la secuencia de error a las 1005 para que si falla no envie el mandato
+insert into isys_querys_tx values ('8010',20,45,1,'select proc_procesa_input_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
 
 --Reglas de Validacion Base ACM
 insert into isys_querys_tx values ('8010',600,7,1,'select reglas.validacion_lista(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Reglas de BASE_1_LOCAL
 insert into isys_querys_tx values ('8010',610,1,1,'select reglas.validacion_lista(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
-insert into isys_querys_tx values ('8010',28,1,1,'select proc_procesa_input_dte_8010_parte2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1010);
+--20201027 Se cambia la secuencia de error a las 1005 para que si falla no envie el mandato
+insert into isys_querys_tx values ('8010',28,1,1,'select proc_procesa_input_dte_8010_parte2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
 
 --Borra o Actualiza el contenido de la cola API MOTOR
 insert into isys_querys_tx values ('8010',1000,45,1,'select sp_procesa_respuesta_cola_motor_original(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
---Se ejecuta en la 88 API COLAS
+--20201027 Secuencia para aumentar reintentos en caso de error
+insert into isys_querys_tx values ('8010',1005,19,1,'select sp_procesa_respuesta_cola_motor(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
+--Ejecuta la respuesta para borrar y envia el mandato en el caso de las boletas
 insert into isys_querys_tx values ('8010',1010,19,1,'select proc_verifica_fin_dte88_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
 
 --Llamada al Flujo de Publicacion
@@ -194,7 +198,7 @@ BEGIN
 	
     --FAY-DAO 2018-03-13 PAra soportar el CONTROLLER PRE-EMISION
     if (get_campo('__RETIENE_DTE__',xml2)='SI') then
-	xml2:=logapp(xml2,'Retiene DTE');
+	xml2:=logapp(xml2,'Retiene DTE MENSAJE_XML_FLAGS='||get_campo('MENSAJE_XML_FLAGS',xml2));
 	xml2:=put_campo(xml2,'RESPUESTA','Status: 555 NK');
 	xml2 := pivote_borrado_8010(xml2);
 	return xml2;

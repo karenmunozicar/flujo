@@ -17,6 +17,8 @@ insert into isys_querys_tx values ('112704',2017,33,1,'select proxy_traza_amazon
 insert into isys_querys_tx values ('112704',2018,46,1,'select proxy_traza_amazon_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###URI_IN[]=$$URI_IN$$###TABLA_TRAZA[]=$$TABLA_TRAZA$$###'') as __xml__',0,0,0,1,1,-1,0);
 --Traza 2019
 insert into isys_querys_tx values ('112704',2019,49,1,'select proxy_traza_amazon_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###URI_IN[]=$$URI_IN$$###TABLA_TRAZA[]=$$TABLA_TRAZA$$###'') as __xml__',0,0,0,1,1,-1,0);
+--Traza 2020
+insert into isys_querys_tx values ('112704',2020,50,1,'select proxy_traza_amazon_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###URI_IN[]=$$URI_IN$$###TABLA_TRAZA[]=$$TABLA_TRAZA$$###'') as __xml__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('112704',20,1,1,'select proc_consulta_publicacion_112704_2(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###'') as __xml__',0,0,0,1,1,-1,0);
 
@@ -137,6 +139,7 @@ BEGIN
                         else
 				--DAO 20200713 Dado que las referencias se suben luego de retenido el doc. Marcamos que ya se retuvo una vez y lo dejamos en la cola
 				if strpos(get_campo('XML_FLAGS',xml2),'RETENIDO1VEZ-')=0 then
+					xml2 := logapp(xml2, 'RETENIDO1VEZ-');
 					xml2 := put_campo(xml2,'MENSAJE_XML_FLAGS','RETENIDO1VEZ-'||get_campo('FECHA_INGRESO_COLA',xml2));
 					xml2 := put_campo(xml2,'__FECHA_FUTURO_COLA__',get_campo('FECHA_RETENCION_CONTROLLER',xml_c));
 					xml2 := put_campo(xml2, 'RUT_USUARIO_ACCION', get_campo('RUT_USUARIO_ACCION', xml_c));
@@ -347,7 +350,7 @@ BEGIN
     end if;
 
     --Saco los parametros del publicador para usarlos posteriormente.
-    xml2:=logapp(xml2,'DTE no publicado (o Recibido) URI_IN='||get_campo('URI_IN',xml2));
+    xml2:=logapp(xml2,'DTE no publicado (o Recibido) URI_IN='||get_campo('URI_IN',xml2)||' XML_FLAGS='||get_campo('XML_FLAGS',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2));
     if (get_fecha_uri(uri1)::integer>=1701) then
     	xml2:=get_parametros_motor(xml2,'PUBLICADOR_2017');
     else

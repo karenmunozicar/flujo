@@ -84,6 +84,8 @@ insert into isys_querys_tx values ('15100','60',9,1,'select responde_pantalla_15
 --LOOP de tablas
 --Base Normal
 insert into isys_querys_tx values ('15100','70',9,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
+--Base Replica - Solo Reportes
+insert into isys_querys_tx values ('15100','71',11,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 --Base Emitidos Historicos
 insert into isys_querys_tx values ('15100','72',25,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 --Base Importados
@@ -187,7 +189,13 @@ begin
 	elsif (par1='BASE_AMAZON_BOLETAS_HISTORICAS') then
 		json2:=put_json(json2,'__SECUENCIAOK__','77');
 	else
-		json2:=put_json(json2,'__SECUENCIAOK__','70');
+		--if get_json('rutUsuario',json2)='17597643' then
+		--DAO 20201001 para los reportes vamos a la base de replica
+		if is_number(get_json('id_reporte',json2)) then
+			json2:=put_json(json2,'__SECUENCIAOK__','71');
+		else
+			json2:=put_json(json2,'__SECUENCIAOK__','70');
+		end if;
 		--perform logfile('FLUJO_15100 QUERY1 '||query1);
 	end if;
 	json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
@@ -418,10 +426,16 @@ DECLARE
 	order1	varchar;
 	ret1	varchar;	
 	jaux1	json;
+	jaux2	json;
 	j	integer;
 	aux1	varchar;
 	-- FGE - 20200225 - Para el filtro de tipo de busqueda OC Dipres
         v_tipo_institucion  varchar;
+
+	pag_base_colas1	integer;
+	sobra_base_colas1 integer;
+	total_base_colas1 integer;
+	total_base_colas2 integer;
 BEGIN
         json2:=json1;
 	json2:=put_json(json2,'__FUNC__','arma_filtro');
@@ -867,9 +881,9 @@ BEGIN
                 --if (total_pag1='-1') then
                         if (vin_estado='EN_PROCESO') then
 				if get_json('rutUsuario',json2)='17597643' then
-					perform logfile(query1);
+					perform logfile('EN_PROCESO '||query1);
 				end if;
-                                json_par1:=get_parametros_motor_json('{}','BASE_COLAS_motor1');
+                                json_par1:=get_parametros_motor_json('{}','BASE_COLAS_CH-ADX-P-Colas-motor13');
                                 json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
                                 if (get_json('STATUS',json3)<>'OK') then
                                         json2:=logjsonfunc(json2,'Falla Obtener Datos En Proceso');
@@ -877,6 +891,7 @@ BEGIN
                                         return json2;
                                 end if;
                                 v_total1:=get_json('total',json3);
+				total_base_colas1:=get_json('total',json3);
                                 json_par1:=get_parametros_motor_json('{}','BASE_COLAS_motor14');
                                 json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
                                 if (get_json('STATUS',json3)<>'OK') then
@@ -885,6 +900,7 @@ BEGIN
                                         return json2;
                                 end if;
                                 v_total1:=v_total1+get_json('total',json3)::integer;
+				total_base_colas2:=get_json('total',json3);
                         else
 				--if (get_json('rutUsuario',json2)='17597643') then
 					json2:=logjsonfunc(json2,'QUERY_COUNT '||replace(query1,chr(10),''));
@@ -905,10 +921,46 @@ BEGIN
 			--json5:=put_json(json5,'RUT_RECEPTOR',v_in_rut_receptor_com);
 			json5:=put_json(json5,'RUT_RECEPTOR',v_in_rut_receptor_com||' and categoria in (''DTE_NORMAL'',''BOLETA'',''WINDTE'',''DTE'') ');
 			json2:=put_json(json2,'flag_encolados','SI');
-			if get_json('rutUsuario',json2)='17597643' then
-				perform logfile('merge_lista_query_bd_colas select merge_lista_query_bd_colas('''||replace(query1,chr(10),' ')||''',''array_to_json'');');
-			end if;
-			json4:=merge_lista_query_bd_colas(query1,'array_to_json');
+			pag_base_colas1:=total_base_colas1/v_in_cant_reg_fijo::integer;
+			sobra_base_colas1:=total_base_colas1%v_in_cant_reg_fijo::integer;	
+			--DAO 20200930
+			--if get_json('rutUsuario',json2)='17597643' then
+				--perform logfile('EN_PROCESO pag_base_colas1='||pag_base_colas1::varchar||' sobra_base_colas1='||sobra_base_colas1||' '||' v_in_offset1='||v_in_offset1::varchar);	
+				--perform logfile('EN_PROCESO '||replace(query1,chr(10),' '));
+				if (v_in_offset1::integer+v_in_cant_reg_fijo::integer<=pag_base_colas1*v_in_cant_reg_fijo::integer) then
+					--perform logfile('EN_PROCESO solo base moto13 ');
+                                	json_par1:=get_parametros_motor_json('{}','BASE_COLAS_CH-ADX-P-Colas-motor13');
+					json4:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
+				elsif sobra_base_colas1>0 and v_in_offset1::integer=pag_base_colas1*v_in_cant_reg_fijo::integer then
+					--perform logfile('EN_PROCESO base moto13 off='||v_in_offset1::varchar||' limit '||sobra_base_colas1::varchar);
+                                	json_par1:=get_parametros_motor_json('{}','BASE_COLAS_CH-ADX-P-Colas-motor13');
+					jaux1:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,split_part(query1,'offset ',1)||'offset '||v_in_offset1::varchar||' limit '||sobra_base_colas1::varchar||' ) x left '||split_part(query1,') x left',2));
+					if get_json('STATUS',jaux1)<>'OK' then
+						json2:=put_json(json2,'MENSAJE_RESPUESTA','Falla Conexión Base Datos1.-.');
+						json2:=put_json(json2,'CODIGO_RESPUESTA','2');
+						json2:=put_json(json2,'__SECUENCIAOK__','0');
+						json2:=responde_pantalla_15100(json2);
+						return json2;
+					end if;
+					--perform logfile('EN_PROCESO base moto14 off=0 limit '||(v_in_cant_reg_fijo::integer-sobra_base_colas1)::varchar);
+					json_par1:=get_parametros_motor_json('{}','BASE_COLAS_motor14');
+					jaux2:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,split_part(query1,'offset ',1)||'offset 0 limit '||(v_in_cant_reg_fijo::integer-sobra_base_colas1)::varchar||' ) x left '||split_part(query1,') x left',2));
+					if get_json('STATUS',jaux2)<>'OK' then
+						json2:=put_json(json2,'MENSAJE_RESPUESTA','Falla Conexión Base Datos1.-.');
+						json2:=put_json(json2,'CODIGO_RESPUESTA','2');
+						json2:=put_json(json2,'__SECUENCIAOK__','0');
+						json2:=responde_pantalla_15100(json2);
+						return json2;
+					end if;
+					json4:=put_json(put_json('{}','array_to_json',json_merge_lists(get_json('array_to_json',jaux1)::varchar,get_json('array_to_json',jaux2)::varchar)::varchar),'STATUS','OK');
+				else
+					--perform logfile('EN_PROCESO solo base moto14 off='||(v_in_offset1::integer-pag_base_colas1*v_in_cant_reg_fijo::integer-sobra_base_colas1)::varchar||' limit '||v_in_cant_reg_fijo::varchar);
+					json_par1:=get_parametros_motor_json('{}','BASE_COLAS_motor14');
+					json4:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,split_part(query1,'offset ',1)||'offset '||(v_in_offset1::integer-pag_base_colas1*v_in_cant_reg_fijo::integer-sobra_base_colas1)::varchar||' limit '||v_in_cant_reg_fijo::varchar||' ) x left '||split_part(query1,') x left',2));
+				end if;
+			/*else
+				json4:=merge_lista_query_bd_colas(query1,'array_to_json');
+			end if;*/
 			/*
 			json_par1:=get_parametros_motor_json('{}','BASE_COLAS');
 			json4:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par1),get_json_int('__IP_PORT_CLIENTE__',json_par1)::integer,query1);
@@ -1407,7 +1459,13 @@ BEGIN
 	elsif (par1='BASE_AMAZON_BOLETAS_HISTORICAS') then
 		json2:=put_json(json2,'__SECUENCIAOK__','77');
 	else
-		json2:=put_json(json2,'__SECUENCIAOK__','70');
+		--if get_json('rutUsuario',json2)='17597643' then
+		--DAO 20201001 para los reportes vamos a la base de replica
+		if is_number(get_json('id_reporte',json2)) then
+			json2:=put_json(json2,'__SECUENCIAOK__','71');
+		else
+			json2:=put_json(json2,'__SECUENCIAOK__','70');
+		end if;
 	end if;
 	json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
 	json2:=put_json(json2,'__CONTADOR__','1');
@@ -1595,6 +1653,11 @@ begin
                         tabla_base2:='dte_boletas_'||get_json('rutCliente',json2);
                 else
                         tabla_base2:='dte_boletas';
+                end if;
+		--RME 20200828 para buscar boletas con COD_SAP repetido 
+		if (get_json('flag_errores',json1)='SI') then
+                        tabla_base1:='dte_emitidos_errores';
+                        tabla_base2:='dte_emitidos_errores';
                 end if;
 		json2:=put_json(json2,'BASE_RS','BASE_REDSHIFT_BOLETAS');
                 campo1:='codigo_txel';

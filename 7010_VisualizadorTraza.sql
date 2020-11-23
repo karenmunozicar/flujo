@@ -19,6 +19,8 @@ insert into isys_querys_tx values ('7010',2017,33,1,'select proc_procesa_bitacor
 insert into isys_querys_tx values ('7010',2018,46,1,'select proc_procesa_bitacora_7010_Amazon2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Traza 2019
 insert into isys_querys_tx values ('7010',2019,49,1,'select proc_procesa_bitacora_7010_Amazon2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--Traza 2020
+insert into isys_querys_tx values ('7010',2020,50,1,'select proc_procesa_bitacora_7010_Amazon2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 
 

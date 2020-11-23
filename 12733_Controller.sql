@@ -62,6 +62,7 @@ DECLARE
         nombre_plantilla        varchar;	
 	json_msg	json;
 	campox	record;
+	aux1    varchar;
 BEGIN
         --text_input:=decode(get_campo('INPUT',text_all),'hex');
 	BEGIN
@@ -121,7 +122,7 @@ BEGIN
 			v_caratula:=v_caratula||'<RutReceptor>'||get_json('RUT_RECEPTOR',json2)||'-'||modulo11(get_json('RUT_RECEPTOR',json2))||'</RutReceptor>'||chr(10);
 			v_caratula:=v_caratula||'<FchResol>'||get_json('FECHA_RESOLUCION',json2)||'</FchResol>'||chr(10);	
 			v_caratula:=v_caratula||'<NroResol>'||get_json('NRO_RESOLUCION',json2)||'</NroResol>'||chr(10);
-			v_caratula:=v_caratula||'<TmstFirmaEnv>'||to_char(now(),'YYYY-MM-DD HH24:MI:SS')||'</TmstFirmaEnv>'||chr(10);	
+			v_caratula:=v_caratula||'<TmstFirmaEnv>'||replace(to_char(now(),'YYYY-MM-DD HH24:MI:SS'),' ','T')||'</TmstFirmaEnv>'||chr(10);	
 			v_caratula:=v_caratula||'<SubTotDTE><TpoDTE>'||get_json('TIPO_DTE',json2)||'</TpoDTE><NroDTE>1</NroDTE></SubTotDTE></Caratula>'||chr(10);
 			json3:=put_json(json3,'caratula_hex_ini',encode(v_caratula::bytea,'hex')::varchar);
 		end if;
@@ -166,6 +167,19 @@ BEGIN
 			end if;
 			if get_json('MENSAJE_PLANTILLA',json_plantilla) <> '' then
 				json_msg:=json4;
+				aux1:=get_json('RUT_EMISOR',json2);
+                                json_msg:=put_json(json_msg,'RS_EMISOR',(select nombre from contribuyentes where rut_emisor=aux1::integer));
+                                aux1:=get_json('RUT_RECEPTOR',json2);
+                                json_msg:=put_json(json_msg,'RS_RECEPTOR',(select nombre from contribuyentes where rut_emisor=aux1::integer));
+                                aux1:=get_json('TIPO_DTE',json2);
+                                select descripcion_externa into aux1 from tipo_dte where codigo=aux1::integer;
+                                aux1:=replace(aux1,'á','&aacute;');
+                                aux1:=replace(aux1,'é','&eacute;');
+                                aux1:=replace(aux1,'í','&iacute;');
+                                aux1:=replace(aux1,'ó','&oacute;');
+                                aux1:=replace(aux1,'ú','&uacute;');
+                                json_msg:=put_json(json_msg,'DESC_TIPO',aux1);
+
 				json_msg:=put_json(json_msg,'ROL','<li>'||replace(get_json('ROLES',json_plantilla),',','</li><li>')||'</li>');
 				json_msg:=put_json(json_msg,'NOMBRE_ROL','<li>'||replace(get_json('USUARIOS',json_plantilla),',','</li><li>')||'</li>');
 				json_msg:=put_json(json_msg,'TIPO_DOCUMENTO',get_json('TIPO_DTE',json2));
@@ -177,8 +191,16 @@ BEGIN
 				mensaje_plantilla:=remplaza_tags_json_c(json_msg,decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar);
 				json4:=put_json(json4,'INFORMACION_REGLA',get_json('C_NOMBRE',json2));
 				json4:=put_json(json4,'MENSAJE',mensaje_plantilla);
-				json4:=put_json(json4,'LINK',get_json('LINK_PLANTILLA',json_plantilla));
-				json4:=put_json(json4,'NOMBRE_LINK',get_json('NOMBRE_LINK_PLANTILLA',json_plantilla));
+				if get_json('LINK_PLANTILLA',json_plantilla)='' then
+					json4:=put_json(json4,'LINK',get_json('URI_IN',json2));
+				else
+					json4:=put_json(json4,'LINK',get_json('LINK_PLANTILLA',json_plantilla));
+				end if;
+				if get_json('NOMBRE_LINK_PLANTILLA',json_plantilla)='' then
+					json4:=put_json(json4,'NOMBRE_LINK','Documento');
+				else
+					json4:=put_json(json4,'NOMBRE_LINK',get_json('NOMBRE_LINK_PLANTILLA',json_plantilla));
+				end if;
 			end if;
 		else
 			patron_correo1:=pg_read_file('./patron_correos/patron_correo_controller.html');

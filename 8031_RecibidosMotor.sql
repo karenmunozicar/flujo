@@ -276,6 +276,11 @@ BEGIN
 	else
 		json2:=logjson(json2,'GENERO URI RUT_EMISOR='||rut_emisor1::varchar||' TIPO_DTE='||tipo_dte1::varchar||' FOLIO='||folio1::varchar||' FECHA_EMISION='||get_xml_hex1('FchEmis',xml_dte1)||' MONTO_TOTAL='||get_xml_hex1('MntTotal',xml_dte1));
         	uri1:='http://'||campo.dominio||to_char(now(),'YYMM')||'.acepta.com/v01/'||genera_uri2(rut_emisor1,tipo_dte1,folio1,get_xml_hex1('FchEmis',xml_dte1),get_xml_hex1('MntTotal',xml_dte1),'R');
+		if uri1<>get_json('URIP',json2) then
+			json2:=logjson(json2,'URIS Distintas '||uri1||' '||get_json('URIP',json2)||' se deja la generada por el python');	
+		end if;
+		--DAO-FAY 20201014 se cambia por la uri generada en el python (casi siempre la misma), por el OP compra, ya que si se procesa un documento de un mes para otro, la uri enviada en el opcompra no es la correcta
+		uri1:=get_json('URIP',json2);
 		json2:=logjson(json2,'DTE no registrado en dte_pendientes_recibidos URI='||uri1);
 	end if;
 	

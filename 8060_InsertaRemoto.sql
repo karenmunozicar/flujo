@@ -17,6 +17,8 @@ insert into isys_querys_tx values ('8060','60',38,1,'$$QUERY_DATA$$',0,0,0,9,1,9
 insert into isys_querys_tx values ('8060','61',46,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 --Traza 2019
 insert into isys_querys_tx values ('8060','62',49,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
+--Traza 2020
+insert into isys_querys_tx values ('8060','63',50,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 
 --Base Boletas
 --Boletas 2014
@@ -120,6 +122,8 @@ BEGIN
 			json2:=put_json(json2,'__SECUENCIAOK__','61');
 		elsif (parametro1='TRAZA_2019') then
 			json2:=put_json(json2,'__SECUENCIAOK__','62');
+		elsif (parametro1='TRAZA_2020') then
+			json2:=put_json(json2,'__SECUENCIAOK__','63');
 		else
 			--Traza no definida
 			json2:=logjson(json2,'Traza no definida '||parametro1);

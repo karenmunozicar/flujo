@@ -10,12 +10,11 @@ delete from isys_querys_tx where llave='12794';
 
 --insert into isys_querys_tx values ('12794',20,1,10,'$$SCRIPT$$',0,0,0,1,1,30,30);
 
---Se cambia la base de datos de la 9 a la 8009 para que vaya directo al api web
-insert into isys_querys_tx values ('12794',30,8009,1,'select emitir_documento_firmado_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12794',30,1,1,'select emitir_documento_firmado_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('12794',40,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,50,50);
 
-insert into isys_querys_tx values ('12794',50,9,1,'select emitir_documento_firmado_resp_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12794',50,1,1,'select emitir_documento_firmado_resp_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --Publicamos el DTE
 insert into isys_querys_tx values ('12794',65,1,8,'Publica DTE',12704,0,0,0,0,70,70);
@@ -24,43 +23,7 @@ insert into isys_querys_tx values ('12794',65,1,8,'Publica DTE',12704,0,0,0,0,70
 insert into isys_querys_tx values ('12794',67,1,8,'Publica DTE',8010,0,0,0,0,70,70);
 
 --Validamos la publicacion
-insert into isys_querys_tx values ('12794',70,9,1,'select valida_publicacion_dte_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
-
-CREATE or replace FUNCTION response_requests_6000_upper_12794(character varying, character varying, character varying, json)
-RETURNS json AS $$
-DECLARE
-	json2           alias for $4;
-	id1		bigint;
-	ses1		varchar;
-BEGIN
-	id1:=get_json('__ID_FORM__',json2)::bigint;
-	ses1:=get_json('session_id',json2);
-	if $1 in ('1','3') then
-		update tmp_json_emitir set estado_emision='OK',cod_respuesta_emision=$1,mensaje_respuesta_emision=$2,respuesta_emision=$3 where sesion=ses1 and id=id1;
-	else
-		update tmp_json_emitir set estado_emision='ERROR' where sesion=ses1 and id=id1;
-	end if;
-	return response_requests_6000_upper($1,$2,$3,$4);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE or replace FUNCTION response_requests_6000_12794(character varying, character varying, character varying, json)
-RETURNS json AS $$
-DECLARE
-	json2           alias for $4;
-	id1		bigint;
-	ses1		varchar;
-BEGIN
-	id1:=get_json('__ID_FORM__',json2)::bigint;
-	ses1:=get_json('session_id',json2);
-	if $1 in ('1','3') then
-		update tmp_json_emitir set estado_emision='OK',cod_respuesta_emision=$1,mensaje_respuesta_emision=$2,respuesta_emision=$3 where sesion=ses1 and id=id1;
-	else
-		update tmp_json_emitir set estado_emision='ERROR' where sesion=ses1 and id=id1;
-	end if;
-	return response_requests_6000($1,$2,$3,$4);
-END;
-$$ LANGUAGE plpgsql;
+insert into isys_querys_tx values ('12794',70,1,1,'select valida_publicacion_dte_12794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION emitir_documento_pivote_12794(json)
 RETURNS json AS $$
@@ -81,8 +44,6 @@ DECLARE
 	json_in1	json;
 	campo	record;
 	json3	json;
-	rutr1	varchar;
-	aux1	varchar;
 BEGIN
         rut1:=get_json('rutCliente',json2);
 
@@ -94,7 +55,7 @@ BEGIN
                 j1:=get_json('formEmitirdocumento',json2)::json;
         EXCEPTION WHEN OTHERS THEN
                 json2:=put_json(json2,'__SECUENCIAOK__','0');
-                json2:=response_requests_6000_12794('2', 'ERROR en Formulario', '', json2);
+                json2:=response_requests_6000('2', 'ERROR en Formulario', '', json2);
                 return json2;
         end;
         tipo_dte1:=get_json('tipoDTE',j1);
@@ -102,45 +63,10 @@ BEGIN
 	rut_usuario1:=get_json('rutUsuario',json2)::integer;
 	-- NBV_201705 801
 	json2:=logjson(json2,'TIPO_DOCUMENTO '||get_json('TipoDTE',json2));
-
-        if get_json('__TBK__', json2) = 'SI' then
-		--Hacemos Proxy
-		rutr1:=split_part(replace(get_json('RUTRecep',j1),'.',''),'-',1);
-		aux1:=right(sesion1,28);
-		json2:=logjson(json2,'TBK_PROXY Tipo='||tipo_dte1||' RutEmisor='||rut1||' Receptor='||rutr1||' parametro5='||aux1);
-		if sesion1='__PRUEBAS_AUTOMATIZADAS_TBK__' then
-			json3:=put_json('{}','TED','TED_DE_PRUEBA');
-                        json3:=put_json(json3,'FOLIO','999');
-                        json3:=put_json(json3,'ID_GESTOR_FOLIO','-1');
-			json2:=logjson(json2,'TBK_PROXY PRUEBA');
-			json2:=response_requests_6000_upper_12794('4', 'Prueba TBK, respondemos en duro',json3::varchar,json2);
-			json2:=put_json(json2,'__FLAG_DTE_REPETIDO__','SI');
-			return json2;
-		end if;
-		BEGIN
-			select * into campo from dte_boletas_diarias where rut_emisor=rut1::integer and tipo_dte=tipo_dte1::integer and rut_receptor=rutr1::integer and parametro5=aux1;
-			if found then
-				json3:=put_json('{}','TED',get_xml('TED_TBK',campo.data_dte));
-				json3:=put_json(json3,'FOLIO',campo.folio::varchar);
-				json3:=put_json(json3,'ID_GESTOR_FOLIO','-1');
-				json2:=logjson(json2,'TBK_PROXY Found');
-				json2:=response_requests_6000_upper_12794('4', 'El DTE ya fue emitido correctamente',json3::varchar,json2);
-				json2:=put_json(json2,'__FLAG_DTE_REPETIDO__','SI');
-				return json2;
-			else
-				json2:=logjson(json2,'TBK_PROXY Not Found');
-			end if;
-		EXCEPTION WHEN OTHERS THEN
-			json2:=logjson(json2,'TBK_PROXY Exception');
-		END;
-	end if;
-
-
-
         --if(get_json('TipoDTE',json2)<>'801') then
         if(tipo_dte1<>'801') then
 	--Si tengo un folio o intento de folio en id_temporal_gestor_folios para la misma sesion en estado=1, significa que fallo el anterior (borrado o emision),  por ende usamos este id para la transaccion
-		select * into stCorrelativo from id_temporal_gestor_folios where rut=rut1 and tipo_dte=tipo_dte1 and estado in (1,3) and sesion=get_json('session_id',json2) order by id limit 1 for update;
+		select * into stCorrelativo from id_temporal_gestor_folios where rut=rut1 and tipo_dte=tipo_dte1 and estado=1 and sesion=get_json('session_id',json2) order by id limit 1 for update;
 		if found then
 			--FAY-DAO si encontramos el folio en estado 1, significa que algo termino mal o aun esta en proceso (reintento del FrameWork)
 			json2:=logjson(json2,'REUSO_FOLIO:');
@@ -170,19 +96,15 @@ BEGIN
 							--Contestamos que el DTE ya esta emitido correctamente
                                         		if get_json('dispositivo',j1)='movil' then
 								json2:=logjson(json2,'REUSO_FOLIO: MOVIL-'||get_json('rutCliente',json2));
-                		                                json2:=response_requests_6000_upper_12794('1', '*El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href=''http://almacen.acepta.com/ca4webv3/PdfViewMedia?url='||campo.uri||'''>aquí</a>',json3::varchar,json2);
+                		                                json2:=response_requests_6000_upper('1', '*El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href=''http://almacen.acepta.com/ca4webv3/PdfViewMedia?url='||campo.uri||'''>aquí</a>',json3::varchar,json2);
                                 		        else
-                                               			 json2:=response_requests_6000_upper_12794('1', '*El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||campo.uri||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
+                                               			 json2:=response_requests_6000_upper('1', '*El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||campo.uri||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
 		                                        end if;
                 					json2:=put_json(json2,'__FLAG_DTE_REPETIDO__','SI');
 							return json2;
 						else
 							--Si no es igual el DTE que se emite ahora, le entregamos otro folio y borramos este id de la tabla
-        						if get_json('__TBK__', json2) = 'SI' then
-								insert into id_temporal_gestor_folios(sesion,rut,tipo_dte,id,rut_usuario,fecha_ingreso,estado,fecha_actualizacion) values (get_json('session_id',json2),rut1,tipo_dte1,nextval('correlativo_emitir_dte'),rut_usuario1,now(),3,now()) returning id into stCorrelativo.id;
-							else
-								insert into id_temporal_gestor_folios(sesion,rut,tipo_dte,id,rut_usuario,fecha_ingreso,estado,fecha_actualizacion) values (get_json('session_id',json2),rut1,tipo_dte1,nextval('correlativo_emitir_dte'),rut_usuario1,now(),1,now()) returning id into stCorrelativo.id;
-							end if;
+							insert into id_temporal_gestor_folios(sesion,rut,tipo_dte,id,rut_usuario,fecha_ingreso,estado,fecha_actualizacion) values (get_json('session_id',json2),rut1,tipo_dte1,nextval('correlativo_emitir_dte'),rut_usuario1,now(),1,now()) returning id into stCorrelativo.id;
 							json2:=logjson(json2,'REUSO_FOLIO: Inserta ID de CAF stCorrelativo.id='||stCorrelativo.id::varchar||' no es el mismo que se emite');
 						end if;
 					else --campo.estado_sii
@@ -193,7 +115,7 @@ BEGIN
 				end if;
 			end if;
 		else
-			--Busco si existe un id de gestor, La Emision Anterior Fallo
+			--Busco si existe un id de gestor
 			select * into stCorrelativo from id_temporal_gestor_folios where rut=rut1 and tipo_dte=tipo_dte1 and estado=0 order by id limit 1 for update;
 			if found then
 				--Si existe lo tomo para este DTE
@@ -308,9 +230,6 @@ DECLARE
 BEGIN
         json2:=json1;
 
-	if get_json('rutUsuario',json2)='17597643' then
-		return response_requests_6000_12794('2', 'ERROR RUT RESERVADO', '', json2);
-	end if;
 	json2:=emitir_documento_pivote_12794(json2);
 	if get_json('__FLAG_DTE_REPETIDO__',json2)='SI' then
 		json2:=put_json(json2,'__SECUENCIAOK__','0');
@@ -325,15 +244,14 @@ BEGIN
         select * into stMaestro from maestro_clientes where rut_emisor=rut1::integer;
         if not found then
                 json2:=logjson(json2,'Cliente '||rut1::varchar||' no esta en maestro_clientes');
-                json2:=response_requests_6000_12794('2', 'Cliente '||rut1::varchar||' no esta en maestro_clientes', '', json2);
+                json2:=response_requests_6000('2', 'Cliente '||rut1::varchar||' no esta en maestro_clientes', '', json2);
 	        --Libero el Folio
-                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
                 return json2;
         end if;
 	--IOS Pruebas
 	if get_json('rutUsuario',json2)='16813717' then
-                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
-		return response_requests_6000_12794('2', 'Sin permisos para emitir en produccion','',json2);
+		return response_requests_6000('2', 'Sin permisos para emitir en produccion','',json2);
 	end if;
 	--DAO 20190712 Para clientes Windte que ocupan solo un certificado
         if stMaestro.rut_emision_dtes is not null and stMaestro.rut_emision_dtes<>'' then
@@ -341,14 +259,14 @@ BEGIN
                 if found then
 			--DAO 20191122 si viene clave la validamos contra la clave del portal
 			--Solo validamos clave del usuario cuando firma por Movil
-                        if get_json('pass',json2)<>'__CLAVE_CENTRALIZADA_ESC__' and get_json('tipo_tx',json2) not in ('crear_factura10k','emitir_factura_masiva_csv','emitir_factura_masiva','crea_documento_desde_url') and get_json('apk',json2)<>'DTE_MOBILE_REPRO' then
+                        if get_json('pass',json2)<>'__CLAVE_CENTRALIZADA_ESC__' and get_json('tipo_tx',json2) not in ('emitir_factura_masiva_csv','emitir_factura_masiva','crea_documento_desde_url') and get_json('apk',json2)<>'DTE_MOBILE_REPRO' then
                                 aux1:=get_json('rutUsuario',json2);
                                 if (exists(select 1 from user_10k where rut_usuario=aux1 and get_json(get_json('host_canal',json2),clave_json)=md5(get_json('pass',json2))) is false) then
 					--Validamos si la clave coincide con la del certificado
 					if corrige_pass(decode(stRutFirma.clave,'hex')::text)<>get_json('pass',json2) then
-						json2:=response_requests_6000_12794('2', 'Clave Invalida..','',json2);
+						json2:=response_requests_6000('2', 'Clave Invalida..','',json2);
 						--Libero el Folio
-						update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+						update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 						return json2;
 					end if;
                                 end if;
@@ -360,33 +278,22 @@ BEGIN
 			json2:=logjson(json2,'Rut con Firma Centralizada Rut='||stMaestro.rut_emision_dtes);
 		else
 			json2:=logjson(json2,'Error Rut con Firma Centralizada Rut='||stMaestro.rut_emision_dtes||' no registrado en rut_firma_clave');
-			--DAO 20201008 Si es TBK, debe tener SI o SI Firma Centralizada
-			if get_json('__TBK__', json2) = 'SI' then
-				update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
-				return response_requests_6000_12794('2', 'Cliente TBK sin firma centralizada.', '', json2);
-			end if;
                 end if;
-	else
-		--DAO 20201008 Si es TBK, debe tener SI o SI Firma Centralizada
-		if get_json('__TBK__', json2) = 'SI' then
-			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
-			return response_requests_6000_12794('2', 'Cliente TBK sin firma centralizada', '', json2);
-		end if;
         end if;
 
 	--Leo los datos del contribuyente
 	select * into stCont from contribuyentes where rut_emisor=rut1::integer;
 	if not found then
                 json2:=logjson(json2,'Cliente '||rut1::varchar||' no esta en tabla de contribuyentes');
-                json2:=response_requests_6000_12794('2', 'Cliente '||rut1::varchar||' no esta en contribuyentes', '', json2);
+                json2:=response_requests_6000('2', 'Cliente '||rut1::varchar||' no esta en contribuyentes', '', json2);
 	        --Libero el Folio
-                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
                 return json2;
 	end if;
 
 	--DAO,FAY 2015-12-02 Chequeo el codigo de respuesta de retorna el servicio que devuelve el CAF. Si es distinto a 1 es un error y devuelvo el mensaje.
 	/*if(strpos(get_json('RESPUESTA',json2),'<codigoRespuesta>1</codigoRespuesta>')=0)then
-		json2:=response_requests_6000_12794('2','CAF: '|| split_part(split_part(get_json('RESPUESTA',json2),'<documentoRespuesta>',2),'</documentoRespuesta>',1), '', json2);
+		json2:=response_requests_6000('2','CAF: '|| split_part(split_part(get_json('RESPUESTA',json2),'<documentoRespuesta>',2),'</documentoRespuesta>',1), '', json2);
 	        --Libero el Folio
                 update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
                 return json2;
@@ -403,7 +310,6 @@ BEGIN
         -- NBV_201705 801
         if(tipo_dte1<>'801') then
 		--Vamos a pedir folios al Gestor de Folios
-		perform logfile('GESTOR_FOLIOS '||idGestorFolio1::varchar||' Inicio');
 		json_par1:=get_parametros_motor_json('{}','BASE_GESTOR_FOLIOS');
 		json_in1:=json2;
 		json_in1:=put_json(json_in1,'GF_ID_TRX',idGestorFolio1::varchar);
@@ -419,22 +325,19 @@ BEGIN
 		resp1:=get_json('WF_RESPUESTA',resp_db);
 		resp1:=hex_2_ascii2(encode(resp1::bytea,'hex'));
 		json2:=logjson(json2,'Respuesta CAF '||resp1);
-		perform logfile('GESTOR_FOLIOS '||idGestorFolio1::varchar||' Fin');
 		--perform logfile('DAO resp1='||resp1 ||' json_out1='||resp_db::varchar);
 		if (get_json('GF_CODIGO_RESPUESTA',resp_db)<>'1') then
-			json2:=response_requests_6000_12794('2', 'CAF: '||get_json('GF_MENSAJE_RESPUESTA',resp_db), '', json2);
+			json2:=response_requests_6000('2', 'CAF: '||get_json('GF_MENSAJE_RESPUESTA',resp_db), '', json2);
 			--Libero el Folio
-			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 			return json2;
 		end if;
 		if(resp1='') then
-			json2:=response_requests_6000_12794('2', 'CAF: Falla obtencion', '', json2);
+			json2:=response_requests_6000('2', 'CAF: Falla obtencion', '', json2);
 			--Libero el Folio
-			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 			return json2;
 		end if;
-
-		--YA TENEMOS FOLIO ASIGNADO
 
 	--        caf1:=replace('<CAF version="1.0">' || split_part(split_part(get_json('RESPUESTA',json2),'<CAF version="1.0">',2),'</CAF>',1) || '</CAF>',chr(10),'');
 		
@@ -453,9 +356,9 @@ BEGIN
 		update id_temporal_gestor_folios set folio=folio1 where id=idGestorFolio1;
 		if not found then
 			json2:=logjson(json2,'Falla en actualizacion de id_temporal_gestor_folios con idGestorFolio1='||idGestorFolio1::varchar);
-			json2:=response_requests_6000_12794('2', 'Error en la asignacion de folios, Emita Nuevamente', '', json2);
-			--No Libero el Folio xq no esta
-			--update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+			json2:=response_requests_6000('2', 'Error en la asignacion de folios, Emita Nuevamente', '', json2);
+			--Libero el Folio
+			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 			return json2;
 		end if;
 
@@ -651,33 +554,25 @@ BEGIN
         		firma_ted1:=sign_rsa_ted(ted1,rsask1,rsask_p1);
 		EXCEPTION WHEN OTHERS THEN
 			perform logfile ('FALLA select sign_rsa_ted('''||ted1||''','''||rsask1||''','''||rsask_p1||'''); SOL='||get_json('id_solicitud',json2));
-			-- Si falla en firmar el ted reutilizaremos el folio
-			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
-			json2:=response_requests_6000_12794('2', 'Falla Firma CAF, Reintente Por Favor','', json2);
+			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+			json2:=response_requests_6000('2', 'Falla Firma CAF, Reintente Por Favor','', json2);
 			return json2;
 		end;
         	ted1:='<TED version="1.0">'||ted1||'<FRMT algoritmo="SHA1withRSA">'||firma_ted1||'</FRMT></TED>'||chr(10)||'<TmstFirma>'||fecha1||'</TmstFirma>';
-		-- FGE - 20200409 - Devuelve solamente el TED - MS de TBK
+		-- FGE - 20200409 - Devuelve solamente el TED
                 if get_json('__SOLO_TED__', json2) = 'SI' then
-		    update id_temporal_gestor_folios set estado=3 where id=idGestorFolio1 and estado=1;
                     json2:=put_json(json2,'__SECUENCIAOK__','0');
-		    ted1:=split_part(ted1,'<TmstFirma>',1);
-                    json2:=response_requests_6000_12794('1', 'Devuelve Solo TED', put_json(put_json(put_json('{}', 'TED', str2latin12base64(ted1)), 'FOLIO', get_json('Folio',json2)), 'ID_GESTOR_FOLIO', idGestorFolio1::varchar)::varchar, json2);
+                    json2:=response_requests_6000('1', 'Devuelve Solo TED', put_json(put_json(put_json('{}', 'TED', ted1), 'FOLIO', get_json('Folio',json2)), 'ID_GESTOR_FOLIO', idGestorFolio1::varchar)::varchar, json2);
                     return json2;
                 end if;
-        	if (get_json('__TBK__', json2) = 'SI') then
-		    	ted1:=split_part(ted1,'<TmstFirma>',1);
-			--Metemos el TED en el json para poder guardarlo en dte_boletas_diarias para el proxy
-			json2:=put_json(json2,'TED_TBK',str2latin12base64(ted1));
-		end if;
 	end if;
 	-- NBV_201705 801
 
         patron_dte1:=pg_read_file('./patron_dte_10k/patron_'||get_json('TipoDTE',json3)||'.xml');
         if (patron_dte1='' or patron_dte1 is null) then
-                json2:=response_requests_6000_12794('2', 'Falla Insercion no existe patron de DTE','', json2);
+                json2:=response_requests_6000('2', 'Falla Insercion no existe patron de DTE','', json2);
 	        --Libero el Folio
-                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
                 return json2;
         end if;
 
@@ -839,7 +734,7 @@ begin
         json2:=put_json(json2,'__SECUENCIAOK__','0');
 
         /*if (get_json_upper('__PUBLICADO_OK__',json2)<>'SI') then
-                  json2:=response_requests_6000_upper_12794('2', 'Falla Publicacion del DTE', '',json2);
+                  json2:=response_requests_6000_upper('2', 'Falla Publicacion del DTE', '',json2);
                   return json2;
         end if;
         */
@@ -870,13 +765,13 @@ begin
 			--Antes de grabar vamos a validar el schema
 			xml3:=get_hash_dte(xml2,get_json('TipoDTE',json2));
 			if (get_campo('__BASURA_CON_URI__',xml3)='SI') then
-				--json2:=response_requests_6000_upper_12794('2', 'Falla Validacion de Esquema en el DTE '||get_json_upper('URI_IN',json2),'',json2);
+				--json2:=response_requests_6000_upper('2', 'Falla Validacion de Esquema en el DTE '||get_json_upper('URI_IN',json2),'',json2);
 				json3:='{}';
 				json3:=put_json(json3,'id_solicitud',get_json_upper('id_solicitud',json2));
-				json2:=response_requests_6000_upper_12794('2', get_campo('COMENTARIO_TRAZA',xml3),json3::varchar,json2);
+				json2:=response_requests_6000_upper('2', get_campo('COMENTARIO_TRAZA',xml3),json3::varchar,json2);
 				json2:=bitacora10k(json2,'EMITIR',get_campo('COMENTARIO_TRAZA',xml3));
 				--Libero el Folio
-				update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+				update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 				return json2;
 			end if;
 
@@ -963,13 +858,13 @@ begin
 					update icar_rendiciones set folio_factura=get_json_upper('FOLIO',json2),url_factura=get_json_upper('URI_IN',json2) where id=id_sol1;
                                 end if;
 				if get_json('__FLAG_RESPUESTA_PANTALLA__',json2) != 'SI' then
-                                        json2:=response_requests_6000_upper_12794('3', 'OK',json3::varchar,json2);
+                                        json2:=response_requests_6000_upper('3', 'OK',json3::varchar,json2);
                                         return json2;
                                 else
-                                        json2:=response_requests_6000_12794('1', 'Exitoso',get_json_upper('URI_IN',json2), json2);
+                                        json2:=response_requests_6000('1', 'Exitoso',get_json_upper('URI_IN',json2), json2);
                                         return json2;
                                 end if;
-				--json2:=response_requests_6000_upper_12794('3', 'OK',json3::varchar,json2);
+				--json2:=response_requests_6000_upper('3', 'OK',json3::varchar,json2);
                                 --return json2;
 			else
 				-- NBV_201705 801
@@ -984,34 +879,33 @@ begin
 					BEGIN
                                         if get_json('dispositivo',get_json_upper('formEmitirdocumento',json2)::json)='movil' then
 						json2:=logjson(json2,'MOVIL-'||get_json('rutCliente',json2));
-                                                json2:=response_requests_6000_upper_12794('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href=''http://almacen.acepta.com/ca4webv3/PdfViewMedia?url='||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
+                                                json2:=response_requests_6000_upper('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href=''http://almacen.acepta.com/ca4webv3/PdfViewMedia?url='||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
                                         else
-                                                json2:=response_requests_6000_upper_12794('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
+                                                json2:=response_requests_6000_upper('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
                                         end if;
 					EXCEPTION WHEN OTHERS THEN
-                                                json2:=response_requests_6000_upper_12794('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
+                                                json2:=response_requests_6000_upper('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'&sesion='||get_json('session_id',json2)||'''>aquí</a>',json3::varchar,json2);
 					END;
-	                		--json2:=response_requests_6000_upper_12794('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target="_blank" href="'||get_json_upper('URI_IN',json2)||'">aquí</a>',json3::varchar,json2);
+	                		--json2:=response_requests_6000_upper('3', 'El DTE fue emitido correctamente, para visualizarlo aca click <a target="_blank" href="'||get_json_upper('URI_IN',json2)||'">aquí</a>',json3::varchar,json2);
                                 else
                                         -- NBV_201705 801
                                         json_oc_resp:=update_estado_documento_no_tributario_6000(json2);
                                         json2:=logjson(json2,'RESPUESTA_UPDATE_801=>'||json_oc_resp::varchar);
                                         json3:=put_json(json3,'URL_RESPUESTA',(select remplaza_tags_6000(href,json2) from menu_info_10k where id2='buscarOC_emitidos_folio'));
-                                        json2:=response_requests_6000_upper_12794('3', 'El Documento fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'''>aquí</a>',json3::varchar,json2);
+                                        json2:=response_requests_6000_upper('3', 'El Documento fue emitido correctamente, para visualizarlo aca click <a target=''_blank'' href='''||get_json_upper('URI_IN',json2)||'''>aquí</a>',json3::varchar,json2);
                                 end if;
                                 -- NBV_201705 801
 			end if;
 		else
-                	json2:=response_requests_6000_upper_12794('1', 'DTE Firmado OK',json3::varchar,json2);
+                	json2:=response_requests_6000_upper('1', 'DTE Firmado OK',json3::varchar,json2);
 		end if;
 
                 --Borramos el correlativo temporal
                 delete from id_temporal_gestor_folios where id=idGestorFolio1;
 		--Elimino el Form del Temporal
-		--DAO-FAY 20201002 No se borra mas, porque lo utilizaremos de proxy
-		/*if get_json('flagBorrador', json2)='1' or get_json('flagBorrador', json2)='' then
+		if get_json('flagBorrador', json2)='1' or get_json('flagBorrador', json2)='' then
 			delete from tmp_json_emitir where id=idForm1;
-		end if;*/
+		end if;
 		--Descuento Saldo
 		if (get_json('tipo_plan_mc',json2)='PLAN10K') then
 	                msg1:=update_saldo_10k(rut1::integer,get_json('TIPO_DTE',json2)::integer);
@@ -1027,8 +921,8 @@ begin
 			update solicitudes_productos set mensaje_estado_factura=replace(replace(mensaje_error1,chr(39),''),chr(10),' '),estado_factura='FALLA_EMISION' where id_solicitud=id_sol1;
 		end if;
                 --Libero el Folio
-                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1  and estado=1;
-               	json2:=response_requests_6000_upper_12794('2', mensaje_error1||' Reintente.',get_json_upper('URI_IN',json2),json2);
+                update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+               	json2:=response_requests_6000_upper('2', mensaje_error1||' Reintente.',get_json_upper('URI_IN',json2),json2);
                 json2:=bitacora10k(json2,'EMITIR',mensaje_error1);
         end if;
         return json2;
@@ -1094,21 +988,21 @@ BEGIN
 			return json2;
 
                 else
-			--Libero el Folio excepto que sea de TBK y q este en las colas estado=3
+			--Libero el Folio
 			json2:=logjson(json2,'Falla Firma');
-			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+			update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
 			resp1:=json_get('ERROR',json_resp1);
 			   if (length(resp1)=0) then
 				resp1:='Servicio Firma Electronica no responde.<br>Reintente más tarde.';
 			   end if;
-                        json2:=response_requests_6000_upper_12794('2', resp1, '',json2);
+                        json2:=response_requests_6000_upper('2', resp1, '',json2);
                         insert into log_firma_10k_hsm (fecha,rut_firma,estado,respuesta,doc_firmado,uri) values (now(),get_json_upper('rut_firma',json2),'FALLA',resp1,'DTE',get_json_upper('URI_IN',json2));
                         json2:=bitacora10k(json2,'EMITIR','Firma Falla');
                 end if;
        elsif (strpos(resp1,'HTTP/1.1 500 ')>0) then
-		   --Libero el Folio excepto que sea de TBK y q este en las colas estado=3
+		   --Libero el Folio
 		   json2:=logjson(json2,'Falla Firma error 500 '||resp1);
-                   update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
+                   update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
                    resp1:=json_get('ERROR',json_resp1);
 		   if (length(resp1)=0) then
 			resp1:='Servicio de Validación de Firma Electronica no responde.<br>Reintente más tarde.';
@@ -1118,14 +1012,14 @@ BEGIN
 			resp1:='Esta empresa tiene configurado Rut Emision Centralizado y la clave configurada para el rut '||get_json('rut_firma',json2)||'-'||modulo11(get_json('rut_firma',json2))||' esta incorrecta. Revise la <a target=''_blank'' href='''||(select remplaza_tags_6000(href,json2)||'%26abre_acordeon=ac22_rut_sii%26' as href from menu_info_10k where id2='configDinamico')||'''>Configuracion</a>';
 		   end if;
                    --resp1:='Error: '||split_part(split_part(resp1,'<faultstring>com.acepta.custodiafirma.servicios.ServicioFirmaXMLException:',2),'</faultstring>',1);
-                   json2:=response_requests_6000_upper_12794('2', resp1, '',json2);
+                   json2:=response_requests_6000_upper('2', resp1, '',json2);
                    insert into log_firma_10k_hsm (fecha,rut_firma,estado,respuesta,doc_firmado,uri) values (now(),get_json_upper('rut_firma',json2),'FALLA',resp1,'DTE',get_json_upper('URI_IN',json2));
                    json2:=bitacora10k(json2,'EMITIR','Firma Falla');
         else
 	  	   --Libero el Folio
 		   json2:=logjson(json2,'Falla Firma error XXX');
-                   update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1 and estado=1;
-                   json2:=response_requests_6000_upper_12794('2', 'Servicio de Firma no responde', '',json2);
+                   update id_temporal_gestor_folios set estado=0 where id=idGestorFolio1;
+                   json2:=response_requests_6000_upper('2', 'Servicio de Firma no responde', '',json2);
                    insert into log_firma_10k_hsm (fecha,rut_firma,estado,respuesta,doc_firmado,uri) values (now(),get_json_upper('rut_firma',json2),'FALLA','Servicio de Firma no responde','DTE',get_json_upper('URI_IN',json2));
                    json2:=bitacora10k(json2,'EMITIR','Firma Falla');
 

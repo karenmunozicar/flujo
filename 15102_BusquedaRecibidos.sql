@@ -31,6 +31,8 @@ insert into isys_querys_tx values ('15102','60',9,1,'select responde_pantalla_15
 --LOOP de tablas
 --Base Normal
 insert into isys_querys_tx values ('15102','70',9,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
+--Base Replica - Solo Reportes
+insert into isys_querys_tx values ('15102','71',11,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 --Base Emitidos Historicos
 insert into isys_querys_tx values ('15102','72',25,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 --Base Importados
@@ -222,7 +224,14 @@ begin
 	elsif (par1='BASE_AMAZON_BOLETAS_2014') then
 		json2:=put_json(json2,'__SECUENCIAOK__','76');
 	else
-		json2:=put_json(json2,'__SECUENCIAOK__','70');
+		--DAO 20201001 para los reportes vamos a la base de replica
+                if get_json('rutUsuario',json2)='17597643' then
+                --if is_number(get_json('id_reporte',json2)) then
+                        json2:=put_json(json2,'__SECUENCIAOK__','71');
+                else
+                        json2:=put_json(json2,'__SECUENCIAOK__','70');
+                end if;
+
 		if get_json('rutUsuario',json2)='17597643' then
 		json2:=logjson(json2,'QUERY17597643 '||query1);
 		end if;
@@ -1205,9 +1214,16 @@ BEGIN
 		json2:=put_json(json2,'__SECUENCIAOK__','74');
 	else
 		json2:=logjson(json2,'QUERY '||query1);
-		json2:=put_json(json2,'__SECUENCIAOK__','70');
+                --DAO 20201001 para los reportes vamos a la base de replica
+		--if get_json('rutUsuario',json2)='17597643' then
+		if is_number(get_json('id_reporte',json2)) then
+                        json2:=put_json(json2,'__SECUENCIAOK__','71');
+                else
+                        json2:=put_json(json2,'__SECUENCIAOK__','70');
+                end if;
+
 		if get_json('rutUsuario',json2)='17597643' then
-		json2:=logjson(json2,'QUERY17597643 '||query1);
+			json2:=logjson(json2,'QUERY17597643 '||query1);
 		end if;
 	end if;
 	json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
@@ -1452,6 +1468,9 @@ begin
         if(get_json('flag_act',json2)='SI' and tabla_rs1 is not null and (v_estado <>'' and v_estado is not null and strpos(v_estado,'1=1')=0)) then
                 --Sacamos los codigos txel que estan en la tabla de actualizacion de la busqueda q va al redshift
                 --perform logfile('DAO_ACT select string_agg(codigo_txel::varchar,'',''),count(*) from '||tabla_rs1||' where 1=1 '||v_in_rut_receptor);
+		if get_json('rutUsuario',json2)='17597643' then
+			perform logfile('cuenta_offset_redshift_emitidos_codigo_txel v_in_offset1='||v_in_offset1::varchar||' v_in_cant_reg='||v_in_cant_reg::varchar||' v_parametro_rut_emisor='||v_parametro_rut_emisor||' v_tipo_dte='||v_tipo_dte||' v_parametro_tipo_dte='||v_parametro_tipo_dte||' v_parametro_var='||v_parametro_var||' fecha_in1='||fecha_in1||' v_estado='||v_estado||' tipo_dia_ind1='||tipo_dia_ind1||' v_in_rut_receptor='||v_in_rut_receptor||' v_parametro_referencias='||v_parametro_referencias||' v_parametro_adicional='||v_parametro_adicional||' hash='||hash);
+		end if;
                 execute 'select string_agg(codigo_txel::varchar,'','') from '||tabla_rs1||' where 1=1 '||v_in_rut_receptor into cod_act1;
                 execute 'select count(*) from '||tabla_rs1||' where '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional||' and codigo_txel is not null' into count_act1;
                 if (cod_act1 is not null) then

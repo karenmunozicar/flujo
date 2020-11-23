@@ -195,6 +195,7 @@ BEGIN
 
 			xml4:=put_campo(xml4,'URI_IN',campo1.uri);
 			xml4:=graba_bitacora(xml4,'RACS');
+			json2:=logjson(json2,'RACS '||get_campo('_LOG_',xml4));
 			if (get_campo('EVENTO_REPETIDO',xml4)='SI') then
 				return response_requests_6000('1','Evento Repetido '||rut1||' '||campo1.uri,'',json2);
 			else

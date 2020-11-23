@@ -377,9 +377,7 @@ for cuenta in json_devengo_detalle:
                 else:
                     transaccion_temp['folio'] = cuenta['requerimiento']
             # FGE - 20190621 - Agrego campos para la NC / ND
-            transaccion_temp['tipo'] = str(cuenta['tipo_detalle'])
-            transaccion_temp['idAgrupacionDeReferencia'] = cuenta['cod_combinacion'] 
-            transaccion_temp['idAgrupacionAjustada'] = cuenta['id_agrupacion_ajustada']   
+            transaccion_temp['idAgrupacionAjustada'] = cuenta['id_agrupacion_ajustada']
         transaccion_temp['agrupacionesDeImputacionesACatalogos'] = {'agrupacion': []}
         transaccion_lista.append(transaccion_temp)
 
@@ -444,12 +442,6 @@ for cuenta in json_devengo_detalle:
         if json_devengo['flag_catalogo_propio'] == 'S':
             transaccion_temp['agrupacionesDeImputacionesACatalogos']['agrupacion'][0]['imputacionesACatalogosDeReagrupacion']['imputacion'].append({"catalogo": 'iniciativaInversion', "elemento": json_devengo['catalogo_propio_inversion']})
             catalogos_imputados['imputacion'].append({"catalogo": 'iniciativaInversion', "elemento": json_devengo['catalogo_propio_inversion']})
-
-# FGE - 20201113 - Sacamos el tipo y folio de las NC y ND y reversas
-if json_devengo['tipo_dte'] in [0, 56, 61]:
-    for trx_temp in transaccion_lista:
-        del trx_temp['folio']
-        del trx_temp['tipo']
 
 transacciones_previas['transaccion'] = transaccion_lista
 ####################################################################

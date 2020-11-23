@@ -1,3 +1,4 @@
+--Las funciones estan en DEC
 delete from isys_querys_tx where llave='25106';
 
 insert into isys_querys_tx values ('25106','10',44,1,'select arma_querys_25106(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);

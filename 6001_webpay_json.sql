@@ -4,24 +4,30 @@ delete from isys_querys_tx where llave='6001';
 --insert into isys_querys_tx values ('6001',5,45,1,'select log_generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,10);
 insert into isys_querys_tx values ('6001',5,9,16,'LOG_JSON',0,0,0,1,1,10,10);
 
-insert into isys_querys_tx values ('6001',10,45,1,'/*$$__JSONCOMPLETO__["tipo_tx"]$$*/ select webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
+insert into isys_querys_tx values ('6001',10,1,1,'/*$$__JSONCOMPLETO__["tipo_tx"]$$*/ select webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 
-insert into isys_querys_tx values ('6001',15,45,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('6001',15,19,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 
 --Llamada a Script Generico
 insert into isys_querys_tx values ('6001',20,1,10,'$$SCRIPT$$',0,0,0,1,1,25,25);
 --Llamada a un MicroServicio POST
 insert into isys_querys_tx values ('6001',22,1,2,'Microservicioe 127.0.0.1',4013,300,101,0,0,25,25);
 
-insert into isys_querys_tx values ('6001',25,45,1,'select generico10k_resp_6001(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('6001',25,45,1,'select /*$$__JSONCOMPLETO__["tipo_tx"]$$*/ generico10k_resp_6001(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+
 
 --Flujo Firma XML Subido en el Subir
 insert into isys_querys_tx values ('6001',40,1,8,'Llamada EMITIR DTE',13794,0,0,0,0,0,0);
 
 insert into isys_querys_tx values ('6001',55,1,8,'Llamada SUBIR FIRMA',12793,0,0,0,0,0,0);
 --Llama flujo EMIITR
-insert into isys_querys_tx values ('6001',56,1,8,'Llamada EMITIR DTE',12794,0,0,0,0,0,0);
+insert into isys_querys_tx values ('6001',56,1,8,'Llamada EMITIR DTE',12794,0,0,0,0,25,25);
 insert into isys_querys_tx values ('6001',57,1,8,'Llamada EMITIR DTE',12794,0,0,0,0,58,58);
+--Llama flujo EMIITR Procesa la respuesta en las colas
+insert into isys_querys_tx values ('6001',66,1,8,'Llamada EMITIR TBK',12794,0,0,0,0,67,67);
+insert into isys_querys_tx values ('6001',67,19,1,'select analiza_resp_colas_tbk(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+
 insert into isys_querys_tx values ('6001',58,13,1,'select $$FUNCION_RESPUESTA_12794$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('6001',59,1,8,'Llamada EMITIR DTE',13794,0,0,0,0,0,0);
 

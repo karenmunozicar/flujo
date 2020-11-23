@@ -310,6 +310,8 @@ DECLARE
         rol_dec varchar;
 	filtro_doc_rs1	varchar;
 	filtro_doc_local1	varchar;
+	aux1	varchar;
+	aux2	varchar;
 BEGIN
         json2:=json1;
         vin_fstart:=get_json('FSTART',json2);
@@ -390,10 +392,16 @@ BEGIN
 			filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1;
 		else
                         --FAY-DAO 2018-12-10 Solo para HITES por mala construccion
+			aux1:=lpad(split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1),12,'0');
+			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+                                --DAO 20201029 filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+				--DAO 20201029 cambiamos el strpos del rut
+                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
                         else
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+                                --DAO 20201029 filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+				--DAO 20201029 cambiamos el strpos del rut
+                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(tags,'''||v_in_rut1||''')>0) ';
                         end if;
                 end if;
                 query_rs1:='select count(*) as count from (select distinct coddocumento from firmantes_dec_inst_doc where '||filtro1||') x ';
@@ -410,14 +418,16 @@ BEGIN
                         query_local1:='select count(*) as count '||from_query_local1;
                 else
                         --FAY-DAO 2018-12-10 Solo para HITES por mala construccion
+			aux1:=lpad(split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1),12,'0');
+			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
                                 --Debemos hacer doble join con los firmantes, primero los que puedo ver y luego en  donde este el rut
                                 --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and (POSITION('''||v_in_rut1||''' in z.Rut)>0 or POSITION('''||v_in_rut1||''' in x.Descripcion)>0) ) w';
-                                from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ) w';
+                                from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ) w';
                                 --filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
                         else
                                 --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and POSITION('''||v_in_rut1||''' in z.Rut)>0 ) w';
-                                from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and ( strpos(rut,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0)  ) w';
+                                from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and ( rut='''||aux1||''' or strpos(tags,'''||v_in_rut1||''')>0)  ) w';
                                 --from_query_local1:=' from (select distinct x.coddocumento,Descripcion from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and POSITION('''||v_in_rut1||''' in Rut)>0 ) w';
                         end if;
                         query_local1:='select count(*) as count '||from_query_local1;
@@ -434,10 +444,12 @@ BEGIN
 			filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1;
 		else
                         --FAY-DAO 2018-12-10 Solo para HITES por mala construccion
+			aux1:=lpad(split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1),12,'0');
+			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
                         else
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and ( strpos(rut,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
+                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and ( rut='''||aux1||''' or strpos(tags,'''||v_in_rut1||''')>0) ';
                         end if;
                 end if;
                 --query_rs1:='select count(*) as count from firmantes_dec where '||filtro1;

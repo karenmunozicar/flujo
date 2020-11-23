@@ -86,7 +86,7 @@ DECLARE
         port varchar;
 
         uri1    varchar;
-        v_reg_devengo     record;
+        v_estado_devengo        varchar;
 BEGIN
         json2:=json1;
         json2:=put_json(json2,'__SECUENCIAOK__','900');
@@ -120,18 +120,13 @@ BEGIN
         -- FGE - 20200820 - No reclamar si tiene un devengo finalizado sin errores
         -- FGE - 20201030 - Solo se debe verificar si es RCD, RFP, RFT
         if v_accion in ('RCD', 'RFP', 'RFT') then
-                select estado, codigo_dv, codigo_oc, codigo_rc, rut_emisor, rut_receptor from dp_devengo where dte_codigo_txel = (select codigo_txel::varchar from dte_recibidos where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint) and tipo_dte = v_tipo_dte::integer into v_reg_devengo;
+                select estado into v_estado_devengo from dp_devengo where dte_codigo_txel = (select codigo_txel::varchar from dte_recibidos where rut_emisor=v_rutEmisor::integer and tipo_dte=v_tipo_dte::integer and folio=v_folio::bigint) and tipo_dte = v_tipo_dte::integer;
                 if found then
-                        if v_reg_devengo.estado in ('FINALIZADO_SIN_ERRORES', 'MANUAL_SIGFE') then
+                        if v_estado_devengo in ('FINALIZADO_SIN_ERRORES', 'MANUAL_SIGFE') then
                                 json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
                                 json2:=put_json(json2,'__MENSAJE_10K__','No es posible reclamar un documento que tiene un devengo con estado Finalizado Sin Errores o Manual Sigfe');
                                 json2:=logjson(json2,'El DTE v_rutEmisor='||v_rutEmisor||' v_tipo_dte='||v_tipo_dte||' folio='||v_folio||' tiene un devengo FINALIZADO SIN ERRORES, imposible reclamar');
                                 return json2;
-                        end if;
-                        -- FGE - 20201111 - Si es gubernamental y tiene un devengo, entonces liberar la RC.
-                        if v_reg_devengo.codigo_rc <> '' then
-                                update token_de_emitidos set codigo_dv = null, estado = 'ACEPTADA' where token = v_reg_devengo.codigo_rc and rut_receptor = v_reg_devengo.rut_receptor;
-                                update dp_devengo set codigo_rc = '' where codigo_dv = v_reg_devengo.codigo_dv;
                         end if;
                 end if;
         end if;

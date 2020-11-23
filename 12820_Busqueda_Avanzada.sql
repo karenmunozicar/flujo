@@ -77,7 +77,7 @@ begin
 
         json2:=response_requests_6000('1', 'OK', '', json2);
 
-        perform logfile('----- FGE - llamando 12820: ' || json3::varchar);
+        --perform logfile('----- FGE - llamando 12820: ' || json3::varchar);
 
         return json2;
 end;
@@ -100,7 +100,7 @@ begin
 	json2:=json1;
         json2:=regexp_replace(json2::varchar, '[^\x20-\x7f\x0d\x1b\xf1\xd1À-ü]', '', 'g')::json;
 	--json2:=logjson(json2,'[procesa_resp_ms_12820] json2 entrada=>'||json2::varchar);
-        perform logfile('----- FGE - 12820 - json2 entrada: ' || json2::varchar);
+        --perform logfile('----- FGE - 12820 - json2 entrada: ' || json2::varchar);
 
 	json3:='{}';
 	json3:=put_json(json3,'flag_paginacion','SI');
@@ -128,7 +128,7 @@ begin
         --perform logfile('----- FGE - 12820 - resp1: ' || resp1::varchar);
 
         select row_to_json(sql) from (select *, 'orange' as color from acciones_grillas where id_pantalla = get_json('app_dinamica', json2) and valor = 'Descargar') sql into json_descargar;
-        perform logfile('----- FGE - 12820 - json_descargar: ' || json_descargar::varchar);
+        --perform logfile('----- FGE - 12820 - json_descargar: ' || json_descargar::varchar);
 
 	resp1:=procesa_json_12820(resp1, json_descargar::varchar);
         --perform logfile('----- FGE - 12820 - 2 - resp1: ' || resp1::varchar);
@@ -138,7 +138,7 @@ begin
                 json3:=put_json(json3, 'datos_tabla', json_respuesta::varchar);
 
 
-                perform logfile('----- FGE - 12820 respuesta: ' || json_respuesta::varchar);
+                --perform logfile('----- FGE - 12820 respuesta: ' || json_respuesta::varchar);
 
 
 
