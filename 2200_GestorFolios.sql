@@ -1,8 +1,8 @@
 delete from isys_querys_tx where llave='2200';
 -- debo agregar una funcion en el motor que saque los datos de la TX
-insert into isys_querys_tx values ('2200',5,45,1,'select lee_parametros_motor_2200(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('2200',5,19,1,'select lee_parametros_motor_2200(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('2200',10,15,1,'select pivote_gestorfolios_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,20,0);
-insert into isys_querys_tx values ('2200',20,45,1,'select salida_gestorfolios_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('2200',20,19,1,'select salida_gestorfolios_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 
 CREATE or replace FUNCTION lee_parametros_motor_2200(json) RETURNS json AS $$
 DECLARE

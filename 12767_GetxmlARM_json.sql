@@ -1,27 +1,27 @@
 --Publica documento
 delete from isys_querys_tx where llave='12767';
 --Obtiene el DTE Original con la entrada URI_IN
-insert into isys_querys_tx values ('12767',10,1,1,'select xml_firma1_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12767',10,9,1,'select xml_firma1_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --insert into isys_querys_tx values ('12767',20,1,10,'$$SCRIPT$$',0,0,0,1,1,21,21);
 insert into isys_querys_tx values ('12767',20,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,30,30);
 
-insert into isys_querys_tx values ('12767',30,1,1,'select xml_firma2_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12767',30,9,1,'select xml_firma2_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --insert into isys_querys_tx values ('12767',40,1,10,'$$SCRIPT$$',0,0,0,1,1,41,41);
 insert into isys_querys_tx values ('12767',40,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,50,50);
 
-insert into isys_querys_tx values ('12767',50,1,1,'select arm_resp_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12767',50,9,1,'select arm_resp_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --Se envia al EDTE
 insert into isys_querys_tx values ('12767',60,1,8,'Llamada ARM EDTE',12780,0,0,0,0,65,65);
 --insert into isys_querys_tx values ('12767',62,1,8,'Llamada ARM EDTE',112780,0,0,0,0,65,65);
 
 --Publicamos el ARM
-insert into isys_querys_tx values ('12767',65,1,8,'Publica DTE',12704,0,0,0,0,70,70);
+insert into isys_querys_tx values ('12767',65,1,8,'Publica DTE',1127043,0,0,0,0,70,70);
 
 --Validamos la publicacion
-insert into isys_querys_tx values ('12767',70,1,1,'select valida_publicacion_arm_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12767',70,9,1,'select valida_publicacion_arm_12767(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 
 CREATE or replace FUNCTION valida_publicacion_arm_12767(json) RETURNS json AS $$

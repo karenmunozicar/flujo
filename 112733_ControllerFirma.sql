@@ -1,5 +1,6 @@
 delete from isys_querys_tx where llave='112733';
 
+insert into isys_querys_tx values ('112733',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
 insert into isys_querys_tx values ('112733',10,19,1,'select prepara_mail_controller_112733(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1000);
 insert into isys_querys_tx values ('112733',15,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,20,20);
 insert into isys_querys_tx values ('112733',20,19,1,'select analiza_resp_firmador_112733(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1000);

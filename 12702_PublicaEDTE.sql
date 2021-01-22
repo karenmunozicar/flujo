@@ -1,17 +1,13 @@
 --Publica documento
 delete from isys_querys_tx where llave='12702';
---insert into isys_querys_tx values ('12702',10,1,1,'select proc_procesa_publica_dte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
---insert into isys_querys_tx values ('12702',20,1,2,'Llamada al Storage Writer',4010,104,105,0,0,30,30);
---insert into isys_querys_tx values ('12702',30,1,1,'select proc_procesa_publica_dte_respuesta_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
-
+insert into isys_querys_tx values ('12702',10,1,14,'{"f":"INSERTA_JSON","p1":{"FILTRO_LEE_TRAZA_HEX":"206576656e746f20696e202827505349272c27415349272c27435349272c27525349272c27455349272920"}}',0,0,0,0,0,20,20);
+insert into isys_querys_tx values ('12702',20,1,8,'Flujo LeeTraza ',8070,0,0,0,0,40,40);
 --Llamamos a Escribir Directo
-insert into isys_querys_tx values ('12702',40,45,1,'select proc_prepara_grabacion_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12702',40,19,1,'select proc_prepara_grabacion_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('12702',50,1,3,'Llamada a Escribir en EDTE',8016,0,0,0,0,60,60);
---Llamada al flujo 8015 modo transaccional
---insert into isys_querys_tx values ('12702',55,1,2,'Llamada a Escribir en EDTE',9015,104,106,0,0,65,65);
 
-insert into isys_querys_tx values ('12702',60,45,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('12702',65,45,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12702',60,8021,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12702',65,8021,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION proc_prepara_grabacion_edte_12702(varchar) RETURNS varchar AS $$
 DECLARE
@@ -36,7 +32,6 @@ stTraza	traza.traza%ROWTYPE;
 BEGIN
     xml2:=xml1;
 
-
     --Si es un get salgo altiro
     if (get_campo('REQUEST_METHOD',xml2)='GET') then
         if ((strpos(get_campo('HTTP_USER_AGENT',xml2),'check_http')>0) or (length(get_campo('QUERY_STRING',xml2))=0))
@@ -54,12 +49,7 @@ then
         end if;
     end if;
 
-
-
-
     uri1:=get_campo('URI_IN',xml2);
-
-
 
     --20150224 FAY Si no viene URI no se puede publicar
     if (length(uri1)=0) then
@@ -68,43 +58,27 @@ then
 	return xml2;	
     end if;
 
-
+    if get_campo('STATUS_LEE_TRAZA',xml2)<>'OK' then
+	xml2 := logapp(xml2,'Falla Leer Traza');
+	xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
+	xml2 := put_campo(xml2,'__EDTE_OK__','NO');
+	return xml2;
+    end if;
+    jtraza:=get_campo('RESPUESTA_LEE_TRAZA',xml2)::json;
+    xml2 := logapp(xml2,'JTRAZA='||jtraza::varchar);
     --FAY-DAO 20180423
-    jtraza=lee_traza_filtro(uri1,' evento in (''PSI'',''ASI'',''CSI'',''RSI'',''ESI'') ');
+    --jtraza=lee_traza_filtro(uri1,' evento in (''PSI'',''ASI'',''CSI'',''RSI'',''ESI'') ');
     if count_array_json(jtraza)>0 then
-		xml2 := logapp(xml2,'eventos='||jtraza::varchar);
-		 --Ya esta enviado, OK, salgo
-                 xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
-                 xml2 := put_campo(xml2,'__EDTE_OK__','SI');
-                 xml2 := logapp(xml2,'Uri '||uri1||' ya esta enviado al SII');
-                 xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
-		--FAY-DAO-MDA 2018-11-27 Se debe sacar el documento de la dte_emitidos y enviarlo a la dte_Errores...
-                 return xml2;
+	xml2 := logapp(xml2,'eventos='||jtraza::varchar);
+	 --Ya esta enviado, OK, salgo
+	 xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+	 xml2 := put_campo(xml2,'__EDTE_OK__','SI');
+	 xml2 := logapp(xml2,'Uri '||uri1||' ya esta enviado al SII');
+	 xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
+	--FAY-DAO-MDA 2018-11-27 Se debe sacar el documento de la dte_emitidos y enviarlo a la dte_Errores...
+	 return xml2;
     end if;
 
-	/*
-
-    --Si ya tiene el evento PUB en traza, no se publica
-    tabla_traza1:=get_tabla_traza(uri1);
-    begin
-	       
-	        execute 'select string_agg(evento,'';'') from '||tabla_traza1||' where uri=$1 and evento in (''PSI'',''ASI'',''CSI'',''RSI'',''ESI'')' into eventos1 using uri1;
-		eventos1:=coalesce(eventos1,'');
-		xml2 := logapp(xml2,'eventos='||eventos1);
-		--Si esta aprobado no enviamos al EDTE
-		if strpos(eventos1,'ASI')>0 or strpos(eventos1,'CSI')>0 or  strpos(eventos1,'ESI')>0 or strpos(eventos1,'RSI')>0 or strpos(eventos1,'PSI')>0 then
-			--Ya esta enviado, OK, salgo
-			xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
-			xml2 := put_campo(xml2,'__EDTE_OK__','SI');
-			xml2 := logapp(xml2,'Uri '||uri1||' ya esta enviado al SII');
-			xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
-			return xml2;
-		end if;
-    exception WHEN OTHERS THEN
-		xml2 := logapp(xml2,'Falla string_agg 12702');
-    end;
-*/
-    --xml2:=put_context(xml2,'CONTEXTO_ALMACEN');
     xml2 := put_campo(xml2,'TX','8016'); 
 
     --Si ya vengo de publicar el Documento y tengo el INPUT_CUSTODIUM, no lo vuelvo a parsear
@@ -126,28 +100,11 @@ then
 	    xml2 := put_campo(xml2,'LEN_INPUT_CUSTODIUM',length(data1)::varchar);
     end if;
 
-   /*
-    dominio1:=split_part(split_part(uri1,'//',2),'.',1);
-    --Los ultimo 4 del dominio1
-    if length(dominio1)>4 then
-    	fecha1:=substring(dominio1,length(dominio1)-3,4);
-        --xml2:=logapp(xml2,'fecha1='||fecha1);
-        dominio1:=lower(substring(dominio1,1,length(dominio1)-4));
-        --xml2:=logapp(xml2,'dominio1='||dominio1);
-        file1:=split_part(uri1,'/',5);
-        --xml2:=logapp(xml2,'file1='||file1);
-        directorio1:=substring(file1,1,2);
-        --xml2:=logapp(xml2,'directorio1='||directorio1);
-        file1:=split_part(substring(file1,3,length(file1)),'?',1);
-        --xml2:=logapp(xml2,'file1='||file1);
-    end if;
-    */
-    --http%3A%2F%2Fdcummins1503.acepta.com%2Fv01%2F8747A8B9163F1433677E5676D9E619701998F1AA%3Fk%3D8181b82294071788d29d6992b4caf785
     file1:=replace(replace(replace(replace(uri1,':','%3A'),'/','%2F'),'?','%3F'),'=','%3D');
     --xml2:=put_campo(xml2,'ALMACEN','/opt/acepta/enviodte/work/sii/dte/pendiente/.'||file1);
 
    xml2:=put_campo(xml2,'RUT_CGE',get_campo('RUT_EMISOR',xml2));
-   xml2:=verifica_evento_cge(xml2);
+   xml2:=verifica_evento_cge_colas(xml2);
 
    --Si no es CGE
    if (get_campo('EVENTO_CGE',xml2)<>'SI') then
@@ -173,15 +130,6 @@ then
 
     --Limpia el Status antes de ir al almacen	
     xml2 := put_campo(xml2,'_STS_FILE_','');
-
-  /*  Si la URI es
-    if (get_campo('URI_IN',xml2)='http://rtc1512.acepta.com/v01/CC94FADB9FB7A17632F60227E5A74801BA444F96?k=00b81398a69e71181cd4ee13c80fa3df') then
-    		--Armo paquete para ir directo al edte
-		xml2:=put_campo(xml2,'INPUT_CUSTODIUM','02'||encode('<TX=4>9015<INPUT='::bytea,'hex')||encode(((get_campo('LEN_INPUT_CUSTODIUM',xml2)::integer/2)::varchar||'>')::bytea,'hex')||get_campo('INPUT_CUSTODIUM',xml2)||encode(('<ALMACEN='||length(get_campo('ALMACEN',xml2))::varchar||'>'||get_campo('ALMACEN',xml2))::bytea,'hex')||'03');
-        	xml2:=put_campo(xml2,'__SECUENCIAOK__','55');
-    end if;
-*/
-
     return xml2;
 END;
 $$ LANGUAGE plpgsql;

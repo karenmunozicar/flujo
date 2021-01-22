@@ -44,7 +44,7 @@ BEGIN
 	end if;
 
 
-	json2 := logjson(json2,'F 13795 Rut firma-->'|| v_rut_firma); 		
+	json2 := logjson(json2,'F 13795 1.-Rut firma-->'|| v_rut_firma||' rut_emisor='||v_rut_emisor_int::varchar); 		
 
 	if v_rut_firma='' and v_rut_emisor_int='96697410' then
 		if (select count(*) from rut_firma_clave where rut_emisor=v_rut_emisor_int)=1 then
@@ -53,6 +53,7 @@ BEGIN
         		v_rut_firma := get_json('RUT_USUARIO_ACCION', json2);
 		end if;
 	end if;
+	json2 := logjson(json2,'F 13795 2.-Rut firma-->'|| v_rut_firma||' rut_emisor='||v_rut_emisor_int::varchar); 		
 --        select rut_firmante, decode(clave, 'hex')  into v_rut_firma, v_clave from rut_firma_clave where rut_emisor=v_rut_emisor::integer ;
         select decode(clave, 'hex') into v_clave from rut_firma_clave where rut_emisor=v_rut_emisor_int and rut_firmante=v_rut_firma;
         if not found then
@@ -63,6 +64,7 @@ BEGIN
                 end if;
                 return json2;
         end if;
+	json2 := logjson(json2,'F 13795 Clave='||v_clave);
         v_clave := corrige_pass(v_clave);
 	--RME Se sacan los parametros antes de cambiar de BD
 	--json2:=get_parametros_motor_json(json2,'FIRMADOR');
@@ -144,7 +146,7 @@ BEGIN
 	
 	--FAY-DAO 20200409 si viene de pantalla sacamos el INPUT de las colas
 	if get_json('__ID_DTE__',json2)='' then
-		jaux=query_bd_colas('select data from colas_motor_generica where uri ='''||v_uri||''' and rut_emisor='''||v_rut_emisor||''' and get_campo(''TX'',data)=''8010'' limit 1');
+		jaux=query_bd_colas('select data,xml_flags from colas_motor_generica where uri ='''||v_uri||''' and rut_emisor='''||v_rut_emisor||''' and get_campo(''TX'',data)=''8010'' limit 1');
 		if get_json('STATUS',jaux)='SIN_DATA' then
 		--select data into v_data from colas_motor_generica where uri = v_uri and rut_emisor = v_rut_emisor limit 1;
 		--if not found then
@@ -156,6 +158,10 @@ BEGIN
 			return json2;
 		else
 			json2 := logjson(json2, 'Se encuentra DTE en la cola');
+			--DAO 20201123 Si aun no esta retenido, no se ha preprocesado, no se pueden agregar referencias
+			if strpos(get_json('xml_flags',jaux),'RETENIDO')=0 then
+				return response_requests_6000('2','Documento aun no procesado por Controller. Intente en unos minutos.', '', json2);
+			end if;
 			--FAY 20190602 si lo encuentra
 			v_data:=get_json('data',jaux);
 			json2 := put_json(json2, 'INPUT', get_campo('INPUT', v_data));

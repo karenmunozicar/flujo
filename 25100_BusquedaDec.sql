@@ -396,8 +396,13 @@ BEGIN
 			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
                                 --DAO 20201029 filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
-				--DAO 20201029 cambiamos el strpos del rut
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
+				--FAY-DAO 2020-11-23 si es modulo k buscamos con mayuscula y minuscula
+				if upper(modulo11(v_in_rut1))='K' then
+	                               filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0 or rut='''||lower(aux1)||''' or strpos(Descripcion,'''||lower(aux2)||''')>0 or strpos(tags,'''||lower(aux2)||''')>0    ) ';
+				else
+					--DAO 20201029 cambiamos el strpos del rut
+	                               filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
+				end if;
                         else
                                 --DAO 20201029 filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
 				--DAO 20201029 cambiamos el strpos del rut
@@ -421,9 +426,11 @@ BEGIN
 			aux1:=lpad(split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1),12,'0');
 			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
-                                --Debemos hacer doble join con los firmantes, primero los que puedo ver y luego en  donde este el rut
-                                --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and (POSITION('''||v_in_rut1||''' in z.Rut)>0 or POSITION('''||v_in_rut1||''' in x.Descripcion)>0) ) w';
-                                from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ) w';
+				if modulo11(v_in_rut1)='K' then
+                                	from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0 or rut='''||lower(aux1)||''' or strpos(Descripcion,'''||lower(aux2)||''')>0 or strpos(tags,'''||lower(aux2)||''')>0) w';
+				else
+                                	from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ) w';
+				end if;
                                 --filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (strpos(rut,'''||v_in_rut1||''')>0 or strpos(Descripcion,'''||v_in_rut1||''')>0 or strpos(tags,'''||v_in_rut1||''')>0) ';
                         else
                                 --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and POSITION('''||v_in_rut1||''' in z.Rut)>0 ) w';
@@ -447,7 +454,11 @@ BEGIN
 			aux1:=lpad(split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1),12,'0');
 			aux2:=split_part(v_in_rut1,'-',1)||'-'||modulo11(v_in_rut1);
                         if (get_json('institucion_dec',json2)='HITES') then
-                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
+				if modulo11(v_in_rut1)='K' then
+	                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0 or rut='''||lower(aux1)||''' or strpos(Descripcion,'''||lower(aux2)||''')>0 or strpos(tags,'''||lower(aux2)||''')>0) ';
+				else
+	                                filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and (rut='''||aux1||''' or strpos(Descripcion,'''||aux2||''')>0 or strpos(tags,'''||aux2||''')>0) ';
+				end if;
                         else
                                 filtro1:=filtro_doc_rs1||' and '||filtro_perf_rs1||' and '||' FecCreacion>='''||v_in_fecha_inicio||''' and FecCreacion<'''||v_in_fecha_fin||''' and ( rut='''||aux1||''' or strpos(tags,'''||v_in_rut1||''')>0) ';
                         end if;
@@ -466,7 +477,6 @@ BEGIN
                         --FAY-DAO 2018-12-10 Solo para HITES por mala construccion
                         if (get_json('institucion_dec',json2)='HITES') then
                                 --Debemos hacer doble join con los firmantes, primero los que puedo ver y luego en  donde este el rut
-                                --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and (POSITION('''||v_in_rut1||''' in z.Rut)>0 or POSITION('''||v_in_rut1||''' in x.Descripcion)>0) ) w';
                                 from_query_local1:=' from (select distinct x.coddocumento from firmantes_dec_dia x where '||filtro_doc_local1||' and '||filtro_perf_local1||' and (POSITION('''||v_in_rut1||''' in Rut)>0 or POSITION('''||v_in_rut1||''' in Descripcion)>0) ) w';
                         else
                                 --from_query_local1:=' from (select distinct x.coddocumento from (select coddocumento,Descripcion from dc4_Documento where '||filtro_doc_local1||') x join dc4_Firmantes y on x.coddocumento=y.coddocumento and '||filtro_perf_local1||' join dc4_Firmantes z on x.coddocumento=z.coddocumento and POSITION('''||v_in_rut1||''' in z.Rut)>0 ) w';

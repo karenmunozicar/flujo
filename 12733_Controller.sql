@@ -1,5 +1,7 @@
 delete from isys_querys_tx where llave='12733';
 
+insert into isys_querys_tx values ('12733',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 insert into isys_querys_tx values ('12733',10,19,1,'select envia_mail_controller_12733(''$$__XMLCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 insert into isys_querys_tx values ('12733',20,1,2,'Microservicioe 127.0.0.1',4013,300,101,0,0,30,30);
 insert into isys_querys_tx values ('12733',30,19,1,'select analiza_respuesta_ms_12733(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1000);
@@ -186,21 +188,27 @@ BEGIN
 				json_msg:=put_json(json_msg,'FOLIO_DOCUMENTO',get_json('FOLIO',json2));
 				json_msg:=put_json(json_msg,'URI_DOC',get_json('URI_IN',json2));
 				json_msg:=put_json(json_msg,'CARGO','<li>'||replace(get_json('CARGOS',json_plantilla),',','</li><li>')||'</li>');
-				json2:=logjson(json2,'MENSAJE_PLANTILLA '||decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar);
-				--mensaje_plantilla:=remplaza_tags_json_c(json_msg,decode(decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar,'hex')::varchar);
-				mensaje_plantilla:=remplaza_tags_json_c(json_msg,decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar);
-				json4:=put_json(json4,'INFORMACION_REGLA',get_json('C_NOMBRE',json2));
-				json4:=put_json(json4,'MENSAJE',mensaje_plantilla);
-				if get_json('LINK_PLANTILLA',json_plantilla)='' then
-					json4:=put_json(json4,'LINK',get_json('URI_IN',json2));
-				else
-					json4:=put_json(json4,'LINK',get_json('LINK_PLANTILLA',json_plantilla));
-				end if;
-				if get_json('NOMBRE_LINK_PLANTILLA',json_plantilla)='' then
-					json4:=put_json(json4,'NOMBRE_LINK','Documento');
-				else
-					json4:=put_json(json4,'NOMBRE_LINK',get_json('NOMBRE_LINK_PLANTILLA',json_plantilla));
-				end if;
+				--DAO 20201221 si falla la plantilla, mandamos normal
+				BEGIN
+					json2:=logjson(json2,'MENSAJE_PLANTILLA '||decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar);
+					mensaje_plantilla:=remplaza_tags_json_c(json_msg,decode(get_json('MENSAJE_PLANTILLA',json_plantilla),'hex')::varchar);
+				
+					json4:=put_json(json4,'INFORMACION_REGLA',get_json('C_NOMBRE',json2));
+					json4:=put_json(json4,'MENSAJE',mensaje_plantilla);
+					if get_json('LINK_PLANTILLA',json_plantilla)='' then
+						json4:=put_json(json4,'LINK',get_json('URI_IN',json2));
+					else
+						json4:=put_json(json4,'LINK',get_json('LINK_PLANTILLA',json_plantilla));
+					end if;
+					if get_json('NOMBRE_LINK_PLANTILLA',json_plantilla)='' then
+						json4:=put_json(json4,'NOMBRE_LINK','Documento');
+					else
+						json4:=put_json(json4,'NOMBRE_LINK',get_json('NOMBRE_LINK_PLANTILLA',json_plantilla));
+					end if;
+				EXCEPTION WHEN OTHERS THEN
+					patron_correo1:=pg_read_file('./patron_correos/patron_correo_controller.html');
+					json4:=put_json(json4,'MENSAJE',replace(replace(replace(get_json('C_MENSAJE',json2),chr(10),'<br>'),'Regla [[','<br><b>Regla [['),']]',']]</b>'));
+				END;
 			end if;
 		else
 			patron_correo1:=pg_read_file('./patron_correos/patron_correo_controller.html');

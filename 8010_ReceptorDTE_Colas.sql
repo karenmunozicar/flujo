@@ -1,22 +1,28 @@
 delete from isys_querys_tx where llave='8010';
 
+insert into isys_querys_tx values ('8010',5,1,14,'{"f":"INSERTA_JSON","p1":{"GRABA_PUB_8010":"SI","__SECUENCIAOK__":"10","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,10,10);
+--insert into isys_querys_tx values ('8010',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 --Primero que hacemos el publicar DTE
 insert into isys_querys_tx values ('8010',10,1,8,'Publica DTE',112704,0,0,0,0,20,20);
 
 -- Prepara llamada al AML
 --20201027 Se cambia la secuencia de error a las 1005 para que si falla no envie el mandato
-insert into isys_querys_tx values ('8010',20,45,1,'select proc_procesa_input_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
+--XX insert into isys_querys_tx values ('8010',20,45,1,'select proc_procesa_input_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
+insert into isys_querys_tx values ('8010',20,8021,1,'select proc_procesa_input_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
 
 --Reglas de Validacion Base ACM
 insert into isys_querys_tx values ('8010',600,7,1,'select reglas.validacion_lista(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Reglas de BASE_1_LOCAL
-insert into isys_querys_tx values ('8010',610,1,1,'select reglas.validacion_lista(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8010',610,8021,1,'select reglas.validacion_lista(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --20201027 Se cambia la secuencia de error a las 1005 para que si falla no envie el mandato
-insert into isys_querys_tx values ('8010',28,1,1,'select proc_procesa_input_dte_8010_parte2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
+--XX insert into isys_querys_tx values ('8010',28,1,1,'select proc_procesa_input_dte_8010_parte2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
+insert into isys_querys_tx values ('8010',28,8021,1,'select proc_procesa_input_dte_8010_parte2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1005);
 
 --Borra o Actualiza el contenido de la cola API MOTOR
-insert into isys_querys_tx values ('8010',1000,45,1,'select sp_procesa_respuesta_cola_motor_original(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
+--XX insert into isys_querys_tx values ('8010',1000,45,1,'select sp_procesa_respuesta_cola_motor_original(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('8010',1000,8021,1,'select sp_procesa_respuesta_cola_motor_original(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
 --20201027 Secuencia para aumentar reintentos en caso de error
 insert into isys_querys_tx values ('8010',1005,19,1,'select sp_procesa_respuesta_cola_motor(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
 --Ejecuta la respuesta para borrar y envia el mandato en el caso de las boletas
@@ -37,6 +43,12 @@ insert into isys_querys_tx values ('8010',1600,1,8,'Llamada Publica Mandato  EDT
 --Envia Boletas con mandato
 insert into isys_querys_tx values ('8010',1610,1,8,'Llamada Publica Mandato  EDTE',12771,0,0,0,0,1010,1010);
 
+--EnvioBoletaSII-
+insert into isys_querys_tx values ('8010',1620,19,1,'select encola_envio_boleta_sii_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1010);
+insert into isys_querys_tx values ('8010',1630,1,2,'Llamada MS EnvioBoletaSII',4013,300,101,0,0,1631,1631);
+--XX insert into isys_querys_tx values ('8010',1631,1,1,'select valida_respuesta_envio_boleta_sii_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1632);
+insert into isys_querys_tx values ('8010',1631,8021,1,'select valida_respuesta_envio_boleta_sii_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1632);
+insert into isys_querys_tx values ('8010',1632,19,1,'select valida_respuesta_envio_boleta_sii_error_8010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1010);
 
 --Llamada al AML por el Apache
 --insert into isys_querys_tx values ('8010',30,1,2,'Llamada al AML',4001,100,101,0,0,40,40);
@@ -53,7 +65,8 @@ insert into isys_querys_tx values ('8010',38,1,2,'Llamada directo al AML',14008,
 --AML CGE
 insert into isys_querys_tx values ('8010',39,1,2,'Llamada directo al AML CGE',14009,102,101,0,0,40,40);
 --Respuesta del AML
-insert into isys_querys_tx values ('8010',40,45,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
+--insert into isys_querys_tx values ('8010',40,45,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8010',40,8021,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
 
 --Flujo de Mandato de Boletas y DTE
 --Va directo al 1000 para verificar si le fue bien en el flujo y se borra de la cola
@@ -96,6 +109,25 @@ insert into isys_querys_tx values ('8010',700,1,8,'Flujo CA4LIB',12788,0,0,1,1,0
 --Flujo de los CA4RCF, igual que el de WEBIECV
 insert into isys_querys_tx values ('8010',710,1,8,'Flujo CA4RCF',12802,0,0,1,1,0,0);
 
+CREATE or replace FUNCTION encola_envio_boleta_sii_8010(varchar) RETURNS varchar AS $$
+DECLARE
+        xml1        alias for $1;
+        xml2    varchar;
+        xml7    varchar;
+        id1     bigint;
+BEGIN
+        xml2:=xml1;
+
+        xml7:=put_campo(xml2,'_LOG_','');
+	xml7:=put_campo(xml7,'TX','6010');
+	execute 'insert into cola_motor_4 (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria,nombre_cola) values (now(),'||quote_literal(get_campo('URI_IN',xml2))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ENVIO_BOLETA_SII'',''cola_motor_4'') returning id' into id1;
+	xml2:=logapp(xml2,'Inserto ENVIO_BOLETA_SII '||get_campo('URI_IN',xml2)||' id='||id1::varchar);
+
+	xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
+	xml2 := sp_procesa_respuesta_cola_motor_original(xml2);
+        return xml2;
+END;
+$$ LANGUAGE plpgsql;
 
 
 --Genera un XML para ir a borrar, con datos basicos
@@ -109,7 +141,13 @@ BEGIN
         if(get_campo('_CATEGORIA_BD_',xml2)='COLAS')then
                 xml3 := put_campo(xml3,'__SECUENCIAOK__','1010');
         else
-                xml3 := put_campo(xml3,'__SECUENCIAOK__','1000');
+		--Si no viene de las colas(Flujo Escritorio), no vamos a la secuencia de borrado
+		if is_number(get_campo('__ID_DTE__',xml2)) is false then
+			xml3:=logapp(xml3,'No viene desde las colas, Teminamos aqui');
+                	xml3 := put_campo(xml3,'__SECUENCIAOK__','0');
+		else	
+                	xml3 := put_campo(xml3,'__SECUENCIAOK__','1000');
+		end if;
         end if;
         return xml3;
 END;
@@ -162,6 +200,18 @@ DECLARE
 	j3	json;
 BEGIN
     xml2:=xml1;
+	if get_campo('GRABA_PUB_8010',xml2)='SI' and get_campo('__PUBLICADO_OK__',xml2)='SI' then
+		if (get_campo('SCRIPT_NAME',xml2) in ('/ca4/ca4rec','/ca4/recmotor')) then
+			xml2:=put_campo(xml2,'CANAL','RECIBIDOS');
+			xml2:=put_campo(xml2,'RUT_OWNER',get_campo('RUT_RECEPTOR',xml2));
+		else
+			xml2:=put_campo(xml2,'CANAL','EMITIDOS');
+			xml2:=put_campo(xml2,'RUT_OWNER',get_campo('RUT_EMISOR',xml2));
+		end if;
+		xml2:=put_campo(xml2,'COMENTARIO_TRAZA','');
+		xml2:=put_campo(xml2,'COMENTARIO2','');
+		xml2 := graba_bitacora(xml2,'PUB');
+	end if;
 
     --xml2:=logapp(xml2,'Paso1');
     --xml2:=logapp(xml2,'Llega DTE '||get_campo('SCRIPT_NAME',xml2));
@@ -423,6 +473,15 @@ BEGIN
 	 if (strpos(resp1,'200 OK')>0) then
 	        xml2 := logapp(xml2,'Respuesta Servicio 200 OK URI'||get_campo('URI',xml1));
 		xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
+	 elsif (strpos(resp1,'555 NK')>0) then
+		xml2:=put_campo(xml2,'RESPUESTA','Status: 555 NK');
+		--Si no esta encolado, lo mandamos a la secuencia para encolar el envio
+		if is_number(get_campo('__ID_DTE__',xml2)) is false then
+			xml2 := logapp(xml2,'Encolamos el Envio');
+			xml2 := put_campo(xml2,'__SECUENCIAOK__','1632');	
+			RETURN xml2;
+		end if;
+		xml2 := logapp(xml2,'Enviamos a Futuro ');
 	 else
 	        xml2 := logapp(xml2,'Respuesta Servicio 400 Rechazado (8010) URI'||get_campo('URI',xml1));
 		xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');

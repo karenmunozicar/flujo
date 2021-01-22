@@ -40,7 +40,7 @@ insert into isys_querys_tx values ('15102','74',26,1,'$$QUERY_DATA$$',0,0,0,9,1,
 --Boletas 2014
 insert into isys_querys_tx values ('15102','76',17,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 
-insert into isys_querys_tx values ('15102','80',9,1,'select arma_next_query1_15102(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('15102','80',19,1,'select arma_next_query1_15102(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 --Base Normal por Folio
 insert into isys_querys_tx values ('15102','90',9,1,'$$QUERY_DATA$$',0,0,0,9,1,100,100);
 --Base Importados Folio
@@ -141,7 +141,7 @@ DECLARE
 begin
 	json2:=json1;
 	json2:=put_json(json2,'__FUNC__','arma_next_query1_15102');
-	json2:=logjsonfunc(json2,'RES_JSON_1='||get_json('RES_JSON_1',json2));
+	--json2:=logjsonfunc(json2,'RES_JSON_1='||get_json('RES_JSON_1',json2));
 	res1:=get_json('RES_JSON_1',json2);
 	--Si no contesta el API...
 	if (is_json_dict(res1) is false) then
@@ -225,15 +225,14 @@ begin
 		json2:=put_json(json2,'__SECUENCIAOK__','76');
 	else
 		--DAO 20201001 para los reportes vamos a la base de replica
-                if get_json('rutUsuario',json2)='17597643' then
-                --if is_number(get_json('id_reporte',json2)) then
+		if is_number(get_json('id_reporte',json2)) then
                         json2:=put_json(json2,'__SECUENCIAOK__','71');
                 else
                         json2:=put_json(json2,'__SECUENCIAOK__','70');
                 end if;
 
 		if get_json('rutUsuario',json2)='17597643' then
-		json2:=logjson(json2,'QUERY17597643 '||query1);
+		json2:=logjson(json2,'QUERY17597643 '||replace(query1,chr(10),' '));
 		end if;
 	end if;
 	json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
@@ -315,47 +314,14 @@ BEGIN
                 json3:=put_json(json3,'cantidad_paginas','0');
         end if;
 
-        estado1:=get_json('ESTADO',json2);
-        if(estado1<>'') then
-                select glosa from estado_dte where descripcion=estado1 into evento1;
-                json2:=put_json(json2,'EVENTO_CUAD',evento1);
-        end if;
-        if(tipo_dte1<>'') then
-                if(tipo_dte1 in ('39','41')) then
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_boletas');
-                elsif(tipo_dte1 in ('110','111','112')) then
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_exportacion');
-                else
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_nacionales');
-                end if;
-        end if;
-
         json3:=put_json(json3,'titulo','Búsqueda Emitidos');
         json3:=put_json(json3,'flag_paginacion','NO');
         json3:=put_json(json3,'flag_paginacion_manual','SI');
         json3:=put_json(json3,'flag_tipo_cuadro','GRILLA');
         json3:=put_json(json3,'caption_buscar','Buscar en esta pagina :');
 
-	if(tipo_dte1 in ('39','41') or get_json('v_lista_errores',json2)='SI') then
-		--Las boletas no tienen boton cesion
-		select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end and valor not in ('CESION','ExportarPDF') order by orden) sql into json_out2;
-	else
-		select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
-	end if;
-        -- NBV 201705
-        if(tipo_dte1='801') then
-                json_oc:='[]';
-                select row_to_json(sql) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo,reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and valor='ExportarPDF') sql into json_pdf1;
-                json_oc:=put_json_list(json_oc,json_pdf1);
-                json3:=put_json(json3,'botones_tabla',json_oc);
-        else
-        -- NBV 201705
-                json3:=put_json(json3,'botones_tabla',json_out2);
-        end if;
-	if get_json('__BOTONES_TABLA__',json2)<>'' then
-                json3:=put_json(json3,'botones_tabla',get_json('__BOTONES_TABLA__',json2));
-        end if;
 
+	json3:=put_json(json3,'botones_tabla',get_json('__BOTONES_TABLA__',json2));
         json2:=response_requests_6000('1', 'OK', json3::varchar,json2);
         RETURN json2;
 end;
@@ -476,6 +442,13 @@ DECLARE
 	aux_filtro_fechas varchar;	
 	ret1	varchar;
 	campo_dev	record;
+	
+	json_out2       json;
+        json_pdf1       json;
+        estado1         varchar;
+        evento1         varchar;
+        json_oc         json;
+        app1    varchar;
 BEGIN
         json2:=json1;
 	json2:=put_json(json2,'__FUNC__','arma_filtro');
@@ -818,8 +791,41 @@ BEGIN
                 end if;
         end if;
 
+	if get_json('__BOTONES_TABLA__',json2)='' then
+		app1:=get_json('app_dinamica',json2);
+		if(get_json('TIPO_DTE',json2) in ('39','41') or get_json('v_lista_errores',json2)='SI') then
+			--Las boletas no tienen boton cesion
+			select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end and valor not in ('CESION','ExportarPDF') order by orden) sql into json_out2;
+		else
+			select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
+		end if;
+		-- NBV 201705
+		if(get_json('TIPO_DTE',json2)='801') then
+			json_oc:='[]';
+			select row_to_json(sql) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo,reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and valor='ExportarPDF') sql into json_pdf1;
+			json_oc:=put_json_list(json_oc,json_pdf1);
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_oc);
+		else
+		-- NBV 201705
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_out2);
+		end if;
+		estado1:=get_json('ESTADO',json2);
+                if(estado1<>'') then
+                        select glosa from estado_dte where descripcion=estado1 into evento1;
+                        json2:=put_json(json2,'EVENTO_CUAD',evento1);
+                end if;
+                if(get_json('TIPO_DTE',json2)<>'') then
+                        if(get_json('TIPO_DTE',json2) in ('39','41')) then
+                                json2:=put_json(json2,'GRUPO_CUAD','documentos_boletas');
+                        elsif(get_json('TIPO_DTE',json2) in ('110','111','112')) then
+                                json2:=put_json(json2,'GRUPO_CUAD','documentos_exportacion');
+                        else
+                                json2:=put_json(json2,'GRUPO_CUAD','documentos_nacionales');
+                        end if;
+                end if;
+	end if;
 
-        id_masivo1:=get_json('parametro5',json2);
+	id_masivo1:=get_json('parametro5',json2);
 	--Campos QUERY
 	-- Casos en q no se cuenta en el RS son PREA, OC (de_recibidos), Por FOLIO
 	if (flag_prea1 or vin_folio<>'' or vin_tipo_dte='801') then
@@ -903,6 +909,8 @@ BEGIN
 		--json2:=logjsonfunc(json2,'query_data1='||query_data1);
 		json2:=put_json(json2,'QUERY_DATA',query_data1);
 		json2:=put_json(json2,'CAT_EST','FOLIO_NORMAL_REC');
+		--json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','2');
+                --json2:=put_json(json2,'__SECUENCIAOK__','30');
 		json2:=put_json(json2,'__SECUENCIAOK__','90');
 		json2:=put_json(json2,'__CONTADOR__','0');
 		if get_json('rutUsuario',json2)='17597643' then
@@ -931,6 +939,9 @@ BEGIN
 		json2:=put_json(json2,'CAT_EST','CUENTA_RECIBIDOS');
 		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','2');
 		json2:=put_json(json2,'__SECUENCIAOK__','30');
+		if get_json('rutUsuario',json2)='17597643' then
+		json2:=logjson(json2,'QUERY17597643 '||replace(query_data1,chr(10),' '));
+		end if;
 	else
 		json2:=logjsonfunc(json2,'ERROR: Viene QUERY_RS pero no viene BASE_RS Reconocida');
 		json2:=put_json(json2,'__SECUENCIAOK__','50');

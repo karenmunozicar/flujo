@@ -1,5 +1,9 @@
 delete from isys_querys_tx where llave='8060';
 
+--insert into isys_querys_tx values ('8060',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+--Responde Acelerado si ir a ninguna base
+insert into isys_querys_tx values ('8060',5,1,14,'{"f":"INSERTA_JSON","p1":{"__SECUENCIAOK__":"10","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,10,10);
+
 insert into isys_querys_tx values ('8060',10,19,1,'select inserta_remoto_8060(''$$__XMLCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 
 --Bases Traza
@@ -31,11 +35,18 @@ insert into isys_querys_tx values ('8060','90',41,1,'$$QUERY_DATA$$',0,0,0,9,1,9
 insert into isys_querys_tx values ('8060','100',42,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 
 --Colas de procesamiento, segun donde se ejecute el procesador de colas
-insert into isys_querys_tx values ('8060','110',19,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
+insert into isys_querys_tx values ('8060','110',19,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
+insert into isys_querys_tx values ('8060','113',1913,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
+insert into isys_querys_tx values ('8060','114',1914,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
 
+--Base MOTOR ahora por api motor edr
+insert into isys_querys_tx values ('8060','120',8022,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
+insert into isys_querys_tx values ('8060','122',8022,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 
-insert into isys_querys_tx values ('8060','900',1,1,'select valida_respuesta_insert_8060(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1000);
-insert into isys_querys_tx values ('8060',1000,1,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+--Borra sobre base motor usando base 8021 api motor edr
+insert into isys_querys_tx values ('8060','900',8022,1,'select valida_respuesta_insert_8060(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1000);
+insert into isys_querys_tx values ('8060','910',19,1,'select valida_respuesta_insert_8060_colas(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1010);
+insert into isys_querys_tx values ('8060',1000,8022,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 insert into isys_querys_tx values ('8060',1010,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 
 
@@ -55,6 +66,45 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE or replace FUNCTION valida_respuesta_insert_8060_colas(json) RETURNS json AS $$
+DECLARE
+        json1    alias for $1;
+        json2  json;
+        pg_context      varchar;
+BEGIN
+        json2:=json1;
+        json2 := put_json(json2,'__SECUENCIAOK__','0');
+	--Si falla la conexion a la base...
+	if get_json('__STS_ERROR_SOCKET__',json2)='FALLA_CONEXION_BD' then
+		json2:=logjson(json2,'Falla Conexion BD');
+		json2:=put_json(json2,'__CATEGORIA_COLA__',get_json('__CATEGORIA_COLA__',json2)||'_FALLA_CONEXION_BD');
+        elsif get_json('RES_JSON_1',json2)='' or is_json_dict(get_json('RES_JSON_1',json2)) is false then
+                json2:=logjson(json2,'Falla Query '||get_json('RES_JSON_1',json2));
+                json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
+        elsif get_json('STATUS',get_json('RES_JSON_1',json2)::json)='OK' then
+                json2:=logjson(json2,'Query OK '||get_json('CATEGORIA',json2)||' '||get_json('RES_JSON_1',json2)||' '||get_json('SUB_CATEGORIA',json2));
+                json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+	--Si responde SIN_DATA y es un update lo borramos
+	elsif get_json('STATUS',get_json('RES_JSON_1',json2)::json)='SIN_DATA' and lower(substring(trim(get_json('QUERY_DATA',json2)),1,7))='update ' then
+		json2:=logjson(json2,'Update OK '||get_json('CATEGORIA',json2));
+		json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+        else
+                json2:=logjson(json2,'Respuesta Fallida '||get_json('RES_JSON_1',json2));
+                json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
+        end if;
+	json2:=pivote_borrado_8060(json2);
+	--Para que no devuelva la query nuevamente
+	json2:=put_json(json2,'QUERY_DATA','');
+	json2:=put_json(json2,'RES_JSON_1','');
+	--Si va a las colas nos ahorramos un llamado
+	if get_json('__SECUENCIAOK__',json2)='1010' then
+		json2 := put_json(json2,'__SECUENCIAOK__','0');
+		return sp_procesa_respuesta_cola_motor_original_json(json2);
+	end if;
+	return json2;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE or replace FUNCTION valida_respuesta_insert_8060(json) RETURNS json AS $$
 DECLARE
@@ -64,8 +114,8 @@ DECLARE
 BEGIN
         json2:=json1;
 	json2 := put_json(json2,'__SECUENCIAOK__','0');
-	if get_json('RES_JSON_1',json2)='' then
-		json2:=logjson(json2,'Falla Query');
+        if get_json('RES_JSON_1',json2)='' or is_json_dict(get_json('RES_JSON_1',json2)) is false then
+                json2:=logjson(json2,'Falla Query '||get_json('RES_JSON_1',json2));
 		json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
 	elsif get_json('STATUS',get_json('RES_JSON_1',json2)::json)='OK' then
 		--Chequeamos si viene funcion de respuesta
@@ -80,7 +130,16 @@ BEGIN
 		json2:=logjson(json2,'Respuesta Fallida');
 		json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
 	end if;
-	return pivote_borrado_8060(json2);
+	--Para que no devuelva la query nuevamente
+	json2:=pivote_borrado_8060(json2);
+        json2:=put_json(json2,'QUERY_DATA','');
+        json2:=put_json(json2,'RES_JSON_1','');
+        --Si va a las colas nos ahorramos un llamado
+        if get_json('__SECUENCIAOK__',json2)='1000' then
+                json2 := put_json(json2,'__SECUENCIAOK__','0');
+                return sp_procesa_respuesta_cola_motor_original_json(json2);
+        end if;
+	return json2;
 	--return sp_procesa_respuesta_cola_motor_original_json(json2);
 END;
 $$ LANGUAGE plpgsql;
@@ -102,6 +161,10 @@ BEGIN
 	json2:=put_json(json2,'PARAMETRO',get_campo('PARAMETRO',xml2));
 	json2:=put_json(json2,'__FLUJO_ACTUAL__',get_campo('__FLUJO_ACTUAL__',xml2));
 	json2:=put_json(json2,'__IDPROC__',get_campo('__IDPROC__',xml2));
+	--Si tengo sub categoria se la agrego a la __CATEGORIA_COLA__
+	if get_campo('SUB_CATEGORIA',xml2)<>'' then
+		json2:=put_json(json2,'__CATEGORIA_COLA__',get_campo('__CATEGORIA_COLA__',xml2)||'_'||get_campo('SUB_CATEGORIA',xml2));
+	end if;
 	categoria1:=get_campo('CATEGORIA',xml2);
 	if categoria1 in ('DOCS_RELACIONADOS','TRAZA_REMOTA') then
 		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
@@ -168,6 +231,33 @@ BEGIN
 		json2:=put_json(json2,'__CATEGORIA__',categoria1);
 		json2:=logjson(json2,'Ejecuta Remoto = '||query1);
 		json2:=put_json(json2,'__SECUENCIAOK__','100');
+	elsif categoria1 in ('MOTOR') then
+		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
+                json2:=logjson(json2,'Ejecuta Remoto '||categoria1);
+                query1:=decode_hex(get_campo('QUERY',xml2));
+                xml2:=put_campo(xml2,'QUERY_DATA',query1);
+                json2:=put_json(json2,'QUERY_DATA',query1);
+                json2:=put_json(json2,'__CATEGORIA__',categoria1);
+                json2:=logjson(json2,'Ejecuta Remoto = '||query1);
+		json2:=put_json(json2,'__SECUENCIAOK__','120');
+	elsif categoria1 in ('MOTOR_MOTOR') then
+		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
+                json2:=logjson(json2,'Ejecuta Remoto '||categoria1);
+                query1:=decode_hex(get_campo('QUERY',xml2));
+                xml2:=put_campo(xml2,'QUERY_DATA',query1);
+                json2:=put_json(json2,'QUERY_DATA',query1);
+                json2:=put_json(json2,'__CATEGORIA__',categoria1);
+                json2:=logjson(json2,'Ejecuta Remoto = '||query1);
+		json2:=put_json(json2,'__SECUENCIAOK__','122');
+	elsif categoria1 in ('COLAS_14') then
+		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
+		json2:=logjson(json2,'Ejecuta Remoto '||categoria1);
+		query1:=decode_hex(get_campo('QUERY',xml2));
+		xml2:=put_campo(xml2,'QUERY_DATA',query1);
+		json2:=put_json(json2,'QUERY_DATA',query1);
+		json2:=put_json(json2,'__CATEGORIA__',categoria1);
+		json2:=logjson(json2,'Ejecuta Remoto = '||query1);
+		json2:=put_json(json2,'__SECUENCIAOK__','114');
 	elsif categoria1 in ('COLAS') then
 		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
 		json2:=logjson(json2,'Ejecuta Remoto '||categoria1);
@@ -176,7 +266,11 @@ BEGIN
 		json2:=put_json(json2,'QUERY_DATA',query1);
 		json2:=put_json(json2,'__CATEGORIA__',categoria1);
 		json2:=logjson(json2,'Ejecuta Remoto = '||query1);
-		json2:=put_json(json2,'__SECUENCIAOK__','110');
+		if nextval('alterna_colas')=13 then
+			json2:=put_json(json2,'__SECUENCIAOK__','113');
+		else
+			json2:=put_json(json2,'__SECUENCIAOK__','114');
+		end if;
 	else
 		json2:=logjson(json2,'Categoria no reconocida '||categoria1);
 		json2:=put_json(json2,'RESPUESTA','Status: 444 NK');

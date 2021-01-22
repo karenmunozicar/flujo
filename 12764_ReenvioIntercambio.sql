@@ -1,20 +1,24 @@
 --Publica documento
 delete from isys_querys_tx where llave='12764';
+insert into isys_querys_tx values ('12764',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
 --Obtiene el DTE Original con la entrada URI_IN
-insert into isys_querys_tx values ('12764',5,1,8,'GET XML desde Almacen',12705,0,0,1,1,10,10);
+insert into isys_querys_tx values ('12764',10,1,8,'GET XML desde Almacen',12705,0,0,1,1,15,15);
 
-insert into isys_querys_tx values ('12764',10,19,1,'select proc_procesa_get_xml_mandato_12764(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12764',15,19,1,'select proc_procesa_get_xml_mandato_12764(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --Envia Mandato a EDTE
 insert into isys_querys_tx values ('12764',20,1,8,'Llamada Renvio Intercambio EDTE',12784,0,0,0,0,30,30);
 --Respondemos la respuesta de la Aplicacion
-insert into isys_querys_tx values ('12764',30,1,1,'select proc_procesa_resp_mandato_edte_12764(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12764',30,19,1,'select proc_procesa_resp_mandato_edte_12764(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION proc_procesa_resp_mandato_edte_12764(varchar) RETURNS varchar AS $$
 DECLARE
     xml1        alias for $1;
     xml2	varchar;
 	json2	varchar;
+	xml7	varchar;
+	id1	bigint;
+	xml9	varchar;
 begin
 	xml2:=xml1;
 	json2:='{}';
@@ -24,7 +28,23 @@ begin
 	else
 		--Se graba el evento de reenvio
 		if (get_campo('FLAG_EVENTO_REE',xml2)<>'NO') then
-			xml2:=graba_bitacora(xml2,'REE');
+			--FAY-DAO 20210117 Encolamos el graba_bitacora
+        		xml7:=put_campo('','TX','8060');
+			xml7:=put_campo(xml7,'CATEGORIA','MOTOR');
+			xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_12764');
+			xml7:=put_campo(xml7,'URI_IN',get_campo('URI_IN',xml2));
+			xml9:=put_campo(xml2,'XML_ALMACEN','');
+			xml9:=put_campo(xml9,'INPUT_CUSTODIUM','');
+			xml9:=put_campo(xml9,'RESPUESTA','');
+			xml9:=put_campo(xml9,'SCRIPT_EDTE','');
+			xml9:=put_campo(xml9,'ALMACEN','');
+			xml9:=put_campo(xml9,'FILE','');
+			xml7:=put_campo(xml7,'QUERY',encode_hex('select graba_bitacora('''||replace(xml9,chr(39),'')||''',''REE'')'));
+        		execute 'insert into cola_motor_10 (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values (now(),'||quote_literal(get_campo('URI_IN',xml7))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ACT_REMOTO'') returning id' into id1;
+        		xml2:=logapp(xml2,'Inserto GRABA_BITACORA_12764 '||get_campo('URI_IN',xml7)||' id='||id1::varchar);
+		else
+			xml2:=logapp(xml2,'Sin GRABA_BITACORA_12764');
+			--xml2:=graba_bitacora(xml2,'REE');
 		end if;
 		xml2:=response_requests_5000('1', 'Intercambio Enviado OK','Intercambio Enviado OK', xml2,json2);
 		xml2:=logapp(xml2,'REENVIO INTER: Intercambio Enviado OK'||get_campo('URI_IN',xml2));

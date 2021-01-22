@@ -1,12 +1,12 @@
 --Consulta Estado Reclamo SII
 delete from isys_querys_tx where llave='16210';
 
-insert into isys_querys_tx values ('16210',10,1,1,'select evaluar_ejecucion_16210(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('16210',10,19,1,'select evaluar_ejecucion_16210(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('16210',12767,1,8,'Llamada ARM JSON',12767,0,0,0,0,20,20);
 insert into isys_querys_tx values ('16210',12796,1,8,'Llamada NAR JSON',12796,0,0,0,0,20,20);
 insert into isys_querys_tx values ('16210',16201,1,8,'Llamada Reclamo',16201,0,0,0,0,20,20); 
 
-insert into isys_querys_tx values ('16210',20,1,1,'select flujo_control_16210(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('16210',20,19,1,'select flujo_control_16210(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('16210',1000,19,1,'select sp_procesa_respuesta_cola_motor88_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 

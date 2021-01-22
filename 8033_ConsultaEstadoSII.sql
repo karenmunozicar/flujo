@@ -1,7 +1,7 @@
 delete from isys_querys_tx where llave='8033';
 
 --Proceso el DTE REcibido
-insert into isys_querys_tx values ('8033',20,1,1,'select arma_llamada_sii_8033(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8033',20,19,1,'select arma_llamada_sii_8033(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('8033',30,1,2,'Servicio de SII 172.16.14.88',4013,100,101,0,0,40,40);
 insert into isys_querys_tx values ('8033',40,1,1,'select verifica_resp_sii_8033(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Genera Solicitud de CRT

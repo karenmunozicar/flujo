@@ -1,10 +1,12 @@
 delete from isys_querys_tx where llave='8032';
 
-insert into isys_querys_tx values ('8032',60,45,1,'select genera_crt_8032(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
+insert into isys_querys_tx values ('8032',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
+insert into isys_querys_tx values ('8032',10,45,1,'select genera_crt_8032(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 
 insert into isys_querys_tx values ('8032',70,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,80,80);
 
-insert into isys_querys_tx values ('8032',80,45,1,'select verifica_firma_crt_8032(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8032',80,19,1,'select verifica_firma_crt_8032(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 --Publica CRT
 insert into isys_querys_tx values ('8032',90,1,8,'Publica DTE',112704,0,0,0,0,100,100);
 
@@ -58,6 +60,9 @@ BEGIN
 	--El input viene encodeado, pero es un json
 	--json2:=decode_hex(get_json('INPUT',json1))::json;
 	json2:=json1;
+	
+	json2:=logjson(json2,'Se genera CRT');
+
 	--Limpio el INPUT de la memoria del procesador
 	json2:=put_json(json2,'INPUT','');
 	
@@ -404,11 +409,12 @@ BEGIN
 
 		json2:=put_json(json2,'INPUT','');
 		json2:=put_json(json2,'__SECUENCIAOK__','120');
+		/* Se encola al mimso moneto q el crt
 		if (get_json('TIPO_DTE',json2) in ('33','34','43')) then
 			--si envio correctamente el CRT, grabo en las colas para buscar la fecha de recepcion real del sii
 			sts1:=insert_cola_fecha_rec_sii_16103(get_json('CODIGO_TXEL',json2),get_json('RUT_EMISOR',json2),get_json('TIPO_DTE',json2),get_json('FOLIO',json2),get_json('RUT_RECEPTOR',json2),get_json('URI_REC',json2));
 			json2:=logjson(json2,'Se graba Busqueda de fecha de recepcion '||sts1);
-		end if;
+		end if;*/
 	else
 		json2:=logjson(json2,'Envio CRT Fallido ');
 		json2:= put_json(json2,'RESPUESTA','Status: 400 NK');

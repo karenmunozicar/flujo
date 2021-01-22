@@ -10,7 +10,7 @@ delete from isys_querys_tx where llave='12724';
 --insert into isys_querys_tx values ('12724',20,3,1,'select sp_inserta_docto(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,21,21);
 --insert into isys_querys_tx values ('12724',21,13,1,'select parseo_datos_webiecv_new(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,22,22);
 
-insert into isys_querys_tx values ('12724',10,9,1,'select get_input_almacen(''{"uri":"$$URI_IN$$"}'') as xml_almacen',0,0,0,1,1,22,22);
+insert into isys_querys_tx values ('12724',10,19,1,'select get_input_almacen(''{"uri":"$$URI_IN$$"}'') as xml_almacen',0,0,0,1,1,22,22);
 
 insert into isys_querys_tx values ('12724',22,13,1,'select sp_inserta_docto_new(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,30,30);
 

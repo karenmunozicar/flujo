@@ -1,5 +1,6 @@
 delete from isys_querys_tx where llave='12708';
 
+insert into isys_querys_tx values ('12708',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
 insert into isys_querys_tx values ('12708',10,1,1,'select proc_procesa_doc_recibido_sii_12708(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --Envia a Cuadratura
@@ -53,6 +54,9 @@ DECLARE
 	query1	varchar;
 	id1	bigint;
 	flag1	boolean;
+	aux1	varchar;
+
+	aux2	varchar;
 BEGIN
     xml2:=xml1; 
     --POr defecto paramos la ejecucion
@@ -123,6 +127,7 @@ BEGIN
 	select * into stDteRecibido from dte_recibidos where rut_emisor=rutEmiSDV::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer;
 	flag1:=False;
 	if found then
+		perform logfile_rc('RC dte_recibidos encontrado');
 		flag1:=True;
 	end if;
 	--Si no lo encuentro o tiene algun dato distinto, lo insertamos
@@ -130,7 +135,8 @@ BEGIN
 		--xml2:=logapp(xml2,'RC No existe en dte_recibidos');
 		perform logfile_rc('RC No existe en dte_recibidos');
 		--Si el documento ya esta, se ignora
-		select * into stDtePendiente from dte_pendientes_recibidos where rut_emisor=rutEmisor1 and folio=folio1 and tipo_dte=tipodoc1 and rut_receptor=split_part(rutReceptor1,'-',1)::bigint;
+		aux1:=split_part(rutReceptor1,'-',1);
+		select * into stDtePendiente from dte_pendientes_recibidos where rut_emisor=rutEmisor1 and folio=folio1 and tipo_dte=tipodoc1 and rut_receptor=aux1::bigint;
 		if found then
 			xml2:=logapp(xml2,'RC dte ya registrado en dte_pendientes_recibidos');
 			perform logfile_rc('RC dte ya registrado en dte_pendientes_recibidos, salgo del flujo');
@@ -215,7 +221,7 @@ BEGIN
 		end if;
 
 		--FAY-DAO 2018-11-20 REcorremos todas las reglas que tengan ese filtro para evaluarlas de forma individual en el futuro
-		for campo in select * from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII' loop
+		for campo in select * from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1 and estado = 'HABILITADO') and filtro_xml='FECHA_RECEPCION_SII' loop
 		--select * into campo from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII';
                         execute 'select '''||fechaRecepcion1::varchar||'''::timestamp + interval '''||campo.valor::varchar||' days''' into fecha_cola1;
                         xml2:=logapp(xml2,'FECHA_RECEPCION_SII_CONTROLLER');
@@ -255,6 +261,7 @@ BEGIN
 		return xml2;
    --Lo encuentro en dte_recibidos con los 5 datos rut,tipo,folio,monto,fecha
    ELSE
+		perform logfile_rc('RC dte_recibidos encontrado 1');
 		--Si el DTE esta en el reporte consolidado, significa que esta aprobado por el SII
 		--Si tenemos el DTE marcado como no aprobado, debemos generar el evento ASI
 		if (coalesce(stDteRecibido.estado_sii,'') not in ('ACEPTADO_POR_EL_SII','ACEPTADO_CON_REPAROS_POR_EL_SII')) then
@@ -278,7 +285,19 @@ BEGIN
 		--Guardamos la fecha de recepcion en el sii en dte_recibidos
 		rut_aux1:=split_part(rutEmisor1,'-',1);
 		perform logfile_rc('RC dte ya existe en dte_recibidos, se actualiza '||rut_aux1||folio1||tipodoc1||rutReceptor1||fechaRecepcion1);
-		update dte_recibidos set fecha_recepcion_sii=replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,dia_recepcion_sii=to_char(replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,'YYYYMMDD')::integer,fecha_ult_modificacion=now()::varchar,data_dte=coalesce(data_dte||trackid1,trackid1) where rut_emisor=rut_aux1::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer and rut_receptor=split_part(rutReceptor1,'-',1)::bigint and fecha_recepcion_sii is null;
+		aux2:=split_part(rutReceptor1,'-',1);
+		--Si tengo el codigo txel acutalizo
+		if stDteRecibido.codigo_txel is not null then
+			if stDteRecibido.fecha_recepcion_sii is null and stDteRecibido.rut_receptor=aux2::bigint then
+				update dte_recibidos set fecha_recepcion_sii=replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,dia_recepcion_sii=to_char(replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,'YYYYMMDD')::integer,fecha_ult_modificacion=now()::varchar,data_dte=coalesce(data_dte||trackid1,trackid1) where codigo_txel=stDteRecibido.codigo_txel;
+				perform logfile_rc('RC update dte_recibidos por codigo txel');
+			else
+				perform logfile_rc('RC update dte_recibidos no act porque fecha_recepcion_sii is nula o rut_receptor diferente');
+			end if;
+		else
+			update dte_recibidos set fecha_recepcion_sii=replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,dia_recepcion_sii=to_char(replace(decodifica_url(fechaRecepcion1),'+',' ')::timestamp,'YYYYMMDD')::integer,fecha_ult_modificacion=now()::varchar,data_dte=coalesce(data_dte||trackid1,trackid1) where rut_emisor=rut_aux1::integer and folio=folio1::bigint and tipo_dte=tipodoc1::integer and rut_receptor=aux2::bigint and fecha_recepcion_sii is null;
+			perform logfile_rc('RC update dte_recibidos');
+		end if;
 		--si se encuentra el registro se devuelve ok, el documento ya esta informado en cuadratura
 		xml2:=logapp(xml2,'Actualiza FechaSii en wf. de controller='||inserta_campo_workflow_controller(rut_aux1::integer,tipodoc1::integer,folio1::bigint,'FECHA_RECEPCION_SII',replace(decodifica_url(fechaRecepcion1),'+',' ')));
 		respuesta1:='OK,no fui a cuadratura ';

@@ -1,6 +1,8 @@
 delete from isys_querys_tx where llave='14001';
 
 --Llamamos a Escribir Directo
+insert into isys_querys_tx values ('14001',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 insert into isys_querys_tx values ('14001',10,1,1,'select verifica_modulo_importacion(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 /**BEGIN PROCESA LOS DOCUMENTOS EMITIDOS*/

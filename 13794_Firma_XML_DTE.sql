@@ -11,7 +11,8 @@ insert into isys_querys_tx values ('13794',50,1,1,'select emitir_documento_firma
 insert into isys_querys_tx values ('13794',65,1,8,'Publica DTE',12704,0,0,0,0,70,70);
 
 --Publicamos inmediatamente
-insert into isys_querys_tx values ('13794',67,1,8,'Publica DTE',8010,0,0,0,0,70,70);
+--insert into isys_querys_tx values ('13794',67,1,8,'Publica DTE',8010,0,0,0,0,70,70);
+insert into isys_querys_tx values ('13794',67,1,8,'Publica DTE',80103,0,0,0,0,70,70);
 
 --Validamos la publicacion
 insert into isys_querys_tx values ('13794',70,1,1,'select valida_publicacion_dte_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
@@ -33,6 +34,10 @@ DECLARE
         json_par1       json;
         json_out1       json;
         json_in1        json;
+	rutr1   varchar;
+        aux1    varchar;
+        campo   record;
+        json3   json;
 BEGIN
 
         json2:=put_json(json2,'RUT_USUARIO=',get_json('rutUsuario',json2));
@@ -49,6 +54,30 @@ BEGIN
 	json2:=put_json(json2,'rutCliente',rut1);
         tipo_dte1:=get_xml_hex1('TipoDTE',j1::varchar);
         rut_usuario1:=get_json('rutUsuario',json2)::integer;
+	
+	rutr1:=split_part(replace(get_xml_hex1('RUTRecep',j1::varchar),'.',''),'-',1);
+        aux1:=get_json('ID_UNICO_TX',json2);
+
+        if aux1<>'' then
+                json2:=logjson(json2,'Revisamos Proxy '||rut1||' '||tipo_dte1||' '||rutr1||' '||aux1);
+                if tipo_dte1 in ('39','41') then
+                        select * into campo from dte_boletas_diarias where rut_emisor=rut1::integer and tipo_dte=tipo_dte1::integer and rut_receptor=rutr1::integer and parametro5=aux1;
+                else
+                        execute 'select * from dte_emitidos_'||to_char(now(),'YYMM')||' where dia='||to_char(now(),'YYYYMMDD')||' and rut_emisor='||rut1||' and tipo_dte='||tipo_dte1||' and rut_receptor='||rutr1||' and parametro5='''||aux1||''' ' into campo;
+                end if;
+                if campo.codigo_txel is not null then
+                        json2:=logjson(json2,'Responde Proxy');
+                        json3:='{}';
+                        json3:=put_json(json3,'URL_DOC',campo.uri);
+                        json3:=put_json(json3,'FOLIO',campo.folio::varchar);
+                        json3:=put_json(json3,'URL_REDIRECT',(select remplaza_tags_6000(href,json2) from menu_info_10k where id2='emitidos'));
+                        json3:=put_json(json3,'FOLIO_JSON',encode(('{"FOLIO":"'||campo.folio::varchar||'","TIPO_DTE":"'||campo.tipo_dte::varchar||'"}')::bytea,'hex')::varchar);
+                        json2:=response_requests_6000_upper('3', 'OK',json3::varchar,json2);
+                        json2:=put_json(json2,'RESPONDE_PROXY','SI');
+                        return json2;
+                end if;
+        end if;
+
         --Si tengo un folio o intento de folio en id_temporal_gestor_folios para la misma sesion en estado=1, significa que fallo el anterior (borrado o emision),  por ende usamos este id para la transaccion
         --Busco si existe un id de gestor
         select * into stCorrelativo from id_temporal_gestor_folios where rut=rut1 and tipo_dte=tipo_dte1 and estado=0 order by id limit 1 for update;
@@ -575,6 +604,10 @@ BEGIN
                         */
                         --Se procesa por el 8010
                         --perform logfile('DAO_DTE_13794_8'||data1);
+			if get_json('ID_UNICO_TX',json2)<>'' then
+                                json2:=logjson(json2,'Seteamos Parametro5 para hacer proxy');
+                                json2:=put_json(json2,'PARAMETRO5',get_json('ID_UNICO_TX',json2));
+                        end if;
 			json2:=put_json(json2,'FECHA_INGRESO_COLA',now()::varchar);
                         json2:=put_json(json2,'__SECUENCIAOK__','67');
                         json2:=put_json(json2,'RESPUESTA','');

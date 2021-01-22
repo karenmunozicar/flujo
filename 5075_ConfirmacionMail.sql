@@ -6,11 +6,78 @@ delete from isys_querys_tx where llave='5075';
 --Vamos al base de send_mail
 insert into isys_querys_tx values ('5075',5,30,1,'select graba_confirmacion_send_mail_5075(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
+--Vamos a las colas a desencriptar xq el openssl falla a veces(siempre)
+insert into isys_querys_tx values ('5075',10,19,1,'select desencripta_id_5075(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,15);
 -- Prepara llamada al AML
-insert into isys_querys_tx values ('5075',10,45,1,'select confirmacion_mail_5075(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('5075',15,45,1,'select confirmacion_mail_5075(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('5075',20,10,1,'$$QUERY_DATA$$',0,0,0,9,1,10,10);
 insert into isys_querys_tx values ('5075',40,10,1,'$$QUERY_DATA$$',0,0,0,9,1,0,0);
+
+CREATE or replace FUNCTION desencripta_id_5075(json) RETURNS json AS $$
+DECLARE
+    json1       alias for $1;
+    json2   json;
+        id1     varchar;
+BEGIN
+	json2:=json1;
+        --Remplazamos los ; 
+        json2:=replace(json2::varchar,'\u0006',';')::json;
+        json2:=put_json(json2,'__SECUENCIAOK__','15');
+
+	if(get_json('categoria',json2)='VERIFICA_DTE_MOTOR') then
+		return json2;
+	end if;
+	--Solo procesamos las confirmacion de lectura
+        if (get_json('delivery-status',json2)='') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','0');
+                json2:=logjson(json2,'Confirmacion sin delivery-status, no se procesa');
+                json2:=response_requests_6000('1','Confirmacion sin delivery-status','',json2);
+                return json2;
+        end if;
+        if (get_json('rfc822-headers',json2)='') then
+        	json2:=put_json(json2,'__SECUENCIAOK__','0');
+                json2:=logjson(json2,'Confirmacion sin rfc822-headers, no se procesa');
+                json2:=response_requests_6000('1','Confirmacion sin rfc822-headers','',json2);
+                return json2;
+        end if;
+	if(get_json('categoria',json2)='CONFIRMACION_LECTURA_EDTE') then
+		return json2;
+	end if;
+
+	id1:=get_json('Message-ID',get_json('rfc822-headers',json2)::json);
+        id1:=split_part(split_part(id1,'<',2),'@',1);
+	--json2:=logjson(json2,'id1='||id1||' '||get_json('rfc822-headers',json2));
+	if (substring(id1,1,3)='ACP') then
+                id1:=substring(id1,4);
+		BEGIN
+                	id1:=desencripta_hash_evento_VDC(id1::varchar);
+			if id1='' then
+				id1:=desencripta_hash_evento_vdc_bash(id1::text);
+			end if;
+		EXCEPTION WHEN OTHERS THEN
+			id1:=desencripta_hash_evento_vdc_bash(id1::text);
+		END;
+		json2:=put_json(json2,'DATA_DECRYPT',encode_hex(id1::varchar));
+		json2:=logjson(json2,'ACP DATA_DECRYPT desencripta_hash_evento_VDC colas');
+	elsif (substring(id1,1,3)='JCP') then
+                json2:=logjson(json2,'Formato ID JSON');
+                id1:=substring(id1,4);
+		BEGIN
+                	id1:=desencripta_hash_evento_VDC(id1::varchar);
+			if id1='' then
+				id1:=desencripta_hash_evento_vdc_bash(id1::text);
+			end if;
+		EXCEPTION WHEN OTHERS THEN
+			id1:=desencripta_hash_evento_vdc_bash(id1::text);
+		END;
+		json2:=put_json(json2,'DATA_DECRYPT',encode_hex(id1::varchar));
+		json2:=logjson(json2,'JCP DATA_DECRYPT desencripta_hash_evento_VDC colas');
+	end if;
+	return json2;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE or replace FUNCTION confirmacion_mail_5075(json) RETURNS json AS $$
 DECLARE
@@ -50,12 +117,15 @@ DECLARE
 BEGIN
         json2:=json1;
 	--Remplazamos los ; 
+	--perform logfile('confirmacion_mail_5075 ');
 	json2:=replace(json2::varchar,'\u0006',';')::json;
         json2:=put_json(json2,'__SECUENCIAOK__','0');
         --json2:=logjson(json2,'confirmacion_mail_5075 INPUT='||json2::varchar);
+	--json2:=logjson(json2,'id1=VACIO '||get_json('rfc822-headers',json2));
 
 	--Esta transaccion verifica que si la URL ya esta en la traza terminada, se ignora este correo
 	if(get_json('categoria',json2)='VERIFICA_DTE_MOTOR') then
+		--perform logfile('confirmacion_mail_5075 VERIFICA_DTE_MOTOR');
 		rut1:=split_part(get_json('RUT_EMISOR',json2),'-',1);
 		fecha1:=get_json('FECHA_EMISION',json2);
 		tipo_dte1:=get_json('TIPO_DTE',json2);
@@ -77,6 +147,7 @@ BEGIN
 			json2:=response_requests_6000('2','Dte no procesado '||uri1,'',json2);
 		end if;
 
+		--perform logfile('confirmacion_mail_5075 VERIFICA_DTE_MOTOR Fin');
 		return json2;
 
 	end if;
@@ -96,8 +167,10 @@ BEGIN
 	
 	id1:=get_json('Message-ID',get_json('rfc822-headers',json2)::json);
         id1:=split_part(split_part(id1,'<',2),'@',1);
+	json2:=logjson(json2,'id1='||id1);
 
 	if(get_json('categoria',json2)='CONFIRMACION_LECTURA_EDTE') then
+		--perform logfile('confirmacion_mail_5075 CONFIRMACION_LECTURA_EDTE');
 		s1:=get_json('Subject',get_json('rfc822-headers',json2)::json);
 		rut1:=split_part(id1,'-',2)||'-'||split_part(id1,'-',3);
 		rut_edte1:=rut1;
@@ -116,6 +189,7 @@ BEGIN
 		end if;		
 
 		--json2:=response_requests_6000('2','Parseo de ID EDTE '||get_json('data',json_resp1)||' '||id1,'',json2);
+		--perform logfile('confirmacion_mail_5075 parser_edte_msgid');
 		json_edte3:=parser_edte_msgid(get_json('data',json_resp1),id1);	
 		if(json_edte3::varchar='{}' or get_json('LISTA',json_edte3)='') then
 			--Dejar en 1
@@ -137,7 +211,9 @@ BEGIN
 			if(strpos(id1,'EnvioDTE')>0) then
 				json3:=put_json(json3,'RUT_EMISOR',rut1);
 				json3:=put_json(json3,'RUT_RECEPTOR',rut_rec1);
+				--perform logfile('confirmacion_mail_5075 dte_emitidos '||rut1::varchar||' '||folio1::varchar);
 				select * into campo from dte_emitidos where rut_emisor=rut1::bigint and tipo_dte=tipo_dte1::integer and folio=folio1::bigint;
+				--perform logfile('confirmacion_mail_5075 dte_emitidos '||rut1::varchar||' '||folio1::varchar||' Fin');
 				if not found then
 					json2:=logjson(json2,'CONFIRMACION_LECTURA_EDTE rut_emisor='||rut1||' tipo_dte='||tipo_dte1||' folio='||folio1||' No encontrado en dte_emitidos');
 					i:=i+1;
@@ -154,7 +230,9 @@ BEGIN
 			elsif(strpos(id1,'EnvioRecibos')>0) then  
 				json3:=put_json(json3,'RUT_EMISOR',rut_rec1);
 				json3:=put_json(json3,'RUT_RECEPTOR',rut1);
+				--perform logfile('confirmacion_mail_5075 dte_recibidos '||rut_rec1::varchar||' '||folio1::varchar);
 				select * into campo from dte_recibidos where rut_emisor=rut_rec1::bigint and tipo_dte=tipo_dte1::integer and folio=folio1::bigint;
+				--perform logfile('confirmacion_mail_5075 dte_recibidos '||rut_rec1::varchar||' '||folio1::varchar||' Fin');
 				if not found then
 					json2:=logjson(json2,'CONFIRMACION_LECTURA_EDTE rut_emisor='||rut1||' tipo_dte='||tipo_dte1||' folio='||folio1||' No encontrado en dte_recibidos');
 					i:=i+1;
@@ -178,8 +256,9 @@ BEGIN
 			json3:=put_json(json3,'FECHA_EMISION',campo.fecha_emision::varchar);
 			json3:=put_json(json3,'uri_dte',campo.uri);
 			
-
+			--perform logfile('confirmacion_mail_5075 evento_confirmacion_mail_5075');
 			json_aux1:=evento_confirmacion_mail_5075(json2,json3);	
+			--perform logfile('confirmacion_mail_5075 evento_confirmacion_mail_5075 Fin');
 			json2:=logjson(json2,'CONFIRMACION_LECTURA_EDTE '||get_json('_LOG_',json_aux1));
 
 			i:=i+1;
@@ -204,7 +283,15 @@ BEGIN
 
 	if (substring(id1,1,3)='ACP') then
 		id1:=substring(id1,4);
-		id1:=desencripta_hash_evento_VDC(id1);
+		if get_json('DATA_DECRYPT',json2)<>'' then
+			json2:=logjson(json2,'ACP Ocupo DATA_DECRYPT');
+			id1:=decode_hex(get_json('DATA_DECRYPT',json2));
+		else
+			json2:=logjson(json2,'ACP SIN DATA_DECRYPT');
+			raise notice 'desencripta_hash_evento_VDC ACP';
+			id1:=desencripta_hash_evento_VDC(id1);
+		end if;
+		json2:=logjson(json2,'DATA_DECRYPT ID1='||id1);
 		if (strpos(id1,'##')>0) then
 			json3:='{}';
 			json3:=put_json(json3,'RUT_EMISOR',split_part(id1,'##',1));
@@ -254,7 +341,15 @@ BEGIN
 	elsif (substring(id1,1,3)='JCP') then
 		json2:=logjson(json2,'Formato ID JSON');
 		id1:=substring(id1,4);
-		id1:=desencripta_hash_evento_VDC(id1);
+		if get_json('DATA_DECRYPT',json2)<>'' then
+			json2:=logjson(json2,'JCP Ocupo DATA_DECRYPT');
+			id1:=decode_hex(get_json('DATA_DECRYPT',json2));
+		else
+			json2:=logjson(json2,'JCP SIN DATA_DECRYPT');
+			--raise notice 'desencripta_hash_evento_VDC JCP %',json2;
+			id1:=desencripta_hash_evento_VDC(id1);
+		end if;
+		json2:=logjson(json2,'DATA_DECRYPT ID1='||id1);
 		if is_json_dict(id1) then
 			json3:='{}';
 			json3:=put_json(json3,'RUT_EMISOR',get_json('E',id1::json));
@@ -305,6 +400,9 @@ DECLARE
         json_edte3      json;
         server_remoto1  varchar;
         lista1  json;
+	nombre_tabla1	varchar;
+	--id1	bigint;
+	xml7	varchar;
 BEGIN
 	json2:=json1;
 	json3:=json_data;
@@ -369,15 +467,31 @@ BEGIN
         xml4:=put_campo(xml4,'TIPO_DTE',get_json('TIPO_DTE',json3));
         xml4:=put_campo(xml4,'CANAL',get_json('CANAL',json3));
 	xml4:=put_campo(xml4,'__FLUJO_ACTUAL__',get_json('__FLUJO_ACTUAL__',json1));
-	--perform logfile('Graba Evento '||get_json('evento_confirmacion',json3)||' '||xml4);
+	----perform logfile('Graba Evento '||get_json('evento_confirmacion',json3)||' '||xml4);
 
-	--perform logfile('Graba Evento evento='||get_json('evento_confirmacion',json3)||' xml4='||xml4::varchar);
-        xml4:=graba_bitacora(xml4,get_json('evento_confirmacion',json3));
+	----perform logfile('Graba Evento evento='||get_json('evento_confirmacion',json3)||' xml4='||xml4::varchar);
+	--perform logfile('confirmacion_mail_5075 graba_bitacora '||get_json('evento_confirmacion',json3)||' '||get_json('uri_dte',json3));
+
+	--FAY-DAO 20210116 grabamos en las colas el graba bitacora
+        --xml4:=graba_bitacora(xml4,get_json('evento_confirmacion',json3));
+	nombre_tabla1:='cola_motor_5';
+        xml7:=put_campo('','TX','8060');
+        xml7:=put_campo(xml7,'CATEGORIA','MOTOR_MOTOR');
+        xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_5075');
+        xml7:=put_campo(xml7,'URI_IN',get_json('uri_dte',json3));
+        xml7:=put_campo(xml7,'QUERY',encode_hex('select graba_bitacora('''||replace(xml4,chr(39),'')||''','''||get_json('evento_confirmacion',json3)||''')'));
+        execute 'insert into '||nombre_tabla1||' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values (now(),'||quote_literal(get_campo('URI_IN',xml7))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ACT_REMOTO'') returning id' into id1;
+        json2:=logjson(json2,'Inserto GRABA_BITACORA_5075 '||get_campo('URI_IN',xml7)||' id='||id1::varchar);
+
+	--perform logfile('confirmacion_mail_5075 graba_bitacora '||get_json('evento_confirmacion',json3)||' '||get_json('uri_dte',json3)||' Fin'||' '||id1::varchar);
 	--Se limpia el json
 	json2:='{}';
+	--json2:=logjson(json2,get_json('_LOG_',json1));
         json2:=put_json(json2,'__SECUENCIAOK__','0');
 	json2:=put_json(json2,'__FLUJO_ACTUAL__',get_json('__FLUJO_ACTUAL__',json1));
-	json2:=logjson(json2,'Uri --> '||get_json('uri_dte',json3)||' Evento --> '||get_json('evento_confirmacion',json3));
+	json2:=logjson(json2,'Encolo graba_bitacora URI='||get_json('uri_dte',json3)||' Evento='||get_json('evento_confirmacion',json3)||' ID='||id1::varchar);
+	return response_requests_6000('1','Evento OK','',json2);
+	/*
 	json2:=logjson(json2,get_campo('_LOG_',xml4));
         if (get_campo('EVENTO_REPETIDO',xml4)='SI') then
                 json2:=response_requests_6000('1','Evento Repetido','',json2);
@@ -386,7 +500,7 @@ BEGIN
                 json2:=response_requests_6000('1','Evento OK','',json2);
                 json2:=logjson(json2,'Evento OK');
         end if;
-
+	*/
         return json2;
 END;
 $$ LANGUAGE plpgsql;
@@ -458,7 +572,12 @@ BEGIN
 	id2:='';
 	if (substring(id1,1,3)='JCP') then
                 id1:=substring(id1,4);
-		id1:=desencripta_hash_evento_VDC(id1);
+		BEGIN
+			raise notice 'desencripta_hash_evento_VDC1';
+			id1:=desencripta_hash_evento_VDC(id1);
+		EXCEPTION WHEN OTHERS THEN
+			id1:='';
+		END;	
 		if (is_json_dict(id1)) then
 			id2:=get_json('ID',id1::json);
 			--20180831 FAY-DAO-MDA Si viene MSG_ORI no se necesita marcar en la traza

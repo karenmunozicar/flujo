@@ -1,6 +1,6 @@
 --Publica documento
 delete from isys_querys_tx where llave='12789';
-insert into isys_querys_tx values ('12789',2,1,1,'select proc_pre_procesa_get_xml_12789(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12789',2,19,1,'select proc_pre_procesa_get_xml_12789(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Obtiene el DTE Original con la entrada URI_IN
 insert into isys_querys_tx values ('12789',5,1,8,'GET XML desde Almacen',12705,0,0,1,1,10,10);
 insert into isys_querys_tx values ('12789',6,1,8,'GET XML desde Almacen',7010,0,0,1,1,0,0);

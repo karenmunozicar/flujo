@@ -1,10 +1,34 @@
 --Consulta Estado Reclamo SII
 delete from isys_querys_tx where llave='16100';
 
-insert into isys_querys_tx values ('16100',10,1,1,'select armo_reclamo_sii_16100(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('16100',5,19,1,'select control_flujo_16100(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__","__ID_DTE__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
+insert into isys_querys_tx values ('16100',10,19,1,'select armo_reclamo_sii_16100(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('16100',20,1,2,'Servicio de SII 172.16.14.88',4013,100,101,0,0,30,30);
-insert into isys_querys_tx values ('16100',30,1,1,'select proceso_reclamo_sii_16100(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,1000,1000);
+
+insert into isys_querys_tx values ('16100',30,9,1,'select proceso_reclamo_sii_16100(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,1000,1000);
 insert into isys_querys_tx values ('16100',1000,19,1,'select sp_procesa_respuesta_cola_motor88_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
+
+insert into isys_querys_tx values ('16100',40,9,1,'select armo_reclamo_sii_16100(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+
+
+
+CREATE or replace FUNCTION control_flujo_16100(json) returns json as $$
+DECLARE
+	json1	alias for $1;
+	json2	json;
+BEGIN
+	json2:=control_flujo_80101(json1);
+	if is_number(get_json('__ID_DTE__',json2)) then
+		json2:=put_json(json2,'__SECUENCIAOK__','10');
+	else
+		json2:=put_json(json2,'__SECUENCIAOK__','40');
+	end if;
+	return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 CREATE or replace FUNCTION actualiza_data_dte_16100(varchar,varchar) RETURNS varchar AS $$
 DECLARE

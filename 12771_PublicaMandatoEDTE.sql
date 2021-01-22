@@ -1,6 +1,15 @@
 --Publica documento
 delete from isys_querys_tx where llave='12771';
 
+insert into isys_querys_tx values ('12771',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
+insert into isys_querys_tx values ('12771',15,19,1,'select pivote_12771(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+insert into isys_querys_tx values ('12771',17,1,1,'select lee_datos_base_12771(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12771',19,1,8,'Flujo LeeTraza ',8070,0,0,0,0,25,25);
+
+insert into isys_querys_tx values ('12771',25,19,1,'select lista_mandato_v2_12771(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
 --Arma lista de mails y genera contador en 0
 insert into isys_querys_tx values ('12771',10,19,1,'select lista_mandato_12771(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 
@@ -12,6 +21,251 @@ insert into isys_querys_tx values ('12771',30,19,1,'select envia_correo_12771(''
 
 --Borra de la cola
 insert into isys_querys_tx values ('12771',40,19,1,'select sp_procesa_respuesta_cola_motor88_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
+CREATE or replace FUNCTION  pivote_12771(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+        json3   json;
+	data1	varchar;
+	uri1	varchar;
+	largo1 	integer;	
+	pos_inicial1	integer;
+	pos_final1	integer;
+BEGIN
+	json2:=json1;
+	json2:=put_json(json2,'__SECUENCIAOK__','0');
+        --Solo si tiene DTE con mandato
+        if (get_json('__DTE_CON_MANDATO__',json2)<>'SI') then
+                return json2;
+        end if;
+        uri1:=get_json('URI_IN',json2);
+    	if (length(uri1)=0) then
+		json2 := logjson(json2,'No viene URI_IN, no se puede publicar');
+		json2 := put_json(json2,'__MENSAJE_10K__','DTE sin Uri');
+		json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+		json2:=logjson(json2,'Se borra mandato edte de la cola');
+		json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+		return sp_procesa_respuesta_cola_motor88_json(json2);
+	end if;
+	--Si hay q hacer proxy, solo leemos los EMA
+	json2:=put_json(json2,'FILTRO_LEE_TRAZA_HEX',encode_hex(' evento=''EMA'' '));
+
+	if (get_json('INPUT_CUSTODIUM',json2)='') then
+        	data1:=get_json('INPUT',json2);
+            	if (length(data1)=0) then
+			json2:=logjson(json2,'Obtengo INPUT_CUSTOIUM '|| uri1);
+                	--Sacamos la data del almacen
+                   	json3:=put_json('{}','uri',uri1);
+                   	data1:=get_input_almacen(json3::varchar);
+                   	if (length(data1)=0) then
+				json2 := logjson(json2,'Falla Lectura de la uri en el almacen');
+				json2 := put_json(json2,'__EDTE_MANDATO_OK__','NO');
+				json2 := put_json(json2,'__MENSAJE_10K__','Falla Lectura de DTE en Almacen');
+				json2:=put_json(json2,'RESPUESTA','Status: 400 NK');
+				return sp_procesa_respuesta_cola_motor88_json(json2);
+                   	end if;
+	     	else
+			json2:=logjson(json2,'Viene INPUT '|| uri1);
+                	--Nuevo Procedimiento
+                    	largo1:=get_json('CONTENT_LENGTH',json2)::integer*2;
+                    	--Busco donde empieza <?xml version
+                    	pos_inicial1:=strpos(data1,'3c3f786d6c2076657273696f6e3d');
+                    	--Buscamos al reves donde esta el primer signo > que en hex es 3e
+                    	--Como se pone un reverse se busca e3
+                    	pos_final1:=largo1-pos_inicial1+4-strpos(reverse(data1),'e3');
+                    	data1:=substring(data1,pos_inicial1,pos_final1);
+            	end if;
+            	json2:=put_json(json2,'INPUT_CUSTODIUM',data1);
+		json2:=put_json(json2,'__SECUENCIAOK__','17');
+		json2:=logjson(json2,'Vamos a motor a parsear');
+	else
+		if(get_json('__FLAG_PUB_10K__',json2)<>'SI' and get_json('__FLAG_REENVIO_MANDATO__',json2)<>'SI') then
+			json2:=logjson(json2,'Vamos a leer la traza para el proxy');
+			json2:=put_json(json2,'__SECUENCIAOK__','19');
+		else
+			return lista_mandato_v2_12771(json2);
+		end if;
+    	end if;
+    	return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION  lee_datos_base_12771(json) RETURNS json AS $$
+DECLARE
+        json1   alias for $1;
+        json2   json;
+	uri1	varchar;
+	xml3	varchar;
+BEGIN
+	json2:=json1;
+        json2:=put_json(json2,'__SECUENCIAOK__','0');
+        uri1:=get_json('URI_IN',json2);
+	xml3:='';
+	--Agregamos el TAG URI para el Parseo de Datos 
+	xml3:=put_campo(xml3,'INPUT',get_json('INPUT_CUSTODIUM',json2)||encode(('<URI>filename="'||uri1||'"</URI>')::bytea,'hex'));
+	xml3:=put_campo(xml3,'URI_IN',uri1);
+	xml3:=reglas.parseo_datos(xml3);
+	xml3:=put_campo(xml3,'INPUT','');
+	--Saco los datos que necesito y los copio al json	
+	json2:=put_json(json2,'MANDATO_EMAIL',get_campo('MANDATO_EMAIL',xml3));
+	json2:=put_json(json2,'TOTAL_CASILLAS',get_campo('TOTAL_CASILLAS',xml3));
+	json2:=put_json(json2,'RUT_EMISOR',get_campo('RUT_EMISOR',xml3));
+	json2:=put_json(json2,'RUT_EMISOR_DV',get_campo('RUT_EMISOR_DV',xml3));
+	json2:=put_json(json2,'TIPO_DTE',get_campo('TIPO_DTE',xml3));
+	json2:=put_json(json2,'FOLIO',get_campo('FOLIO',xml3));
+	json2:=put_json(json2,'RUT_RECEPTOR',get_campo('RUT_RECEPTOR',xml3));
+	json2:=put_json(json2,'RUT_RECEPTOR_DV',get_campo('RUT_RECEPTOR_DV',xml3));
+	json2:=put_json(json2,'FECHA_EMISION',get_campo('FECHA_EMISION',xml3));
+	json2:=put_json(json2,'DOMINIO',get_campo('DOMINIO',xml3));
+	json2:=put_json(json2,'MANDATO_MAIL_EMISOR',get_campo('MANDATO_MAIL_EMISOR',xml3));
+	json2:=put_json(json2,'XML_FILTROS_ADICIONALES',get_campo('XML_FILTROS_ADICIONALES',xml3));
+	json2:=put_json(json2,'MANDATO_CICLO',get_campo('MANDATO_CICLO',xml3));
+	xml3:=reglas.maestro_clientes(xml3);
+	json2:=logjson(json2,get_campo('_LOG_',xml3));
+	json2:=put_json(json2,'DTE_MANDATO',get_campo('DTE_MANDATO',xml3));
+	json2:=put_json(json2,'DTE_MANDATO_PDF',get_campo('DTE_MANDATO_PDF',xml3));
+	json2:=put_json(json2,'DTE_MANDATO_XML',get_campo('DTE_MANDATO_XML',xml3));
+	json2:=put_json(json2,'DTE_MANDATO_PDF_CLAVE',get_campo('DTE_MANDATO_PDF_CLAVE',xml3));
+	json2:=put_json(json2,'DTE_MANDATO_PDF_TIPO_CLAVE',get_campo('DTE_MANDATO_PDF_TIPO_CLAVE',xml3));
+	json2:=put_json(json2,'XSL_MANDATO',get_campo('XSL_MANDATO',xml3));
+	--RME 20170713 Se agregan los datos de Casilla Digital
+	json2:=put_json(json2,'FLAG_CASILLA_DIGITAL',get_campo('FLAG_CASILLA_DIGITAL',xml3));
+	if(get_json('__FLAG_PUB_10K__',json2)<>'SI' and get_json('__FLAG_REENVIO_MANDATO__',json2)<>'SI') then
+		json2:=put_json(json2,'__SECUENCIAOK__','19');
+	else
+        	json2:=put_json(json2,'__SECUENCIAOK__','25');
+	end if;
+	return json2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION  lista_mandato_v2_12771(json) RETURNS json AS $$
+DECLARE
+	json1	alias for $1;
+	json2 	json;
+	total1	integer;
+	uri1	varchar;
+	data1	varchar;
+	mail1	varchar;
+	campo	record;
+	json4	json;
+	sts1	varchar;
+	pos	integer;
+	subject1	varchar;
+	jtraza	json;
+	aux1	varchar;
+	i	integer;
+	flag_envio_mandato	boolean;
+	flag_cd 	json;
+	json_aux	json;
+	lista_mail1	json;
+	flag_ya_enviado1	boolean;
+BEGIN
+	json2:=json1;
+        json2:=put_json(json2,'__SECUENCIAOK__','0');
+        uri1:=get_json('URI_IN',json2);
+        data1:=get_json('INPUT_CUSTODIUM',json2);
+	--json2:=logjson(json2,'DATA1='||data1::varchar);
+
+   	--Sacamos el subject
+   	pos=strpos(data1,encode('>Subject_Mail<','hex'));
+   	if (pos=0) then
+        	subject1:=split_part(split_part(data1,encode('<DatoAdjunto nombre="Subject_Mail">','hex'),2),encode('</DatoAdjunto>','hex'),1);
+   	else
+        	subject1:=split_part(split_part(substring(data1,pos,length(data1)),encode('<ValorDA>','hex'),2),encode('</ValorDA>','hex'),1);
+   	end if;
+    	mail1:=get_json('MANDATO_EMAIL',json2);
+   	json2:=logjson(json2,'URI '||uri1||' FLAG_CASILLA_DIGITAL -->'||get_json('FLAG_CASILLA_DIGITAL',json2));
+
+    	--RME 20170713 Se manejan las excepciones de Casilla Digital.
+    	if get_json('FLAG_CASILLA_DIGITAL',json2)<>'' then
+		json_aux:=decode(get_json('FLAG_CASILLA_DIGITAL',json2),'hex')::varchar::json;
+		if (get_json(get_json('TIPO_DTE',json2),json_aux)<>'') then
+			flag_cd:=get_json(get_json('TIPO_DTE',json2),json_aux)::json;
+			subject1:=encode(get_json('ASUNTO',flag_cd)::bytea,'hex');
+			json2:=put_json(json2,'MANDATO_MAIL_EMISOR',get_json('REMITENTE',flag_cd));
+			aux1:=get_json('DTE_MANDATO',json2);
+			if get_json('MANDATO',flag_cd)='SI' and strpos(aux1,'ALL')=0 and strpos(aux1,get_json('TIPO_DTE',json2))=0 then	
+				json2:=put_json(json2,'DTE_MANDATO','ALL');
+				--solo se envia a casilla
+				mail1:=get_json('RUT_RECEPTOR',json2)||'@casilladigital.cl';
+			else
+				json2:=logjson(json2,'Falla condicion 2');
+			end if;
+		else
+			json2:=logjson(json2,'Falla condicion 1');
+		end if;
+    	end if;	
+
+    	--Mandatos que vienen desde Escritorio
+    	if(get_json('__FLAG_PUB_10K__',json2)='SI') then
+		-- Puede venir por PANTALLA
+		json2:=logjson(json2,'Entra a __FLAG_PUB_10K__');
+		mail1:=get_json('mailMandato',json2);
+		subject1:=encode(('Documento de ACEPTA COM S A: Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');
+		json2:=put_json(json2,'MANDATO_MAIL_EMISOR','noreply@acepta.com');
+    	end if;
+    	json2:=put_json(json2,'SUBJECT',subject1);
+    	json2:=logjson(json2,'Mandatos '||mail1||' TotalCasillas='||get_json('TOTAL_CASILLAS',json2)||' URI='||uri1);
+
+    	i:=0;
+    	lista_mail1:='[]'; 
+	--Para verificar que se envia algun mandato
+	flag_envio_mandato:=false;
+    	for campo in select distinct trim(mail) as mail from (select * from regexp_split_to_table(mail1,'[\,,\;]') mail) x where length(mail)>0 loop
+		flag_envio_mandato:=true;
+		json2:=logjson(json2,'Mandato='||campo.mail);
+		--Validamos el correo
+		if (valida_email(campo.mail) is false) then
+			json2:=logjson(json2,'Mail Invalido '||campo.mail);
+			--Si viene desde las colas
+			if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI') then
+			    json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+			    return sp_procesa_respuesta_cola_motor88_json(json2);
+			end if;
+			continue;
+		end if;
+
+		json2:=logjson(json2,'__FLAG_REENVIO_MANDATO__='||get_json('__FLAG_REENVIO_MANDATO__',json2));
+		if(get_json('__FLAG_PUB_10K__',json2)<>'SI' and get_json('__FLAG_REENVIO_MANDATO__',json2)<>'SI') then
+			--Revisamos dentro de los datos leidos
+			if get_json('STATUS_LEE_TRAZA',json2)='OK' then
+				jtraza:=get_json('RESPUESTA_LEE_TRAZA',json2)::json;
+				json2:=logjson(json2,'Verificamos que no tenga evento en la traza para ese correo '||jtraza::varchar);
+        			i:=0;
+				aux1:=get_json_index(jtraza,i);
+				flag_ya_enviado1:=False;
+				while(aux1<>'') loop
+					if get_json('evento',aux1::json)='EMA' and strpos(get_json('comentario1',aux1::json),campo.mail)>0 then
+						json2:=logjson(json2,'Mail ya Enviado OK');
+						json2:=put_json(json2,'__EDTE_MANDATO_OK__','SI');
+						--Si ya existe el envio de mandato
+						if (get_json('__FLAG_REINTENTO_MANDATO__',json2)='SI') then
+						    	json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+						    	return sp_procesa_respuesta_cola_motor88_json(json2);
+						end if;
+						flag_ya_enviado1:=True;
+						EXIT;
+					end if;
+					i:=i+1;
+					aux1:=get_json_index(jtraza,i);
+				end loop;
+        		end if;
+			if flag_ya_enviado1 then
+				continue;
+			end if;
+		end if;
+		lista_mail1:=put_json_list(lista_mail1,'"'||campo.mail||'"');
+    	end loop;
+
+    	json2:=logjson(json2,'Lista Mail '||lista_mail1::varchar);
+    	json2:=put_json(json2,'__SECUENCIAOK__','20');
+    	json2:=put_json(json2,'LISTA_MANDATO',lista_mail1::varchar);
+    	json2:=put_json(json2,'CONTADOR_MANDATO','0');
+    	return json2;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE or replace FUNCTION  lista_mandato_12771(json) RETURNS json AS $$
 DECLARE
@@ -64,6 +318,12 @@ DECLARE
 	lista_mail1	json;
 BEGIN
 	json2:=json1;
+	/*
+	if exists(select 1 from tmp3) is false then
+		insert into tmp3 values (get_json('URI_IN',json2));
+		return pivote_12771(json2);
+	end if;*/
+	return pivote_12771(json2);
         json2:=put_json(json2,'__SECUENCIAOK__','0');
 
 
@@ -660,6 +920,9 @@ BEGIN
 		json4:=put_json(json4,'CATEGORIA','MANDATO');
 		json4:=put_json(json4,'RUT_OWNER',get_json('RUT_EMISOR',json2));
 		json4:=put_json(json4,'ip_envio','http://interno.acepta.com:8080/sendmail');
+		if get_json('rutUsuario',json2)='17597643' then
+			perform logfile('select send_mail_python2_colas('''||json4::varchar||''');');
+		end if;
 		jsonsts1:=send_mail_python2_colas(json4::varchar);
                 --jsonsts1:=send_mail_python2(json4::varchar);
         end if;

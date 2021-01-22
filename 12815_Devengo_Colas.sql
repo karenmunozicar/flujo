@@ -61,7 +61,10 @@ begin
         end if;
 
         v_folio_compromiso:=get_campo('DP_FOLIO_COMPROMISO',xml2);
-        v_area_tx:=get_campo('DP_AREA_TX',xml2);
+        -- FGE - 20201202 - Area Trx viene ahora de una funcion
+        -- v_area_tx:=get_campo('DP_AREA_TX',xml2);
+        v_area_tx:=dp_obtiene_area_trx(v_cod_oc, v_rut_emisor_devengo::integer);
+        
         v_cod_rc:=get_campo('DP_COD_RC',xml2);
         v_monto_devengo:=get_campo('MONTO_TOTAL',xml2);
         v_periodo:=split_part(get_campo('FECHA_EMISION',xml2),'-',2);
@@ -265,6 +268,7 @@ declare
         cod_oc1         varchar;
         monto_total1    integer;
         v_codigo_txel   varchar;
+        cod_devengo_detalle  bigint;
 begin
         json2:=json1;
 
@@ -319,6 +323,8 @@ begin
                 return json2;
         end if;
 
+        -- FGE - 20201216 - Asiento Automatico
+        /*
         if num_detalles > 1 then
                 --Usuario debe seleccionar, queda en devengo manual
                 update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = v_codigo_txel::bigint;
@@ -345,6 +351,38 @@ begin
                 json2:=put_json(json2,'__SECUENCIAOK__','1000');
                 return json2;
         end if;
+        */
+
+        -- FGE - 20201217 - Ahora Dipres pide que el asiento automatico sea solamente con una imputacion contable... sin comentarios.
+        select count(1) into num_detalles from (select distinct cod_imputacion from dp_devengo_detalle where codigo_dv = cod_devengo_num1) imputaciones;
+        if num_detalles <> 1 then
+                --Usuario debe seleccionar, queda en devengo manual
+                update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = v_codigo_txel::bigint;
+                update dp_devengo set tipo_devengo='MAN' where codigo_dv=cod_devengo_num1;
+                json2:=logjson(json2,'Devengo con mas de 1 imputacion, Devengo manual  codigo-->'||cod_devengo1);
+                json2:=put_json(json2,'__SECUENCIAOK__','1000');
+                return json2;
+        end if;
+
+
+        -- FGE - 20200829 - Asiento automatico
+        json2:=put_json(json2, 'codigo_dv', cod_devengo1);
+        monto_total1:=coalesce(nullif(get_json('MONTO_NETO', json2), ''), '0')::bigint + coalesce(nullif(get_json('MONTO_EXENTO', json2), ''), '0')::bigint;
+
+        -- FGE - 20201222 - Ahora si no hay cuenta 5, entonces se utiliza cuenta 1, si no hay ninguna de las dos, entonces va a manual
+        select id into cod_devengo_detalle from dp_devengo_detalle where codigo_dv = cod_devengo_num1 and cuenta_debe like '5%' limit 1;
+        if not found then
+            select id into cod_devengo_detalle from dp_devengo_detalle where codigo_dv = cod_devengo_num1 and cuenta_debe like '1%' limit 1;
+            if not found then
+                update dte_recibidos set data_dte = put_data_dte(data_dte, 'TIPO_DEVENGO', 'MAN') where codigo_txel = v_codigo_txel::bigint;
+                update dp_devengo set tipo_devengo='MAN' where codigo_dv=cod_devengo_num1;
+                json2:=logjson(json2,'Devengo sin cuenta 5 o 1, Devengo manual  codigo-->'||cod_devengo1);
+                json2:=put_json(json2,'__SECUENCIAOK__','1000');
+                return json2;
+            end if;
+        end if;
+
+        update dp_devengo_detalle set debe = monto_total1 where codigo_dv = cod_devengo_num1 and id = cod_devengo_detalle;        
 
         --Preparo la llamada al servicio
 
@@ -415,5 +453,7 @@ begin
         --return json2;
 end;
 $$ LANGUAGE plpgsql;
+
+
 
 

@@ -10,6 +10,7 @@ declare
     json2           json;
     v_codigo_txel   bigint;
     v_id_solicitud  bigint;
+    v_id_solicitud1 varchar;
     v_oc            varchar;
     v_json_post     json;
 
@@ -43,7 +44,12 @@ declare
 begin
     json2:=json1;
     v_codigo_txel := replace(get_json('COD_TXEL', json2), '.', '')::bigint;
-    select get_xml('ID_SOLICITUD_WF', data_dte)::bigint into v_id_solicitud from dte_recibidos where codigo_txel = v_codigo_txel;
+    select get_xml('ID_SOLICITUD_WF', data_dte) into v_id_solicitud1 from dte_recibidos where codigo_txel = v_codigo_txel;
+    if is_number(v_id_solicitud1) then
+	v_id_solicitud:=v_id_solicitud1::bigint;
+    else
+        return response_requests_6000('2', 'Falla ID_SOLICITUD_WF.', '', json2);
+    end if;
     select dp_obtiene_oc_flujo(v_id_solicitud::varchar) into v_oc;
     v_json_post:=put_json('{}', 'OC', v_oc);
 

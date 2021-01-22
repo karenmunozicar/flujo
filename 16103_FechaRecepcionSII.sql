@@ -178,7 +178,7 @@ BEGIN
 		--DAO Revisamos si hay alguna regla para este cliente que incluya como filtro la fecha de recepcion
 		xml2:=logapp(xml2,'Reviso en el Controller '||rut_receptor1::varchar);
 		--DAO-FAY 2018-11-20 Se revisan todas las reglas que tengan ese filtro y se insertan tantas veces como reglas existan
-		for campo in select * from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII' loop
+		for campo in select * from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1 and estado = 'HABILITADO') and filtro_xml='FECHA_RECEPCION_SII' loop
 		--select * into campo from controller_detalle_regla_10k where id_cabecera in (select id from controller_cabecera_regla_10k where canal='RECIBIDOS' and rut_empresa=rut_receptor1) and filtro_xml='FECHA_RECEPCION_SII';
 			execute 'select '''||fecha2::varchar||'''::timestamp + interval '''||campo.valor::varchar||' days''' into fecha_cola1;
 			xml2:=logapp(xml2,'FECHA_RECEPCION_SII_CONTROLLER');	

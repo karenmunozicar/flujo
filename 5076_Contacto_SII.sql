@@ -330,13 +330,13 @@ BEGIN
 			values(now(),to_char(now(),'YYYYMM')::integer,to_char(now(),'YYYYMMDD')::integer,1,folio1::integer,fecha_emi1,to_char(fecha_emi2,'YYYYMM')::integer,to_char(fecha_emi2,'YYYYMMDD')::integer,rut_emisor1::integer,rut_receptor1::integer,monto1::integer,'BOLETA_GRABADA_OK',uri1,'BOLETA_GRABADA_OK','<Giro>'||coalesce(giro1,'')||'</Giro><Direccion>'||coalesce(direccion1,'')||'</Direccion><Fono>'||coalesce(fono1,'')||'</Fono>',get_json('uri_xml',json2));
 
 			--Enviamos al ERP En caso de que corresponda
-			xml3:=put_campo(xml3,'URI_IN',uri1);
-		        xml3:=put_campo(xml3,'RUT_EMISOR',rut_emisor1::varchar);
-			xml3:=put_campo(xml3,'RUT_RECEPTOR',rut_receptor1::varchar);
-			xml3:=put_campo(xml3,'FOLIO',folio1::varchar);
-			xml3:=put_campo(xml3,'PDF_ALMACEN',get_json('data_pdf',json2));
-			xml3:=put_campo(xml3,'XML_ALMACEN',get_json('data_xml',json2));
-			xml3:=graba_envio_erp_boleta_honorario(xml3);
+			json3:=put_json('{}','URI_IN',uri1);
+		        json3:=put_json(json3,'RUT_EMISOR',rut_emisor1::varchar);
+			json3:=put_json(json3,'RUT_RECEPTOR',rut_receptor1::varchar);
+			json3:=put_json(json3,'FOLIO',folio1::varchar);
+			json3:=put_json(json3,'PDF_ALMACEN',get_json('data_pdf',json2));
+			json3:=put_json(json3,'XML_ALMACEN',get_json('data_xml',json2));
+			json3:=graba_envio_erp_boleta_honorario(json3);
 			json2:=logjson(json2,'LOG graba_envio_erp_boleta_honorario='||get_campo('_LOG_',xml3));
 
         		return response_requests_6000('1','Datos OK rut_emisor1='||rut_emisor1||' rut_receptor1='||rut_receptor1||' monto1='||monto1||' fecha_emi2='||fecha_emi2,'',json2);

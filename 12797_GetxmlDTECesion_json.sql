@@ -3,30 +3,30 @@ delete from isys_querys_tx where llave='12797';
 --Obtiene el DTE Original con la entrada URI_IN
 insert into isys_querys_tx values ('12797',5,1,8,'GET XML desde Almacen',12705,0,0,1,1,10,10);
 
-insert into isys_querys_tx values ('12797',10,1,1,'select proc_procesa_get_xml_cesion_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12797',10,9,1,'select proc_procesa_get_xml_cesion_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --insert into isys_querys_tx values ('12797',60,1,10,'$$SCRIPT$$',0,0,0,1,1,70,70);
 insert into isys_querys_tx values ('12797',60,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,70,70);
 
-insert into isys_querys_tx values ('12797',70,1,1,'select cesion1_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12797',70,9,1,'select cesion1_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --insert into isys_querys_tx values ('12797',90,1,10,'$$SCRIPT$$',0,0,0,1,1,100,100);
 insert into isys_querys_tx values ('12797',90,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,100,100);
 
-insert into isys_querys_tx values ('12797',100,1,1,'select cesion2_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12797',100,9,1,'select cesion2_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --insert into isys_querys_tx values ('12797',180,1,10,'$$SCRIPT$$',0,0,0,1,1,200,200);
 insert into isys_querys_tx values ('12797',180,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,200,200);
 
-insert into isys_querys_tx values ('12797',200,1,1,'select cesion3_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12797',200,9,1,'select cesion3_resp_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --Vamos a Publicar
 insert into isys_querys_tx values ('12797',210,1,8,'Publica DTE',12704,0,0,0,0,220,220);
-insert into isys_querys_tx values ('12797',220,1,1,'select verifica_pub_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0); 
+insert into isys_querys_tx values ('12797',220,9,1,'select verifica_pub_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0); 
 
 --Enviamos al EDTE
 insert into isys_querys_tx values ('12797',230,1,8,'Llamada CESION EDTE',12786,0,0,0,0,240,240);
-insert into isys_querys_tx values ('12797',240,1,1,'select verifica_cesion_edte_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0); 
+insert into isys_querys_tx values ('12797',240,9,1,'select verifica_cesion_edte_12797(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0); 
 
 
 CREATE or replace FUNCTION verifica_cesion_edte_12797(json) RETURNS json AS $$

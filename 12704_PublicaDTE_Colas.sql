@@ -1,8 +1,27 @@
 --Publica documento
 delete from isys_querys_tx where llave='112704';
 
+
+--FAY-DAO 2021-01-20 se valida la existencia del archivo directo en el almacen para evitar consulta la traza
+--Llamada a un ms
+insert into isys_querys_tx values ('112704',5,1,17,'{"ip":"172.16.14.69","port":"5010","timeout":"2","request_uri":"/ms/revisa_existe_file","campos":["URI_IN"]}',4013,0,0,0,0,7,7);
+
+--Validamos si ya existe el archivo en el custodium con el flag FLAG_FILE_CUS
+insert into isys_querys_tx values ('112704',7,1,14,'{"f":"IGUAL","p1":"$$FLAG_FILE_CUS$$","p2":"SI"}',0,0,0,0,0,8,10);
+--Si el archivo existia insertamos el flag de publicado OK
+insert into isys_querys_tx values ('112704',8,1,14,'{"f":"INSERTA_JSON","p1":{"__PUBLICADO_OK__":"SI"}}',0,0,0,0,0,9,9);
+--LOG y nos vamos del flujo si existia el archivo..
+insert into isys_querys_tx values ('112704',9,1,16,'["URI_IN","FLAG_FILE_CUS","__PUBLICADO_OK__","LEN_FILE","RUTA"]',0,0,0,1,1,0,0);
+
+--Preguntamos por donde nos vamos, solo boletas por ahora sin pasar por la traza
+insert into isys_querys_tx values ('112704',10,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"BOLETA"}',0,0,0,0,0,11,12);
+
+--Si no esta publicado vamos a publicar la Boleta (Sin traza)
+insert into isys_querys_tx values ('112704',11,19,1,'select proc_consulta_publicacion_112704_colas(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+
+--Si no existia hacemos lo mismo por ahora
 --Consultamos en la base de traza si el DTE ya esta publicado
-insert into isys_querys_tx values ('112704',10,1,1,'select proc_consulta_publicacion_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',12,8021,1,'select proc_consulta_publicacion_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###'') as __xml__',0,0,0,1,1,-1,0);
 
 --20200110 proxy en Amazon
 --Traza 2014
@@ -20,12 +39,12 @@ insert into isys_querys_tx values ('112704',2019,49,1,'select proxy_traza_amazon
 --Traza 2020
 insert into isys_querys_tx values ('112704',2020,50,1,'select proxy_traza_amazon_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###URI_IN[]=$$URI_IN$$###TABLA_TRAZA[]=$$TABLA_TRAZA$$###'') as __xml__',0,0,0,1,1,-1,0);
 
-insert into isys_querys_tx values ('112704',20,1,1,'select proc_consulta_publicacion_112704_2(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',20,8021,1,'select proc_consulta_publicacion_112704_2(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###'') as __xml__',0,0,0,1,1,-1,0);
 
 --Sacamos el XML del DTE Emitido en caso de ser necesario
 --insert into isys_querys_tx values ('112704',20,1,8,'GET XML desde Almacen',12705,0,0,1,1,40,40);
 --Ejecuta la Pre-Emision en Controller
-insert into isys_querys_tx values ('112704',30,45,1,'select pre_emision_controller_112704(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',30,8021,1,'select pre_emision_controller_112704(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('112704',35,1,8, 'Firma XML flujo 13795',13795,0,0,1,1,0,0);
 
 --Llamamos a Escribir Directo
@@ -36,7 +55,7 @@ insert into isys_querys_tx values ('112704',56,1,2,'Llamada a Escribir en Almace
 --Se eejecuta en la base de colas
 insert into isys_querys_tx values ('112704',66,19,1,'select proc_respuesta_almacen_112704_3(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Se eejecuta en la base principal
-insert into isys_querys_tx values ('112704',70,1,1,'select graba_estado_publicacion_traza_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###$$XML3$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',70,8021,1,'select graba_estado_publicacion_traza_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###$$XML3$$'') as __xml__',0,0,0,1,1,-1,0);
 
 
 CREATE or replace FUNCTION pre_emision_controller_112704(varchar) RETURNS varchar AS $$
@@ -237,6 +256,9 @@ BEGIN
 	    select * into campo from config_tabla_traza where periodo_desde<=fecha1::integer and periodo_hasta>=fecha1::integer;
 	    --Si debo hacer lo mismo
 	    if (found and campo.parametro is null) then
+		   if get_campo('FLAG_FILE_CUS',xml2)='NO' then
+			xml2 := logapp(xml2,'Uri '||uri1||' no se lee la traza');
+		   else
  	            --Si ya tiene el evento PUB en traza, no se publica
 	            begin
         	       execute 'select * from '||tabla_traza1||' where uri=$1 and evento=''PUB''' into stTraza using uri1;
@@ -255,6 +277,7 @@ BEGIN
                         	return xml2;
 	               end if;
         	    end;
+		   end if;
 	     --Si es de una traza antigua >=2014
 	     elsif is_number(split_part(campo.parametro,'_',2)) then
 		xml2:=put_campo(xml2,'TABLA_TRAZA',tabla_traza1);
@@ -415,13 +438,11 @@ BEGIN
     end if;
 
     --RME 20181023 solo para pruebas escribo LOG
-   xml2 := logapp(xml2,'FLAG RME---->'|| get_campo('REFERENCIA_OK',xml2));	
    if (get_campo('REFERENCIA_OK',xml2)='SI') then
+   	xml2 := logapp(xml2,'FLAG RME---->'|| get_campo('REFERENCIA_OK',xml2));	
 	xml2 := logapp(xml2,'INPUT REFERENCIA-->'||get_campo('INPUT',xml2));
    end if;
   
-
-
     if (get_campo('REFERENCIA_OK',xml2)='FALLA') then	
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
 	xml2 := put_campo(xml2,'RESPUESTA','');  --Para forzar aumento de reintentos.
@@ -502,7 +523,13 @@ BEGIN
     --Si son DTE importados, solo van al S3 y no al almacen
     if (get_campo('SCRIPT_NAME',xml2)='/ca4/ca4importer') or (get_campo('SCRIPT_NAME',xml2)='/ca4/ca4importer_rec') then
                 --Si no esta el evento PUB vamos a publicar
-                xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
                 xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
                 xml2 := logapp(xml2,'Uri '||uri1||' importado va solo al S3');
 
@@ -594,7 +621,13 @@ BEGIN
         xml2:=logapp(xml2,'RESPUESTA_CUSTODIUM='||get_campo('_STS_FILE_',xml2));
 	if (get_campo('_STS_FILE_',xml2)='FILE_YA_EXISTE') then
 		xml2 := logapp(xml2,'Almacen:File ya existe en Almacen');	
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -626,7 +659,13 @@ BEGIN
 		xml2:=put_campo(xml2,'XML3',replace(xml3,'###','&&&'));
 		
 	elsif (get_campo('_STS_FILE_',xml2)='OK') then
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -684,7 +723,13 @@ BEGIN
         xml2 := logapp(xml2,sts1);
 	if (strpos(sts1,'FILE_YA_EXISTE')>0) then
 		xml2 := logapp(xml2,'Almacen:File ya existe en Almacen');	
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -716,7 +761,13 @@ BEGIN
 		xml2:=put_campo(xml2,'XML3',replace(xml3,'###','&&&'));
 		
 	elsif (strpos(sts1,'<_STS_FILE_=2>OK')>0) then
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -769,7 +820,13 @@ BEGIN
 	sts1:=get_campo('_STS_FILE_',xml2);
 	if (sts1='FILE_YA_EXISTE') then
 		xml2 := logapp(xml2,'Almacen:File ya existe en Almacen');	
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -780,7 +837,13 @@ BEGIN
 		
 	elsif (sts1='OK') then
                 xml2 := logapp(xml2,'Almacen:OK Escritos '||get_campo('_STS_FILE_BYTES_WRITTEN_',xml2)||' ContentLength:'||get_campo('CONTENT_LENGTH',xml2)||' Largo Data:'||get_campo('LEN_INPUT_CUSTODIUM',xml2));
-        	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		--FAY-DAO 20210120-GRabamos el pub en el 8010
+		if get_campo('GRABA_PUB_8010',xml2)='SI' then
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+			xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+		else
+                	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+		end if;
 		--SAcamos el input para no hacer viajar la data hacia la base principal
 		xml3:=xml2;
 		xml3:=put_campo(xml3,'INPUT','');
@@ -831,5 +894,98 @@ BEGIN
 	xml3 := put_campo(xml3,'FECHA_EVENTO_PUB',get_campo('FECHA_EVENTO_PUB',xml2));
         return xml3;
 END;
+$$ LANGUAGE plpgsql;
+
+--Para ejecutar en las colas sin traza
+CREATE or replace FUNCTION proc_consulta_publicacion_112704_colas(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1        alias for $1;
+        xml2    varchar;
+    data1       varchar;
+    file1       varchar;
+    sts         integer;
+    host1       varchar;
+    header1     varchar;
+   largo1       integer;
+    pos_final1 integer;
+    pos_inicial1 integer;
+    dominio1 varchar;
+fecha1  varchar;
+directorio1 varchar;
+tabla_traza1    varchar;
+uri1    varchar;
+stTraza traza.traza%ROWTYPE;
+	rut_emisor1	varchar;
+	tipo_dte1	bigint;
+	folio1		bigint;
+	monto1		bigint;
+	campo		RECORD;
+	i1	integer;
+	xml3	varchar;
+	json_aux1	json;
+	rut1		varchar;
+BEGIN
+    xml2:=xml1;
+    xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+    uri1:=get_campo('URI_IN',xml2);
+
+    xml2:=logapp(xml2,'URI_IN='||uri1);
+	
+
+    --Si es un get salgo altiro
+    if (get_campo('REQUEST_METHOD',xml2)='GET') then
+        if ((strpos(get_campo('HTTP_USER_AGENT',xml2),'check_http')>0) or (length(get_campo('QUERY_STRING',xml2))=0)) then
+                xml2 := logapp(xml2,'Nagios Check o GET sin datos, se ignora');
+                --Se Responde OK
+                xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK'||chr(10)||
+                'Content-type: text/html; charset=iso-8859-1'||chr(10)||
+                'Content-length: 0'||chr(10)||
+                'Vary: Accept-Encoding'||chr(10)||chr(10));
+        	xml2 := put_campo(xml2,'__PUBLICADO_OK__','FALLA');
+                --xml2 := sp_procesa_respuesta_cola_motor(xml2);
+                --xml2 := put_campo_ctx(xml2,'__ETAPA1__','OK');
+                return xml2;
+        end if;
+    end if;
+    uri1:=get_campo('URI_IN',xml2);
+
+    --20150224 FAY Si no viene URI no se puede publicar
+    if (length(uri1)=0) then
+        xml2 := logapp(xml2,'No viene URI_IN, no se puede publicar');
+        xml2 := put_campo(xml2,'__PUBLICADO_OK__','FALLA');
+        return xml2;
+    end if;
+
+    xml2 := put_campo(xml2,'__FLAG_CLIENTE_COMUNIDAD__','');
+
+    --Saco los parametros del publicador para usarlos posteriormente.
+    xml2:=logapp(xml2,'DTE no publicado (o Recibido) URI_IN='||get_campo('URI_IN',xml2)||' XML_FLAGS='||get_campo('XML_FLAGS',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2));
+    if (get_fecha_uri(uri1)::integer>=1701) then
+    	xml2:=get_parametros_motor(xml2,'PUBLICADOR_2017');
+    else
+    	xml2:=get_parametros_motor(xml2,'PUBLICADOR');
+    end if;
+
+    xml2 := put_campo(xml2,'__SECUENCIAOK__','40');
+
+    --FAY-DAO 2018-03-12 Solo para Emitidos que no esten retenido previamente
+    --FAY-DAO 20200422 si la emision es por escritorio, no se aplican las reglas de PRE-EMISION
+    if (strpos(uri1,'?k=')>0 and strpos(get_campo('XML_FLAGS',xml2),'RETENIDO-')=0 and get_campo('__FLAG_PUB_10K__',xml2)<>'SI') then
+	--Si tiene el rut controller pre-emision se valida aca
+	rut_emisor1:=get_campo('RUT_EMISOR',xml2);
+	--DAO 20190712 Agregamos que el Tipo Dte sea numerico
+	if is_number(rut_emisor1) and is_number(get_campo('TIPO_DTE',xml2))then
+		select * into campo from dominios_maestro_clientes where rut_emisor=rut_emisor1::integer and pre_emision='SI';
+		if found then
+			xml2:=logapp(xml2,'Vamos a Revisar Controller PRE-EMISION '||uri1);
+			xml2 := put_campo(xml2,'__SECUENCIAOK__','30');
+			return xml2;
+		end if;
+	end if;
+    end if; 
+
+    xml2:=proc_prepara_graba_directo_almacen_colas_112704(xml2);
+    return xml2;
+END;    
 $$ LANGUAGE plpgsql;
 

@@ -1,5 +1,7 @@
 delete from isys_querys_tx where llave='12791';
 
+insert into isys_querys_tx values ('12791',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 --Se envia al Flujo NAR del 10k
 insert into isys_querys_tx values ('12791',10,1,8,'Llamada Intercambio',12764,0,0,0,0,20,20);
 --Validamos la publicacion del NAR

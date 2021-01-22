@@ -1,12 +1,16 @@
 delete from isys_querys_tx where llave='8031';
 
-insert into isys_querys_tx values ('8031',10,45,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
+insert into isys_querys_tx values ('8031',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
+--XX insert into isys_querys_tx values ('8031',10,45,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
+insert into isys_querys_tx values ('8031',10,8021,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 
 --Primero que hacemos el publicar DTE Recibido
 insert into isys_querys_tx values ('8031',40,1,8,'Publica DTE',112704,0,0,0,0,50,50);
 
 --Proceso el DTE REcibido
-insert into isys_querys_tx values ('8031',50,45,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--XX insert into isys_querys_tx values ('8031',50,45,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8031',50,8021,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --Genera Solicitud de CRT
 insert into isys_querys_tx values ('8031',60,19,1,'select genera_solicitud_crt_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
@@ -15,7 +19,8 @@ insert into isys_querys_tx values ('8031',60,19,1,'select genera_solicitud_crt_8
 insert into isys_querys_tx values ('8031',70,19,1,'select genera_solicitud_sii_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,1000);
 
 insert into isys_querys_tx values ('8031',1000,19,1,'select sp_procesa_respuesta_cola_motor88_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
-insert into isys_querys_tx values ('8031',1010,45,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
+-- XXinsert into isys_querys_tx values ('8031',1010,45,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('8031',1010,8021,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 
 CREATE or replace FUNCTION verifica_publicacion_rec_8031(varchar) RETURNS varchar AS $$
 DECLARE
@@ -217,7 +222,10 @@ BEGIN
 		if(now()-get_json('FECHA_INGRESO_COLA',json2)::timestamp>interval '5 days') then
 			json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
 		else
-			json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
+			--json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
+			--Lo tiramos para adelante
+			json2:=put_json(json2,'RESPUESTA','Status: 555 NK');
+			json2:=put_json(json2,'__FECHA_FUTURO_COLA__',(now()+interval '10 hours')::varchar);
 			json2:=put_json(json2,'MENSAJE_XML_FLAGS','Rut Receptor no se encuentra en maestro_clientes');
 		end if;
 		json2:=logjson(json2,'Rut Receptor no se encuentra en maestro_clientes '||rut1::varchar);
@@ -268,7 +276,7 @@ BEGIN
 	end if;
 	
 	--Reviso si el DTE ya esta en la tabla de pendientes
-	select * into campo1 from dte_pendientes_recibidos where rut_emisor=rut_emisor2 and tipo_dte=tipo_dte1 and folio=folio1 and rut_receptor=rut_receptor2 and monto_total=monto1 and split_part(fecha_emision,' ',1)=fecha1 and coalesce(uri,'')<>'';
+	select * into campo1 from (select * from dte_pendientes_recibidos where rut_emisor=rut_emisor2 and tipo_dte=tipo_dte1 and folio=folio1) x where x.rut_receptor=rut_receptor2 and x.monto_total=monto1 and split_part(x.fecha_emision,' ',1)=fecha1 and coalesce(uri,'')<>'';
 	if found then
 		--Si se encuentra
 		json2:=logjson(json2,'DTE ya registrado en dte_pendientes_recibidos, se usa esta URI='||campo1.uri);	
@@ -356,11 +364,19 @@ DECLARE
 	uri1	varchar;
 	campo	record;
 	id1 bigint;
+	sts1	varchar;
 BEGIN
         json2:=json1;
 
 	uri1:=get_json('URI_IN',json2);
 	--Revisamos si esta en la cola
+
+	if (get_json('TIPO_DTE',json2) in ('33','34','43')) then
+		--si envio correctamente el CRT, grabo en las colas para buscar la fecha de recepcion real del sii
+		json2:=logjson(json2,'insert_cola_fecha_rec_sii_16103='||get_json('CODIGO_TXEL',json2)||' '||get_json('RUT_EMISOR',json2)||' '||get_json('TIPO_DTE',json2)||' '||get_json('FOLIO',json2)||' '||get_json('RUT_RECEPTOR',json2)||' '||get_json('URI_IN',json2));
+		sts1:=insert_cola_fecha_rec_sii_16103(get_json('CODIGO_TXEL',json2),get_json('RUT_EMISOR',json2),get_json('TIPO_DTE',json2),get_json('FOLIO',json2),get_json('RUT_RECEPTOR',json2),get_json('URI_IN',json2));
+        	json2:=logjson(json2,'Se graba Busqueda de fecha de recepcion '||sts1);
+        end if;
 	
 	select * into campo from colas_motor_generica where uri=uri1 and categoria='ENVIO_CRT';
 	if found then	

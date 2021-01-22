@@ -1,4 +1,6 @@
 delete from isys_querys_tx where llave='6003';
+insert into isys_querys_tx values ('6003',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 insert into isys_querys_tx values ('6003',10,9,1,'select interno_6003(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('6003',15,9,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 --Llamada a Script Generico
@@ -40,6 +42,10 @@ insert into isys_querys_tx values ('6003',410,19,1,'select $$FUNCION_INPUT$$(''$
 
 
 --insert into isys_querys_tx values ('6002',500,1,8,'Llamada Flujo Pide CAF',6005,0,0,0,0,0,0);
+insert into isys_querys_tx values ('6003',510,15,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+--Secuencia Borrado
+insert into isys_querys_tx values ('6003',1000,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+
 insert into isys_querys_tx values ('6003',14720,1,8,'Llama Flujo 14720',14720,0,0,1,1,0,0);
 
 --Financiamiento
@@ -174,6 +180,11 @@ BEGIN
         if (stSec.base_datos='BASE_15_GESTORFOLIOS') then
                 json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_15_GESTORFOLIOS');
                 json2:=put_json(json2,'__SECUENCIAOK__','500');
+                return json2;
+        end if;
+	if (stSec.base_datos='BASE_15_GESTORFOLIOS_FUNC') then
+                json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_15_GESTORFOLIOS');
+                json2:=put_json(json2,'__SECUENCIAOK__','510');
                 return json2;
         end if;
 	--Base de Bolsa

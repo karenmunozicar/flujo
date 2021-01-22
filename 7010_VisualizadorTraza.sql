@@ -1,6 +1,6 @@
 delete from isys_querys_tx where llave='7010';
 
-insert into isys_querys_tx values ('7010',10,1,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('7010',10,9,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('7010',12,11,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Copia desde Traza Antigua registro de la URI
@@ -104,7 +104,7 @@ BEGIN
 				--Si no hay eventos en la traza antigua, contestamos con los valores de la tabla traza.traza
 				if query1<>'' then
 					--Verificamos que si existen eventos nuevos los sacamos desde la traza.traza
-					execute 'select array_to_json(array_agg(row_to_json(r))) from (SELECT to_char(fecha,''YYYY-MM-DD HH24:MI:SS'') as processedDate,canal,grupo,case when trz.evento in (''CONTROLLER'',''ADJ'') then trz.comentario2 else descripcion1 end as description,comentario1 as comment2,comentario2 as commentFragment ,icono as icon ,url_get as url  from (select distinct fecha,rut_emisor,canal,comentario1||case when comentario_erp is null then '''' else chr(10)||comentario_erp end as comentario1,comentario2,url_get,evento from traza.traza where uri= $1  and evento <>''EMI'') trz join traza.config on trz.evento=traza.config.evento left join recipient_traza_historico recipient  on trz.rut_emisor=recipient.rut  order by orden,fecha) r' into json_traza_traza1 using url1;
+					execute 'select array_to_json(array_agg(row_to_json(r))) from (SELECT to_char(fecha,''YYYY-MM-DD HH24:MI:SS'') as processedDate,canal,grupo,case when trz.evento in (''CONTROLLER'',''ADJ'') then trz.comentario2 else descripcion1 end as description,comentario1 as comment2,comentario2 as commentFragment ,icono as icon ,url_get as url  from (select distinct fecha,rut_emisor,canal,comentario1||case when comentario_erp is null then '''' else chr(10)||comentario_erp end as comentario1,comentario2,url_get,evento from traza.traza where uri= $1  and evento <>''EMI'' ) trz join traza.config on trz.evento=traza.config.evento left join recipient_traza_historico recipient  on trz.rut_emisor=recipient.rut  order by orden,fecha) r' into json_traza_traza1 using url1;
 					if (json_traza_traza1 is not null) then
 						--Debo agregar los eventos nuevos a la traza antigua
 						json_aux1:=query1::json;
@@ -229,7 +229,7 @@ else to_char(coalesce(fecha_ingreso,fecha),''YYYYMMDD'')::integer end as timeSta
 	relacionados1 := array_to_json(array_agg(row_to_json(related))) from (select r.folio, cfg.descripcion1 as tipodte, r.url_relacion as url, cfg.icono  from (select * from documentos_relacionados where url = url1 ) r left join traza.config cfg  on r.tipo_dte = cfg.evento ) related;
 	xml2:=logapp(xml2,'relacionados1='||relacionados1);
 
-	execute 'select array_to_json(array_agg(row_to_json(r))) from (SELECT to_char(fecha,''YYYY-MM-DD HH24:MI:SS'') as processedDate,canal,grupo,case when trz.evento in (''CONTROLLER'',''ADJ'') then decode_utf8(trz.comentario2) else replace(descripcion1,chr(10),''<br>'') end as description,replace(comentario1,chr(10),''<br>'')  as comment2,comentario2 as commentFragment ,icono as icon ,url_get as url  from (select distinct fecha,rut_emisor,canal,decode_utf8(comentario1)||case when comentario_erp is null then '''' else chr(10)||decode_utf8(comentario_erp) end as comentario1,decode_utf8(comentario2) as comentario2,url_get,evento from '||tabla_traza1||' where uri= $1  and evento <>''EMI'') trz join traza.config on trz.evento=traza.config.evento left join recipient_traza_historico recipient  on trz.rut_emisor=recipient.rut  order by orden,fecha) r' into query2 using url1;
+	execute 'select array_to_json(array_agg(row_to_json(r))) from (SELECT to_char(fecha,''YYYY-MM-DD HH24:MI:SS'') as processedDate,canal,grupo,case when trz.evento in (''CONTROLLER'',''ADJ'') then decode_utf8(trz.comentario2) else replace(descripcion1,chr(10),''<br>'') end as description,replace(comentario1,chr(10),''<br>'')  as comment2,comentario2 as commentFragment ,icono as icon ,url_get as url  from (select distinct fecha,rut_emisor,canal,decode_utf8(comentario1)||case when comentario_erp is null then '''' else chr(10)||decode_utf8(comentario_erp) end as comentario1,decode_utf8(comentario2) as comentario2,url_get,evento from '||tabla_traza1||' where uri= $1  and evento <>''EMI'' and case when evento=''RSI'' and tipo_dte in (''39'',''41'') and strpos(comentario1,''Repetido'')>0 then false else true end and case when evento=''MALO_RSI'' and tipo_dte in (''39'',''41'') and strpos(comentario1,''Repetido'')>0 then false else true end) trz join traza.config on trz.evento=traza.config.evento left join recipient_traza_historico recipient  on trz.rut_emisor=recipient.rut  order by orden,fecha) r' into query2 using url1;
 	--xml2:=logapp(xml2,'Eventos='||query2);
 	
 

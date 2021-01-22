@@ -80,25 +80,27 @@ begin
 	--Remplazo QUERY_DATA con QUERY_DATA_HEX porque el motor borra las comillas simples
 	json2:=put_json(json2,'QUERY_DATA',decode_hex(get_json('QUERY_DATA_HEX',json2)));
 	--Si viene resultado
-	if (get_json('TOTAL_RES_JSON',json2)<>'1') then
-		json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Falla Consulta');
-		--Si falla vamos a indicar la falla en el mensaje
-		json2:=put_json(json2,'MENSAJE_RESPUESTA',get_json('MENSAJE_RESPUESTA',json2)||'<br>'||get_json('MENSAJE_ERROR',json2));
-		perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'NK');
-	else
-		perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'OK');
-		v_out_resultado:=get_json('array_to_json',get_json('RES_JSON_1',json2)::json);
-		--Si viene data
-		if v_out_resultado<>'' then
-			json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Concateno Registros');
-			--Si esta vacio lo inicializo, sino agrego
-			if get_json('v_out_resultado',json2)='' then
-				json2:=put_json(json2,'v_out_resultado',v_out_resultado::varchar);
-			else
-        	        	json2:=put_json(json2,'v_out_resultado',json_merge_lists(get_json('v_out_resultado',json2),v_out_resultado::varchar));
-	        	end if;
+	if get_json('SOLO_QUERY',json2)<>'SI' then
+		if (get_json('TOTAL_RES_JSON',json2)<>'1') then
+			json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Falla Consulta');
+			--Si falla vamos a indicar la falla en el mensaje
+			json2:=put_json(json2,'MENSAJE_RESPUESTA',get_json('MENSAJE_RESPUESTA',json2)||'<br>'||get_json('MENSAJE_ERROR',json2));
+			perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'NK');
 		else
-			json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Sin Data');
+			perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'OK');
+			v_out_resultado:=get_json('array_to_json',get_json('RES_JSON_1',json2)::json);
+			--Si viene data
+			if v_out_resultado<>'' then
+				json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Concateno Registros');
+				--Si esta vacio lo inicializo, sino agrego
+				if get_json('v_out_resultado',json2)='' then
+					json2:=put_json(json2,'v_out_resultado',v_out_resultado::varchar);
+				else
+					json2:=put_json(json2,'v_out_resultado',json_merge_lists(get_json('v_out_resultado',json2),v_out_resultado::varchar));
+				end if;
+			else
+				json2:=logjson(json2,get_json('TAG_MENSAJE',json2)||' Sin Data');
+			end if;
 		end if;
 	end if;
 	json2:=put_json(json2,'TOTAL_RES_JSON','');
@@ -107,6 +109,7 @@ begin
 	--DAO 20201110 Si viene el flag nos saltamos la busqueda en la tabla de errores
 	if (get_json('CONTADOR_SECOK',json2)='140' and get_json('busca_errores',json2)='NO') then
 		json2:=put_json(json2,'CONTADOR_SECOK','160');
+		sec1:='160';
 	end if;
 	
 	if (get_json('CONTADOR_SECOK',json2) in ('30') and get_json('FLAG_OC',json2)<>'SI') then
@@ -119,7 +122,7 @@ begin
 
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Boletas EMISION_DISTINTA');
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Boletas Base Boletas EMISION_DISTINTA');
-		json2:=put_json(json2,'CAT_EST','FOLIO_BOLETAS_EMISION_DISTINTA');
+		json2:=put_json(json2,'CAT_EST','FOLIO_BOLETAS_EMISION_DISTINTA_2016');
 	elsif (get_json('CONTADOR_SECOK',json2) in ('40') and get_json('FLAG_OC',json2)<>'SI') then
 		json5:=decode_hex(get_json('JSON5',json2))::json;
 		query2:=decode_hex(get_json('QUERY_PATRON',json2));
@@ -130,7 +133,7 @@ begin
 
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Boletas EMISION_DISTINTA');
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Boletas Base Boletas EMISION_DISTINTA');
-		json2:=put_json(json2,'CAT_EST','FOLIO_BOLETAS_EMISION_DISTINTA');
+		json2:=put_json(json2,'CAT_EST','FOLIO_BOLETAS_EMISION_DISTINTA_2014');
 	elsif (get_json('CONTADOR_SECOK',json2) in ('50') and get_json('FLAG_OC',json2)<>'SI') then
 		json5:=decode_hex(get_json('JSON5',json2))::json;
 		query2:=decode_hex(get_json('QUERY_PATRON',json2));
@@ -258,11 +261,11 @@ begin
                 json2:=put_json(json2,'JSON5',encode_hex(json5::varchar));
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Colas (Encolados) ');
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Colas');
-		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS');
+		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS_13');
 	elsif (get_json('CONTADOR_SECOK',json2)='170') then
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Colas (Encolados) 14');
 		json2:=put_json(json2,'MENSAJE_ERROR','Falla Busqueda en Base Colas 14');
-		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS');
+		json2:=put_json(json2,'CAT_EST','FOLIO_EMITIDOS_COLAS_14');
 	/*
 	elsif (get_json('CONTADOR_SECOK',json2)='180') then
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Colas (Encolados) 14');
@@ -296,7 +299,9 @@ begin
 		json2:=logjson(json2,'MENSAJE='||get_json('MENSAJE_RESPUESTA',json2));
 		json2:=put_json(json2,'MENSAJE',get_json('MENSAJE_RESPUESTA',json2));
 		json2:=put_json(json2,'MENSAJE_RESPUESTA','OK');
-		json2:=responde_pantalla_15100(json2);
+		if get_json('SOLO_QUERY',json2)<>'SI' then
+			json2:=responde_pantalla_15100(json2);
+		end if;
 		return json2;		
 	end if;
 
@@ -410,6 +415,12 @@ declare
 	tabla_defecto1	varchar;
 	query2		varchar;
 	json_resp1	json;
+	json_out2	json;
+        json_pdf1	json;
+	estado1		varchar;
+	evento1		varchar;
+        json_oc		json;
+	app1	varchar;
 BEGIN
         json2:=json1;
         flag_boleta1:='NO';
@@ -608,6 +619,45 @@ BEGIN
 	json4:='[]';
 	v_out_resultado:=null;
         --Se borra el offset y el limit, saca todo lo que tenga
+
+	--Leemos las acciones
+	if get_json('__BOTONES_TABLA__',json2)='' then
+		app1:=get_json('app_dinamica',json2);
+		if(get_json('TIPO_DTE',json2) in ('39','41') or get_json('v_lista_errores',json2)='SI') then
+			--Las boletas no tienen boton cesion
+			select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end and valor not in ('CESION') order by orden) sql into json_out2;
+		else
+			if get_json('ESTADO',json2) in ('EN_PROCESO','RETENIDOS') then
+				select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and labels_editable='EN_PROCESO' and (case when get_json('rutCliente',json2) in ('97018000','96919050','96722460') and get_json('rol_usuario',json2)<>'CallCenter' and valor='AnularNC' then true else check_funcionalidad_6000(json2,valor) end) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
+			else
+				select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and coalesce(labels_editable,'')<>'EN_PROCESO' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
+			end if;
+		end if;
+		-- NBV 201705
+		if(get_json('TIPO_DTE',json2)='801') then
+			json_oc:='[]';
+			select row_to_json(sql) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo,reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and valor='Exportar') sql into json_pdf1;
+			json_oc:=put_json_list(json_oc,json_pdf1);
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_oc);
+		else
+		-- NBV 201705
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_out2);
+		end if;
+		estado1:=get_json('ESTADO',json2);
+		if(estado1<>'') then
+			select glosa from estado_dte where descripcion=estado1 into evento1;
+			json2:=put_json(json2,'EVENTO_CUAD',evento1);
+		end if;
+		if(get_json('TIPO_DTE',json2)<>'') then
+			if(get_json('TIPO_DTE',json2) in ('39','41')) then
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_boletas');
+			elsif(get_json('TIPO_DTE',json2) in ('110','111','112')) then
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_exportacion');
+			else
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_nacionales');
+			end if;
+		end if;
+	end if;
 
 	--QUERY--
 	--tabla_defecto1:='dte_boletas_generica';

@@ -16,11 +16,12 @@ DECLARE
 BEGIN
 	xml2:=xml1;
 
-	json_in:='{"RutCompania": "'||get_campo('RUT_EMISOR',xml2)||'","DvCompania":"'||modulo11(get_campo('RUT_EMISOR',xml2))||'","RutReceptor":"'||get_campo('RUT_RECEPTOR',xml2)||'","DvReceptor":"'||modulo11(get_campo('RUT_RECEPTOR',xml2))||'","TipoDte":"'||get_campo('TIPO_DTE',xml2)||'","FolioDte":"'||get_campo('FOLIO',xml2)||'","FechaEmisionDte":"'||get_campo('FECHA_EMISION',xml2)||'","MontoDte":"'||get_campo('MONTO_TOTAL',xml2)||'","RUT_OWNER":"'||get_campo('RUT_EMISOR',xml2)||'"}';
+	json_in:='{"RutCompania": "'||get_campo('RUT_EMISOR',xml2)||'","DvCompania":"'||modulo11(get_campo('RUT_EMISOR',xml2))||'","RutReceptor":"'||get_campo('RUT_RECEPTOR',xml2)||'","DvReceptor":"'||modulo11(get_campo('RUT_RECEPTOR',xml2))||'","TipoDte":"'||get_campo('TIPO_DTE',xml2)||'","FolioDte":"'||get_campo('FOLIO',xml2)||'","FechaEmisionDte":"'||get_campo('FECHA_EMISION',xml2)||'","MontoDte":"'||split_part(get_campo('MONTO_TOTAL',xml2),'\',1)||'","RUT_OWNER":"'||get_campo('RUT_EMISOR',xml2)||'"}';
 	
 	xml2:=logapp(xml2,'SII: '||json_in::varchar||' URI='||get_campo('URI_IN',xml2));
 
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','20');
+	/*
         xml2:=get_parametros_motor(xml2,'SERVICIO_SII_JSON');
 	port:=get_ipport_sii();
         if (port='') then
@@ -34,15 +35,11 @@ BEGIN
         xml2:=put_campo(xml2,'__IP_CONEXION_CLIENTE__',split_part(port,':',1));
         xml2:=put_campo(xml2,'__IP_PORT_CLIENTE__',split_part(port,':',2));
         xml2:=put_campo(xml2,'IPPORT_SII',port);
+	*/
+	xml2:=put_campo(xml2,'__IP_CONEXION_CLIENTE__','interno.acepta.com');
+        xml2:=put_campo(xml2,'__IP_PORT_CLIENTE__','8080');
 
-        --xml2:=get_parametros_motor(xml2,'SERVICIO_SII_JSON');
-        --xml2:=put_campo(xml2,'__IP_PORT_CLIENTE__',port);
-        --xml2:=put_campo(xml2,'IP_PORT_CLIENTE',port);
-
-	--xml2:=put_campo(xml2,'__IP_PORT_CLIENTE__',port);
-        --xml2:=put_campo(xml2,'IP_PORT_CLIENTE',port);
-
-        xml2:=put_campo(xml2,'INPUT','POST /estado_dte HTTP/1.1'||chr(10)||'User-Agent: curl/7.26.0'||chr(10)||'Host: '||get_campo('__IP_CONEXION_CLIENTE__',xml2)||':'||get_campo('__IP_PORT_CLIENTE__',xml2)||chr(10)||'Accept: '||chr(42)||'/'||chr(42)||chr(10)||'Content-Type: application/json; charset=ISO-8859-1'||chr(10)||'Content-Length: '||length(json_in::varchar)::varchar||chr(10)||chr(10)||json_in::varchar);
+        xml2:=put_campo(xml2,'INPUT','POST /sii/estado_dte HTTP/1.1'||chr(10)||'User-Agent: curl/7.26.0'||chr(10)||'Host: '||get_campo('__IP_CONEXION_CLIENTE__',xml2)||':'||get_campo('__IP_PORT_CLIENTE__',xml2)||chr(10)||'Accept: '||chr(42)||'/'||chr(42)||chr(10)||'Content-Type: application/json; charset=ISO-8859-1'||chr(10)||'Content-Length: '||length(json_in::varchar)::varchar||chr(10)||chr(10)||json_in::varchar);
 	return xml2;
 END;
 $$ LANGUAGE plpgsql;
@@ -85,8 +82,8 @@ BEGIN
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
         output1:=get_campo('RESPUESTA',xml2);
         xml2:=logapp(xml2,'SII json='||replace(output1,chr(10),''));
-	if(strpos(output1,'HTTP/1.0 200')=0) then
-		perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'FALLA');
+	if(strpos(output1,'HTTP/1.0 200')=0 and strpos(output1,'HTTP/1.1 200')=0) then
+		--perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'FALLA');
                 xml2:=logapp(xml2,'Falla Respuesta del SII '||output1);
                 xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
                 return xml2;
@@ -97,12 +94,12 @@ BEGIN
                 json_out:=split_part(output1,chr(10)||chr(10),2)::json;
                 j4:=get_first_key_json(get_first_key_json(json_out::varchar));
         exception when others then
-		perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'FALLA');
+		--perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'FALLA');
                 xml2:=logapp(xml2,'Respuesta SII no es un json' );
                 xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
                 return xml2;
         end;
-	perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'OK');
+	--perform libera_ipport_sii(get_campo('IPPORT_SII',xml2),'OK');
 
 	if strpos(get_campo('URI_IN',xml2),'REPROCESO_ID__')>0 then
 		xml2:=logapp(xml2,'REPROCESO_ID__ repro_get_estado_sii');
@@ -135,7 +132,7 @@ BEGIN
 				xml3:=put_campo(xml3,'FLAG_EVENTO_REE','NO');
 				xml3:=put_campo(xml3,'FECHA_INGRESO_COLA',now()::varchar);
 				tx1:='30';
-				cola1:=nextval('id_cola_procesamiento');
+				cola1:=nextval('id_cola_procesamiento_colas');
 				nombre_tabla1:='cola_motor_'||cola1::varchar;
 				--perform logfile('16102: '||i::varchar||' graba en cola88');
 			

@@ -182,10 +182,13 @@ insert into isys_querys_tx values ('6000',12778,1,8,'LLAMADA AL FLUJO 12778',127
 
 --Llama flujo 13710 Cuadro 1 Emitidos
 insert into isys_querys_tx values ('6000',13710,1,8,'Llama Flujo 13710',13710,0,0,1,1,0,0);
+--Llama flujo 15400 Busqueda
+insert into isys_querys_tx values ('6000',15400,1,8,'Llama Flujo 15400',15400,0,0,1,1,0,0);
 --Llama flujo 15100 Busqueda
 insert into isys_querys_tx values ('6000',15100,1,8,'Llama Flujo 15100',15100,0,0,1,1,0,0);
 --Llama flujo 15101 Busqueda Folio
 insert into isys_querys_tx values ('6000',15101,1,8,'Llama Flujo 15101',15101,0,0,1,1,0,0);
+insert into isys_querys_tx values ('6000',17101,1,8,'Llama Flujo 17101',17101,0,0,1,1,0,0);
 --Llama flujo 15102 Busqueda Recibidos
 insert into isys_querys_tx values ('6000',15102,1,8,'Llama Flujo 15102',15102,0,0,1,1,0,0);
 --Grafico KPI SII

@@ -181,10 +181,14 @@ BEGIN
 	adicional1:=replace(adicional1,'\/','/');
 	--DAO 20180725-- Para DEC agregamos el Subject dentro de los Adicionales
 	if strpos(get_json('CATEGORIA',json2),'DEC')>0 then
-		adicional1:=adicional1||'<SUBJECT>'||get_json('subject',json2)||'</SUBJECT>';
+		adicional1:=adicional1||'<SUBJECT>'||replace(replace(get_json('subject',json2),'\\/','/'),chr(39),chr(39)||chr(39))||'</SUBJECT>';
 	end if;
 
 	flag1:='';
+	--FAY 2021-01-15 se borra la ' para que no se caiga el insert
+	adicional1:=replace(adicional1,chr(39),'');
+	to1:=replace(to1,chr(39),'');
+	from1:=replace(from1,chr(39),'');
 	--Si viene con error de origen, solo se registra y no se envia
 	if strpos(adicional1,'<ERROR_ORIGEN>')>0 then
 		flag1:='SI';

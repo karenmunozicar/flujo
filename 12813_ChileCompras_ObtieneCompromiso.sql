@@ -221,6 +221,48 @@ begin
 end;
 $function$ language plpgsql;
 
+
+create or replace function decide_obtiene_asiento_contable(json)
+  returns json
+  as $function$
+declare
+        json1             alias for $1;
+        json2             json;
+        json_consulta     json;
+
+        v_codigo_dv       varchar;
+        v_codigo_txel     varchar;
+        v_reg_devengo     record;
+        v_reg_referencia  record;
+begin
+        json2:=json1;
+        v_codigo_dv:=get_json('V_CODIGO_DV',json2);
+        v_codigo_txel:=get_json('codigo_txel', json2);
+        select codigo_dv, estado, tipo_devengo, tipo_dte, ref_codigo_dv from dp_devengo where dte_codigo_txel = v_codigo_txel and tipo_dte <> 0 into v_reg_devengo;
+        if not found then
+                return grilla_obtiene_compromiso_chile_compras(json2);
+        -- elsif v_reg_devengo.tipo_devengo = 'AUT' then
+        elsif v_reg_devengo.tipo_dte in (56, 61) then
+                select codigo_dv, estado, tipo_devengo, tipo_dte from dp_devengo where codigo_dv = v_reg_devengo.ref_codigo_dv and tipo_dte <> 0 into v_reg_referencia;
+                if not found then
+                        return grilla_obtiene_compromiso_chile_compras(json2);
+                elsif v_reg_referencia.estado = 'FINALIZADO_SIN_ERRORES' and v_reg_referencia.tipo_devengo = 'AUT' and v_reg_devengo.estado in ('BORRADOR', 'REPROCESO') then
+                        perform logfile('----- FGE - Va a 12822');
+                        json2:=put_json(json2, 'codigo_dv', v_codigo_dv);
+                        json2:=put_json(json2, 'LLAMA_FLUJO', 'SI');
+                        json2:=put_json(json2, '__SECUENCIAOK__','12822');
+                        json2:=dp_consulta_contable_12822(json2); 
+                else
+                        return grilla_obtiene_compromiso_chile_compras(json2);
+                end if;
+        else
+             return grilla_obtiene_compromiso_chile_compras(json2);
+        end if;
+        return json2;
+end;
+$function$ language plpgsql;
+
+
 create or replace function grilla_obtiene_compromiso_chile_compras(json)
  returns json
  as $function$
@@ -408,10 +450,11 @@ if 1==1:
 	# FGE - 20191219 - Anexamos la descripcion de status
         if 'descripcion' in json1:
                  descripcion_extendida = ''
-                 for d_extendida in json1['errors']:
-                         descripcion_extendida = descripcion_extendida + d_extendida['descripcion'] + ', '
-                 descripcion_extendida = descripcion_extendida[:-2]
-                 json_out['error_descripcion'] = '%s - %s - %s' % (json1['status'], json1['descripcion'], descripcion_extendida)
+                 if 'errors' in json1:
+                         for d_extendida in json1['errors']:
+                                 descripcion_extendida = descripcion_extendida + d_extendida['descripcion'] + ', '
+                         descripcion_extendida = descripcion_extendida[:-2]
+                         json_out['error_descripcion'] = '%s - %s - %s' % (json1['status'], json1['descripcion'], descripcion_extendida)
 #except Exception as e:
 #       json_out['RESPUESTA']='ERROR'
 
@@ -471,6 +514,7 @@ BEGIN
         RETURN json2;
 END;
 $function$
+
 
 
 

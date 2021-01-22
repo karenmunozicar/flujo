@@ -17,7 +17,8 @@ BEGIN
         json2:=json1;
         json2:=put_json(json2,'LLAMA_FLUJO','SI');
 	if (get_json('FOLIO',json2)<>'') then
-	        json2:=put_json(json2,'__SECUENCIAOK__','15101');
+	        --json2:=put_json(json2,'__SECUENCIAOK__','15101');
+	        json2:=put_json(json2,'__SECUENCIAOK__','17101');
 	elsif (get_json('aplicacion',json2) in ('FINANCIAMIENTO','FINANCIAMIENTO_FIN')) then
 		--Si el cliente no ha aceptado el TyC no le mostramos nada
 		if get_json('aplicacion',json2)='FINANCIAMIENTO' then
@@ -49,13 +50,20 @@ BEGIN
 		if get_json('TIPO_DTE',json2)='801' then
 			json2:=put_json(json2,'__SECUENCIAOK__','15100');
                 elsif get_json('folio_desde',json2)='' then
-                        json2:=put_json(json2,'__SECUENCIAOK__','15101');
+                        --json2:=put_json(json2,'__SECUENCIAOK__','15101');
+			json2:=put_json(json2,'__SECUENCIAOK__','17101');
                         json2:=put_json(json2,'FOLIO',get_json('folio_hasta',json2));
                 elsif get_json('folio_hasta',json2)='' then
-                        json2:=put_json(json2,'__SECUENCIAOK__','15101');
+                        --json2:=put_json(json2,'__SECUENCIAOK__','15101');
+			--FAY-DAO 2020-12-16 nuevo flujo en paralelo
+			json2:=put_json(json2,'__SECUENCIAOK__','17101');
                         json2:=put_json(json2,'FOLIO',get_json('folio_desde',json2));
+			--if get_json('rutUsuario',json2)='17597643' then
+			--	json2:=put_json(json2,'__SECUENCIAOK__','17101');
+			--end if;
                 elsif get_json('folio_hasta',json2)=get_json('folio_desde',json2) then
-                        json2:=put_json(json2,'__SECUENCIAOK__','15101');
+                        --json2:=put_json(json2,'__SECUENCIAOK__','15101');
+			json2:=put_json(json2,'__SECUENCIAOK__','17101');
                         json2:=put_json(json2,'FOLIO',get_json('folio_desde',json2));
                 else
                         json2:=put_json(json2,'__SECUENCIAOK__','15100');
@@ -95,7 +103,7 @@ insert into isys_querys_tx values ('15100','76',17,1,'$$QUERY_DATA$$',0,0,0,9,1,
 --Boletas Historicas
 insert into isys_querys_tx values ('15100','77',39,1,'$$QUERY_DATA$$',0,0,0,9,1,80,80);
 
-insert into isys_querys_tx values ('15100','80',9,1,'select arma_next_query1_15100(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('15100','80',19,1,'select arma_next_query1_15100(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION arma_next_query1_15100(json) RETURNS json AS $$
 DECLARE
@@ -113,6 +121,10 @@ DECLARE
 	v_out_resultado	varchar;
 begin
 	json2:=json1;
+	perform logfile('Inicio arma_next_query1_15100 length json2='||length(json2::varchar)::varchar);
+	if get_json('rutUsuario',json2)='17597643' then
+		perform log_json_key('arma_next_query1_15100',json2::varchar);
+	end if;
 	json2:=put_json(json2,'__FUNC__','arma_next_query1_15100');
 	if (get_json('RES_JSON_1',json2)='') then
 		perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'NK');	
@@ -131,12 +143,15 @@ begin
 	end if;
 	json2:=put_json(json2,'v_out_resultado',v_out_resultado);
 
+	perform logfile('graba_estadisticas_busqueda arma_next_query1_15100');
 	perform graba_estadisticas_busqueda(json1,get_json('CAT_EST',json2),'OK');
+	perform logfile('fin graba_estadisticas_busqueda arma_next_query1_15100');
 
 	i:=get_json('__CONTADOR__',json2)::integer;
 	j1:=get_json('__aux_tablas',json2);
 	--Si el contador es mayor que el total de tablas..
 	if (i=count_array_json(j1)) then
+		perform logfile('fin arma_next_query1_15100.');
 		json2:=logjsonfunc(json2,'Termino de hacer querys');
 		json2:=put_json(json2,'MENSAJE_RESPUESTA','OK');
 		json2:=put_json(json2,'CODIGO_RESPUESTA','1');
@@ -157,6 +172,7 @@ begin
 		return json2;
 	end if;
 	*/
+	perform logfile('arma query arma_next_query1_15100');
 	json5:=decode_hex(get_json('JSON5',json2));
 	query2:=decode_hex(get_json('QUERY2',json2));
 	fecha_c1:=get_json_index(j1,i);
@@ -177,6 +193,7 @@ begin
 	json2:=put_json(json2,'TABLA',tabla1);	
 	query1:=remplaza_tags_json_c(json5,query2);
 	json2:=put_json(json2,'QUERY_DATA',query1);
+	perform logfile('fin arma query arma_next_query1_15100');
 		
 	json2:=put_json(json2,'PARAMETRO_TABLA',par1::varchar);
 	json2:=put_json(json2,'CAT_EST',coalesce(par1::varchar,'LOCAL')||'__'||tabla1);
@@ -200,7 +217,7 @@ begin
 	end if;
 	json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
 	json2:=put_json(json2,'__CONTADOR__',(i+1)::Varchar);
-	json2:=logjsonfunc(json2,'Ejecuta '||coalesce(par1,'LOCAL')||' Tabla '||tabla1);
+	perform logfile('arma_next_query1_15100 Ejecuta '||coalesce(par1,'LOCAL')||' Tabla '||tabla1);
 	return json2;
 end;
 $$
@@ -275,20 +292,6 @@ BEGIN
                 json3:=put_json(json3,'cantidad_paginas','0');
         end if;
 
-        estado1:=get_json('ESTADO',json2);
-        if(estado1<>'') then
-                select glosa from estado_dte where descripcion=estado1 into evento1;
-                json2:=put_json(json2,'EVENTO_CUAD',evento1);
-        end if;
-        if(tipo_dte1<>'') then
-                if(tipo_dte1 in ('39','41')) then
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_boletas');
-                elsif(tipo_dte1 in ('110','111','112')) then
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_exportacion');
-                else
-                        json2:=put_json(json2,'GRUPO_CUAD','documentos_nacionales');
-                end if;
-        end if;
 
         json3:=put_json(json3,'titulo','Búsqueda Emitidos');
         json3:=put_json(json3,'flag_paginacion','NO');
@@ -296,29 +299,8 @@ BEGIN
         json3:=put_json(json3,'flag_tipo_cuadro','GRILLA');
         json3:=put_json(json3,'caption_buscar','Buscar en esta pagina :');
 
-	if(tipo_dte1 in ('39','41') or get_json('v_lista_errores',json2)='SI') then
-		--Las boletas no tienen boton cesion
-		select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end and valor not in ('CESION') order by orden) sql into json_out2;
-	else
-		if get_json('ESTADO',json2)='EN_PROCESO' then
-                        select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and labels_editable='EN_PROCESO' and (case when get_json('rutCliente',json2) in ('97018000','96919050','96722460') and valor='AnularNC' then true else check_funcionalidad_6000(json2,valor) end) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
-                else
-			select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and coalesce(labels_editable,'')<>'EN_PROCESO' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
-		end if;
-	end if;
-        -- NBV 201705
-        if(tipo_dte1='801') then
-                json_oc:='[]';
-                select row_to_json(sql) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo,reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and valor='Exportar') sql into json_pdf1;
-                json_oc:=put_json_list(json_oc,json_pdf1);
-                json3:=put_json(json3,'botones_tabla',json_oc);
-        else
-        -- NBV 201705
-                json3:=put_json(json3,'botones_tabla',json_out2);
-        end if;
-	if get_json('__BOTONES_TABLA__',json2)<>'' then
-                json3:=put_json(json3,'botones_tabla',get_json('__BOTONES_TABLA__',json2));
-	end if;
+	
+	json3:=put_json(json3,'botones_tabla',get_json('__BOTONES_TABLA__',json2));
 
         json2:=response_requests_6000('1', 'OK', json3::varchar,json2);
         RETURN json2;
@@ -436,6 +418,12 @@ DECLARE
 	sobra_base_colas1 integer;
 	total_base_colas1 integer;
 	total_base_colas2 integer;
+	json_out2	json;
+        json_pdf1	json;
+	estado1		varchar;
+	evento1		varchar;
+        json_oc		json;
+	app1	varchar;
 BEGIN
         json2:=json1;
 	json2:=put_json(json2,'__FUNC__','arma_filtro');
@@ -757,7 +745,7 @@ BEGIN
 				v_estado_indexer:=' estado in (''AST'') ';
 				v_estado := ' estado_sii in (''ACEPTADO_POR_EL_SII'',''ACEPTADO_CON_REPAROS_POR_EL_SII'') and ';
 			--Encolados (colas_motor_generica)
-			elsif (v_in_evento='EN_PROCESO') then
+			elsif (v_in_evento in ('EN_PROCESO','RETENIDOS')) then
 				json2:=put_json(json2,'flag_encolados','SI');
 				--v_estado:=' categoria in (''DTE_NORMAL'',''BOLETA'') and ';
 				v_estado:=' 1=1 and ';
@@ -825,6 +813,46 @@ BEGIN
         tabla_dinamica1:=replace(tabla_dinamica1,'##TABLA##',tabla_defecto1);
         json2:=logjsonfunc(json2,'Tabla Dinamica '||tabla_dinamica1);
 
+	
+	--Leemos las acciones
+	if get_json('__BOTONES_TABLA__',json2)='' then
+		app1:=get_json('app_dinamica',json2);
+		if(get_json('TIPO_DTE',json2) in ('39','41') or get_json('v_lista_errores',json2)='SI') then
+			--Las boletas no tienen boton cesion
+			select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end and valor not in ('CESION') order by orden) sql into json_out2;
+		else
+			if get_json('ESTADO',json2) in ('EN_PROCESO','RETENIDOS') then
+				select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and labels_editable='EN_PROCESO' and (case when get_json('rutCliente',json2) in ('97018000','96919050','96722460') and get_json('rol_usuario',json2)<>'CallCenter' and valor='AnularNC' then true else check_funcionalidad_6000(json2,valor) end) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
+			else
+				select array_to_json(array_agg(row_to_json(sql))) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo, reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,informacion,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and coalesce(labels_editable,'')<>'EN_PROCESO' and check_funcionalidad_6000(json2,valor) and case when valor='ExportarPDF' then case when get_json('parametro_pdf_masivo',json2)='SI' then true else false end else true end order by orden) sql into json_out2;
+			end if;
+		end if;
+		-- NBV 201705
+		if(get_json('TIPO_DTE',json2)='801') then
+			json_oc:='[]';
+			select row_to_json(sql) from (select titulo as nombre,tx,labels_no_editable,funcion,funcion_modal,titulo,tipo,reemplaza_regex_valores_json(reemplaza_regex_json(href,json2),json2) as href,glyphicon,caption from acciones_grillas where id_pantalla=app1 and categoria='BOTONERA_GRILLA' and valor='Exportar') sql into json_pdf1;
+			json_oc:=put_json_list(json_oc,json_pdf1);
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_oc);
+		else
+		-- NBV 201705
+			json2:=put_json(json2,'__BOTONES_TABLA__',json_out2);
+		end if;
+		estado1:=get_json('ESTADO',json2);
+		if(estado1<>'') then
+			select glosa from estado_dte where descripcion=estado1 into evento1;
+			json2:=put_json(json2,'EVENTO_CUAD',evento1);
+		end if;
+		if(get_json('TIPO_DTE',json2)<>'') then
+			if(get_json('TIPO_DTE',json2) in ('39','41')) then
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_boletas');
+			elsif(get_json('TIPO_DTE',json2) in ('110','111','112')) then
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_exportacion');
+			else
+				json2:=put_json(json2,'GRUPO_CUAD','documentos_nacionales');
+			end if;
+		end if;
+	end if;
+
         json5:='{}';
         json5:=put_json(json5,'ESTADO_ACEPTA','EMITIDO');
         json5:=put_json(json5,'IMPUESTOS','');
@@ -879,7 +907,7 @@ BEGIN
         	query_data1:='SELECT array_to_json(array_agg(row_to_json(sql))) FROM ( '||chr(36)||chr(36)||chr(36)||'CAMPOS'||chr(36)||chr(36)||chr(36)||' from (select *,tipo_dte as tipo_dte_cesion,'''||chr(36)||chr(36)||chr(36)||'ESTADO_ACEPTA'||chr(36)||chr(36)||chr(36)||'''::varchar as estado_acepta '||chr(36)||chr(36)||chr(36)||'IMPUESTOS'||chr(36)||chr(36)||chr(36)||' '||chr(36)||chr(36)||chr(36)||'REFERENCIAS'||chr(36)||chr(36)||chr(36)||' '||chr(36)||chr(36)||chr(36)||'ESTADO_CESION'||chr(36)||chr(36)||chr(36)||' '||chr(36)||chr(36)||chr(36)||'ALIAS'||chr(36)||chr(36)||chr(36)||' from '||chr(36)||chr(36)||chr(36)||'TABLA'||chr(36)||chr(36)||chr(36)||' where '||v_estado||''||chr(36)||chr(36)||chr(36)||'RUT_EMISOR'||chr(36)||chr(36)||chr(36)||' and tipo_dte in '||chr(36)||chr(36)||chr(36)||'TIPO_DTE'||chr(36)||chr(36)||chr(36)||' and dia'||tipo_dia1||' in '||fecha_in1||' '||chr(36)||chr(36)||chr(36)||'RUT_RECEPTOR'||chr(36)||chr(36)||chr(36)||' '||v_parametro_tipo_dte||' '||v_parametro_var||' '||chr(36)||chr(36)||chr(36)||'FILTRO_REF'||chr(36)||chr(36)||chr(36)||' '||chr(36)||chr(36)||chr(36)||'FILTRO_ADIC'||chr(36)||chr(36)||chr(36)||' '||order_excel1||' offset '||v_in_offset1::varchar||' limit '||v_in_cant_reg::varchar||') x left join contribuyentes m ON m.rut_emisor=x.rut_receptor LEFT JOIN tipo_dte t ON t.codigo = x.tipo_dte LEFT JOIN (select * from dte_pagado where canal=''EMITIDOS'') dp on dp.codigo_txel=x.codigo_txel ) sql';
                 json2:=logjsonfunc(json2,'Encolados y Cedidos');
                 --if (total_pag1='-1') then
-                        if (vin_estado='EN_PROCESO') then
+                        if (vin_estado in ('EN_PROCESO','RETENIDOS')) then
 				if get_json('rutUsuario',json2)='17597643' then
 					perform logfile('EN_PROCESO '||query1);
 				end if;
@@ -913,7 +941,7 @@ BEGIN
                 --        json2:=logjsonfunc(json2,'No cuenta Total pagina='||total_pag1::varchar);
                 --        v_total:=total_pag1;
                 --end if;
-		if (vin_estado='EN_PROCESO') then
+		if (vin_estado in ('EN_PROCESO','RETENIDOS')) then
 			json2:=logjsonfunc(json2,'Busca en Colas EN_PROCESO');
 			query1:=remplaza_tags_json_c(json5,query_data1);
 			json5:=put_json(json5,'TIPO_DTE',v_tipo_dte_com);
@@ -923,6 +951,9 @@ BEGIN
 			json2:=put_json(json2,'flag_encolados','SI');
 			pag_base_colas1:=total_base_colas1/v_in_cant_reg_fijo::integer;
 			sobra_base_colas1:=total_base_colas1%v_in_cant_reg_fijo::integer;	
+				if get_json('rutUsuario',json2)='17597643' then
+					perform logfile('EN_PROCESO '||query1);
+				end if;
 			--DAO 20200930
 			--if get_json('rutUsuario',json2)='17597643' then
 				--perform logfile('EN_PROCESO pag_base_colas1='||pag_base_colas1::varchar||' sobra_base_colas1='||sobra_base_colas1||' '||' v_in_offset1='||v_in_offset1::varchar);	

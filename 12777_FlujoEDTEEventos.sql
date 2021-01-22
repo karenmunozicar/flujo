@@ -4,7 +4,7 @@ delete from isys_querys_tx where llave='12777';
 --insert into isys_querys_tx values ('12777',5,1,1,'select proc_procesa_input_12777(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0); 
 insert into isys_querys_tx values ('12777',5,10,1,'select proc_procesa_input_12777(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0); 
 --insert into isys_querys_tx values ('12777',10,1,8,'Ejecuta Traza',12701,0,0,1,1,20,20);
-insert into isys_querys_tx values ('12777',10,1,8,'Ejecuta Traza',112701,0,0,1,1,20,20);
+insert into isys_querys_tx values ('12777',10,1,8,'Ejecuta Traza',112703,0,0,1,1,20,20);
 
 --Se ejecuta en la Base del EDTE3
 insert into isys_querys_tx values ('12777',20,10,1,'select public.sp_procesa_respuesta_cola_edte3(''$$__ID_DTE__$$'',''$$NOMBRE_COLA$$'',''$$RESPUESTA$$'') as __xml__',0,0,0,1,1,0,0); 

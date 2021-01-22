@@ -2,7 +2,9 @@ delete from isys_querys_tx where llave='6001';
 
 --Las tx sin sesion se ejecutan en el API de MOTOR, no WEB
 --insert into isys_querys_tx values ('6001',5,45,1,'select log_generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,10);
-insert into isys_querys_tx values ('6001',5,9,16,'LOG_JSON',0,0,0,1,1,10,10);
+
+insert into isys_querys_tx values ('6001',2,9,16,'LOG_JSON',0,0,0,1,1,5,5);
+insert into isys_querys_tx values ('6001',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
 
 insert into isys_querys_tx values ('6001',10,1,1,'/*$$__JSONCOMPLETO__["tipo_tx"]$$*/ select webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 
@@ -12,8 +14,11 @@ insert into isys_querys_tx values ('6001',15,19,1,'select secuencia_timeout_6000
 insert into isys_querys_tx values ('6001',20,1,10,'$$SCRIPT$$',0,0,0,1,1,25,25);
 --Llamada a un MicroServicio POST
 insert into isys_querys_tx values ('6001',22,1,2,'Microservicioe 127.0.0.1',4013,300,101,0,0,25,25);
+--Llamada a un MicroServicio sonde la respuesta va a la base de colas
+insert into isys_querys_tx values ('6001',23,1,2,'Microservicioe 127.0.0.1',4013,300,101,0,0,26,26);
 
-insert into isys_querys_tx values ('6001',25,45,1,'select /*$$__JSONCOMPLETO__["tipo_tx"]$$*/ generico10k_resp_6001(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('6001',25,1,1,'select /*$$__JSONCOMPLETO__["tipo_tx"]$$*/ generico10k_resp_6001(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('6001',26,19,1,'select /*$$__JSONCOMPLETO__["tipo_tx"]$$*/ generico10k_resp_6001(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 
 --Flujo Firma XML Subido en el Subir
@@ -41,6 +46,10 @@ insert into isys_querys_tx values ('6001',110,1,8,'LLAMADA AL FLUJO 12764 Reenvi
 insert into isys_querys_tx values ('6001',160,1,8,'FLujo Match WebPay',12810,0,0,0,0,0,0);
 insert into isys_querys_tx values ('6001',161,1,8,'FLujo Match WebPay',12811,0,0,0,0,0,0);
 
+--LeeTraza
+insert into isys_querys_tx values ('6001',170,1,8,'Flujo LeeTraza ',8070,0,0,0,0,171,171);
+insert into isys_querys_tx values ('6001',171,1,1,'select $$FUNCION_RESPUESTA$$(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+
 -- Flujo 6000 --ICAR - Nuevos
 insert into isys_querys_tx values ('6001',180,1,1,'select icar_spie_pivote_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('6001',181,1,1,'select icar_enviar_decision_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,30,0);
@@ -52,15 +61,24 @@ insert into isys_querys_tx values ('6001',400,24,1,'select $$FUNCION_INPUT$$(''$
 insert into isys_querys_tx values ('6001',410,1,1,'select $$FUNCION_INPUT$$(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Base de Colas
 insert into isys_querys_tx values ('6001',420,19,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+-- base Motor puerto 8009 (rapido)
+insert into isys_querys_tx values ('6001',430,9,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('6001',500,1,8,'Llamada Flujo Pide CAF',6005,0,0,0,0,0,0);
+insert into isys_querys_tx values ('6001',510,15,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+
+--Secuencia Borrado
+insert into isys_querys_tx values ('6001',1000,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --Llama flujo 13710 Cuadro 1 Emitidos
 insert into isys_querys_tx values ('6001',13710,1,8,'Llama Flujo 13710',13710,0,0,1,1,0,0);
+--Llama flujo 15400 Busqueda
+insert into isys_querys_tx values ('6001',15400,1,8,'Llama Flujo 15400',15400,0,0,1,1,0,0);
 --Llama flujo 15100 Busqueda
 insert into isys_querys_tx values ('6001',15100,1,8,'Llama Flujo 15100',15100,0,0,1,1,0,0);
 --Llama flujo 15101 Busqueda Folio
 insert into isys_querys_tx values ('6001',15101,1,8,'Llama Flujo 15101',15101,0,0,1,1,0,0);
+insert into isys_querys_tx values ('6001',17101,1,8,'Llama Flujo 17101',17101,0,0,1,1,0,0);
 --Llama flujo 15102 Busqueda Recibidos
 insert into isys_querys_tx values ('6001',15102,1,8,'Llama Flujo 15102',15102,0,0,1,1,0,0);
 --Financiamiento
@@ -200,6 +218,12 @@ BEGIN
                 json2:=put_json(json2,'__SECUENCIAOK__','500');
                 return json2;
         end if;
+	if (stSec.base_datos='BASE_15_GESTORFOLIOS_FUNC') then
+                json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_15_GESTORFOLIOS');
+                json2:=put_json(json2,'__SECUENCIAOK__','510');
+                return json2;
+        end if;
+
 	--Base de Bolsa
         if (stSec.base_datos='BASE_FINANCIAMIENTO') then
                 json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_FINANCIAMIENTO');
@@ -216,6 +240,12 @@ BEGIN
         if (stSec.base_datos='BASE_COLAS') then
                 json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_COLAS');
                 json2:=put_json(json2,'__SECUENCIAOK__','420');
+                return json2;
+        end if;
+	--Para ejecutar rapido (8009)
+        if (stSec.base_datos='BASE_1_LOCAL_WEB') then
+                json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_1_LOCAL_WEB');
+                json2:=put_json(json2,'__SECUENCIAOK__','430');
                 return json2;
         end if;
 
@@ -244,6 +274,10 @@ BEGIN
     if (get_json('LLAMA_MS',json2)='SI') then
         json2:=logjson(json2,'Ejecuta MicroServicio='||get_json('URI_MS',json2));
         json2:=put_json(json2,'__SECUENCIAOK__','22');
+    end if;
+    if (get_json('LLAMA_MS_COLA',json2)='SI') then
+        json2:=logjson(json2,'Ejecuta MicroServicio='||get_json('URI_MS',json2));
+        json2:=put_json(json2,'__SECUENCIAOK__','23');
     end if;
 
     return json2;

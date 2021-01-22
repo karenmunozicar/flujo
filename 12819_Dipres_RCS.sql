@@ -39,18 +39,26 @@ begin
     json2:=json1;
     id1:=nullif(get_json('id_solicitud',json2),'')::bigint;
     if id1 is null then
-	return response_requests_6000('2', 'Error al leer id solicitud.', '', json2);
+	    return response_requests_6000('2', 'Error al leer id solicitud.', '', json2);
     end if;
 
     select id_pendiente into idp1 from wf_pendiente_10k where id_solicitud=id1::bigint;
 
     select * into v_campo from workflow_controller where id_solicitud=id1;
     if not found then 
-	return response_requests_6000('2', 'Error en workflow controller', '', json2);
+	    return response_requests_6000('2', 'Error en workflow controller', '', json2);
     end if;
     -- FGE - 20200414 - Validamos que el DTE no esta reclamado
     aux1:=get_campo('CODIGO_TXEL', v_campo.xml2);
-    select codigo_txel, estado_nar, estado_reclamo from dte_recibidos where codigo_txel = aux1::bigint into v_reg_dte;
+
+    select codigo_txel, estado_nar, estado_reclamo, fecha_sii from dte_recibidos where codigo_txel = aux1::bigint into v_reg_dte;
+
+    -- FGE - 20210118 - Validacion 192 Horas
+    if extract(epoch from now() - v_reg_dte.fecha_sii)/3600 < 192 then
+        json2:=put_json(json2, 'RESPUESTA', 'Status: 444 NK');
+        json2:=logjson(json2, 'La solicitud no alcanza las 192 horas requeridas, tiene ' || (extract(epoch from now() - v_reg_dte.fecha_sii)/3600)::varchar);
+    end if;
+
     if coalesce(v_reg_dte.estado_nar,'') = 'RECHAZO_DE_CONTENIDO_DE_DOCUMENTO' or coalesce(v_reg_dte.estado_reclamo,'') in ('RECLAMO_FALTA_PARCIAL_DE_MERCADERIA','RECLAMO_FALTA_TOTAL_DE_MERCADERIA') then
          datos_wf:=wf_avanza_solicitud(('{"wf_id_solicitud":"'||id1::varchar||'","rutCliente":"'||get_campo('RUT_RECEPTOR',v_campo.xml2)||'","rutUsuario":"99999999","perfil":"Automatico","decision":"dte_reclamado","aplicacion":"DTE","wf_id_pendiente":"'||idp1::varchar||'"}')::json);
          if (datos_wf is not null) then
@@ -236,6 +244,7 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
+
 
 
 

@@ -1,5 +1,7 @@
 delete from isys_querys_tx where llave='8050';
 
+insert into isys_querys_tx values ('8050',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+
 insert into isys_querys_tx values ('8050',10,1,1,'select ensobra_crt_8050(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 
 --Primero que hacemos el publicar el CRT
@@ -318,6 +320,13 @@ BEGIN
 		json2:=logjson(json2,'Rut Receptor no numerico '||rut1::varchar);
 		return json2;
 	end if;
+	if(is_number(rut_emisor1) is false) then
+		json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
+		json2:=put_json(json2,'MENSAJE_XML_FLAGS','(CRT) Rut Emisor no numerico');
+		json2:=logjson(json2,'Rut Emisor no numerico '||rut_emisor1::varchar);
+		return json2;
+	end if;
+		
         select * into campo from maestro_clientes where rut_emisor=rut1::integer;
 	if not found then
 		if(now()-get_json('FECHA_INGRESO_COLA',json2)::timestamp>interval '3 days') then

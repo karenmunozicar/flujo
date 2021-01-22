@@ -10,7 +10,7 @@ insert into isys_querys_tx values ('12796',30,1,1,'select get_xml_NAR_resp_12796
 insert into isys_querys_tx values ('12796',50,1,8,'Llamada NAR EDTE',12779,0,0,0,0,65,65);
 --insert into isys_querys_tx values ('12796',55,1,8,'Llamada NAR',112779,0,0,0,0,65,65);
 --Publicamos el NAR
-insert into isys_querys_tx values ('12796',65,1,8,'Publica DTE',12704,0,0,0,0,70,70);
+insert into isys_querys_tx values ('12796',65,1,8,'Publica DTE',1127043,0,0,0,0,70,70);
 
 --Validamos la publicacion
 insert into isys_querys_tx values ('12796',70,1,1,'select valida_publicacion_nar_12796(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);

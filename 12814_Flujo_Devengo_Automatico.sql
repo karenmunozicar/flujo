@@ -42,7 +42,7 @@ begin
     v_catalogo_propio:=get_json('catalogo_propio', json2);
     v_catalogo_propio_inversion:=get_json('catalogo_propio_inversion', json2);
 
-    raise notice '12814 -> v_codigo_dv: %', v_codigo_dv;
+    --raise notice '12814 -> v_codigo_dv: %', v_codigo_dv;
 
     if v_codigo_dv in ('0', '') then
         v_id_solicitud:=nullif(get_json('id_solicitud', json2), '')::bigint;
@@ -361,7 +361,8 @@ for cuenta in json_devengo_detalle:
     if transaccion_temp == None:
         transaccion_temp = {}
         if ((json_devengo['tipo_dte'] in [33, 34,0])):
-            if json_devengo['tipo_dte'] <> 0:
+            #if json_devengo['tipo_dte'] <> 0:
+            if 1==1:
                 if cuenta['tipo_detalle'] == 2:
                     transaccion_temp['folio'] = cuenta['folio']
                 else:
@@ -371,7 +372,8 @@ for cuenta in json_devengo_detalle:
 
         if json_devengo['tipo_dte'] in [0, 56, 61]:
             # FGE - 20201002 - Correccion para NC con multiples compromisos / requerimientos
-            if json_devengo['tipo_dte'] <> 0:
+            #if json_devengo['tipo_dte'] <> 0:
+            if 1==1:
                 if cuenta['tipo_detalle'] == 2:
                     transaccion_temp['folio'] = cuenta['folio']
                 else:
@@ -448,8 +450,11 @@ for cuenta in json_devengo_detalle:
 # FGE - 20201113 - Sacamos el tipo y folio de las NC y ND y reversas
 if json_devengo['tipo_dte'] in [0, 56, 61]:
     for trx_temp in transaccion_lista:
-        del trx_temp['folio']
-        del trx_temp['tipo']
+        try:
+            trx_temp.pop('folio', None)
+            trx_temp.pop('tipo', None)
+        except:
+            continue
 
 transacciones_previas['transaccion'] = transaccion_lista
 ####################################################################
@@ -610,7 +615,7 @@ begin
         xml3:=put_campo(xml3,'URI_IN', v_reg_dte.uri); -- 'http://pruebasacepta1705.acepta.com/v01/00000000000000_1721614117_1812593659_72_?k=71954f57f2bdbaf140312c054a6513a1');
         -- FGE - 20201102 - Adicion del rut que envia el devengo
         if v_reg_devengo.tipo_devengo = 'MAN' then
-            xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id || ', Enviado por: ' || get_json('rutUsuario', json2));
+            xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id || ', Enviado por: ' || get_json('rutUsuario', json2) || '-' || modulo11(get_json('rutUsuario', json2)));
         else
             xml3:=put_campo(xml3,'COMENTARIO_TRAZA',' Exitoso TicketID: ' || v_track_id || ', Devengo Automatico');
         end if;
@@ -641,4 +646,5 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
+
 

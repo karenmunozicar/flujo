@@ -2,9 +2,9 @@
 delete from isys_querys_tx where llave='12784';
 
 --Llamamos a Escribir Directo
-insert into isys_querys_tx values ('12784',40,1,1,'select proc_prepara_grabacion_edte_12784(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12784',40,19,1,'select proc_prepara_grabacion_edte_12784(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('12784',50,1,3,'Llamada a Escribir en EDTE',8016,0,0,0,0,60,60);
-insert into isys_querys_tx values ('12784',60,1,1,'select proc_respuesta_edte_12784(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12784',60,19,1,'select proc_respuesta_edte_12784(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION proc_prepara_grabacion_edte_12784(varchar) RETURNS varchar AS $$
 DECLARE
@@ -53,7 +53,7 @@ BEGIN
     xml2:=logapp(xml2,'REENVIO INTER Script:'||get_campo('SCRIPT_EDTE',xml2));
    --Si es CGE
    xml2:=put_campo(xml2,'RUT_CGE',get_campo('RUT_EMISOR',xml2));
-   xml2:=verifica_evento_cge(xml2);
+   xml2:=verifica_evento_cge_colas(xml2);
    if (get_campo('EVENTO_CGE',xml2)='SI') then
         xml2:=put_campo(xml2,'__IP_CONEXION_CLIENTE__','172.16.10.181');
         --xml2 := put_campo(xml2,'__SECUENCIAOK__','35');

@@ -175,7 +175,12 @@ then
 	xml2:=logapp(xml2,'EDTE AEC: Recesion no busca en dte_emitidos');
 	xml2 := put_campo(xml2,'CODIGO_TXEL','-1');	
     else
-    	json_dte1:=lee_dte(rut1::integer,tipo_dte1::integer,folio1::bigint);
+	--DAO 20201126 si es factura de compra buscamos en los recibidos
+	if tipo_dte1::integer=46 then
+    		json_dte1:=lee_dte_recibido(rut1::integer,tipo_dte1::integer,folio1::bigint);
+	else
+    		json_dte1:=lee_dte(rut1::integer,tipo_dte1::integer,folio1::bigint);
+	end if;
 	if (get_json('status',json_dte1)='NO_ENCONTRADO') then
 		--Error
 		xml2:=logapp(xml2,'EDTE AEC: No existe en dte_emitidos rut1='||rut1||' tipo_dte1='||tipo_dte1||' folio1='||folio1);
@@ -387,7 +392,11 @@ BEGIN
 		
 		--Relaciono Dte_emitidos indicando que tiene una cesion
 		if codigo_txel1<>'-1' then
-			update dte_emitidos set estado_cesion='SI' where codigo_txel=codigo_txel1::bigint;
+			if get_campo('TIPO_DTE',xml2)='46' then
+				update dte_recibidos set data_dte=put_data_dte(data_dte,'EstadoCesion','CEDIDO') where codigo_txel=codigo_txel1::bigint;
+			else
+				update dte_emitidos set estado_cesion='SI' where codigo_txel=codigo_txel1::bigint;
+			end if;
 		end if;
 
 		status1:='Status: 200 OK'||chr(10)||

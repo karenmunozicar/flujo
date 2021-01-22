@@ -173,7 +173,7 @@ BEGIN
 					xml3:=put_campo(xml3,'RUT_EMISOR',get_campo('RUT_EMISOR',xml2));
 					xml3:=put_campo(xml3,'FLAG_EVENTO_REE','NO');
 					tx1:='30';
-                			cola1:=nextval('id_cola_procesamiento');
+                			cola1:=nextval('id_cola_procesamiento_colas');
                 			nombre_tabla1:='cola_motor_'||cola1::varchar;
 					if (evento1 in ('CSI','ASI')) then
 						query1:=query1||' insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria,nombre_cola) values ( now(),'||quote_literal(lower_dominio_uri(get_json('URI',aux::json)))||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(get_campo('RUT_EMISOR',xml2))||',''NO'',''REENVIO_INTER'','||quote_literal(nombre_tabla1)||');';
