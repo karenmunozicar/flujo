@@ -2,9 +2,10 @@
 delete from isys_querys_tx where llave='12802';
 
 --Llamamos a Escribir Directo
-insert into isys_querys_tx values ('12802',40,1,1,'select proc_prepara_grabacion_edte_12802(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12802',40,8021,1,'select proc_prepara_grabacion_edte_12802(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('12802',50,1,3,'Llamada a Escribir en EDTE',8016,0,0,0,0,60,60);
-insert into isys_querys_tx values ('12802',60,1,1,'select proc_respuesta_edte_12802(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12802',60,8021,1,'select proc_respuesta_edte_12802(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12802',1000,19,1,'select sp_procesa_respuesta_cola_motor_original(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
 
 CREATE or replace FUNCTION proc_prepara_grabacion_edte_12802(varchar) RETURNS varchar AS $$
 DECLARE
@@ -42,9 +43,9 @@ BEGIN
 	rut_emisor1:=split_part(get_xml('RutEmisor'::varchar,input1),'-',1);
 	--FAY 2019-10-30 si no viene FchInicio no es un rcf valido
 	if (is_number(replace(get_xml('FchInicio',input1),'-','')) is false) then
-		xml2 := logapp(xml2,'RCF invalido no viene FchInicio valida');
-		xml2 := put_campo(xml2,'RESPUESTA','Status: 444 OK');
-		xml2 := sp_procesa_respuesta_cola_motor(xml2);
+		xml2 := logapp(xml2,'RCF invalido no viene FchInicio valida '||get_xml('FchInicio',input1)||' '||get_campo('URI_IN',xml2)||' Se borra');
+		xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
+        	xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
 		return xml2;
 	end if;
 
@@ -79,9 +80,9 @@ then
                 'Content-type: text/html; charset=iso-8859-1'||chr(10)||
                 'Content-length: 0'||chr(10)||
                 'Vary: Accept-Encoding'||chr(10)||chr(10));
-                xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
-                xml2 := sp_procesa_respuesta_cola_motor(xml2);
                 xml2 := put_campo_ctx(xml2,'__ETAPA1__','OK');
+		xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
+        	xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
                 return xml2;
         end if;
     end if;
@@ -91,6 +92,8 @@ then
     if (length(uri1)=0) then
 	xml2 := logapp(xml2,'No viene URI_IN, no se puede publicar');
         xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','NO');
+	xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
+        xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
 	return xml2;	
     end if;
    
@@ -106,7 +109,8 @@ then
         		xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','OK');
 			xml2 := logapp(xml2,'Uri '||uri1||' AERCF ya enviado al EDTE');
 			xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
-			xml2 := sp_procesa_respuesta_cola_motor(xml2);
+        		xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
+			--xml2 := sp_procesa_respuesta_cola_motor(xml2);
 		        return xml2;
                end if;
     xml2 := put_campo(xml2,'TX','8016'); 
@@ -199,55 +203,17 @@ BEGIN
     		xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','NK');
 		xml2 := graba_bitacora(xml2,'FALLA_ENVIADO_EDTE_AERCF');
         end if;
-        xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
         xml2 := put_campo(xml2,'_STS_FILE_','');
 
 	--Si falla, ponemos el mensaje en la cola para procesamiento posterior
 	if (get_campo('__EDTE_AERCF_OK__',xml2)<>'OK') then
-		/*
-		--Si no viene de reintento tengo que entrar a la cola
-		if (get_campo('__FLAG_REINTENTO_AERCF__',xml2)<>'SI') then
-    			xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','OK');
-			xml3:='';
-			xml3:=put_campo(xml3,'TX','12802');
-			xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
-			xml3:=put_campo(xml3,'INPUT',get_campo('INPUT_CUSTODIUM',xml2));
-			xml3:=put_campo(xml3,'INPUT_CUSTODIUM',get_campo('INPUT_CUSTODIUM',xml2));
-			xml3:=put_campo(xml3,'LEN_INPUT_CUSTODIUM',get_campo('LEN_INPUT_CUSTODIUM',xml2));
-			xml3:=put_campo(xml3,'RUT_EMISOR',get_campo('RUT_EMISOR',xml2));
-			xml3:=put_campo(xml3,'__FLAG_REINTENTO_AERCF__','SI');
-			xml3:=put_campo(xml3,'__DTE_CON_AERCF__','SI');
-			
-			cola1:=nextval('id_cola_procesamiento');
-		        nombre_tabla1:='cola_motor_'||cola1::varchar;
-		        uri1:=get_campo('URI_IN',xml2);
-		        rut1:=get_campo('RUT_EMISOR',xml2);
-			tx1:='45';
-			xml2 := logapp(xml2,'EDTE AERCF: Graba uri '||uri1||' en cola');
-
-
-			execute 'insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values ( now(),'||quote_literal(uri1)||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(rut1)||',''NO'',''IECV_EDTE'');';	
-			return xml2;
-		else
-			id1:=get_campo('__ID_DTE__',xml2);
-			--Si viene de un reintento, aumento reintentos
-			xml2:=logapp(xml2,'Aumenta Reintentos Envio de AERCF Edte');
-			execute 'update '||get_campo('__COLA_MOTOR__',xml2)||' set reintentos=reintentos+1 where id='||id1;
-			return xml2;
-		end if;
-		*/
-		id1:=get_campo('__ID_DTE__',xml2);
-		--Si viene de un reintento, aumento reintentos
-		xml2:=logapp(xml2,'Aumenta Reintentos Envio de AERCF Edte');
-		execute 'update '||get_campo('__COLA_MOTOR__',xml2)||' set reintentos=reintentos+1 where id='||id1;
-		return xml2;
+		xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
 	--Envio consumo folios exitoso
 	else
 		xml2:=logapp(xml2,'Se borra AERCF edte de la cola');
 		xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
-		xml2 := sp_procesa_respuesta_cola_motor(xml2);
-		return xml2;
 	end if;
+        xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
         return xml2;
 END;
 $$ LANGUAGE plpgsql;

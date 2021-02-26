@@ -22,7 +22,7 @@ insert into isys_querys_tx values ('12724',25,8,1,'select sp_inserta_docto(''$$_
 insert into isys_querys_tx values ('12724',27,13,1,'select sp_inserta_docto_new(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,30,30);
 */
 --Verifica el resultado de la insercion
-insert into isys_querys_tx values ('12724',30,1,1,'select sp_respuesta_webiecv_12724(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('12724',30,8022,1,'select sp_respuesta_webiecv_12724(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,0,0);
 
 CREATE or replace FUNCTION sp_busca_dte_respaldo_12724(varchar) RETURNS varchar AS $$
 DECLARE

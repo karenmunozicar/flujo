@@ -4,7 +4,7 @@ delete from isys_querys_tx where llave='6001';
 --insert into isys_querys_tx values ('6001',5,45,1,'select log_generico10k_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,10);
 
 insert into isys_querys_tx values ('6001',2,9,16,'LOG_JSON',0,0,0,1,1,5,5);
-insert into isys_querys_tx values ('6001',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+insert into isys_querys_tx values ('6001',5,1,14,'{"f":"INSERTA_JSON","p1":{"__SECUENCIAOK__":"10","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,10,10);
 
 insert into isys_querys_tx values ('6001',10,1,1,'/*$$__JSONCOMPLETO__["tipo_tx"]$$*/ select webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 

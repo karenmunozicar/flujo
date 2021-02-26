@@ -1,7 +1,11 @@
 delete from isys_querys_tx where llave='112703';
 -- Prepara llamada al AML
 --20210119 Para el EDTE vaya por el Api ACT
-insert into isys_querys_tx values ('112703',10,8022,1,'select proc_traductor_fcgi_12701(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--20210224 Para el EDTE vaya por el Api Normnal
+
+insert into isys_querys_tx values ('112703',5,1914,1,'select proc_traductor_fcgi_12701_colas(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,10);
+
+insert into isys_querys_tx values ('112703',10,1,1,'select proc_traductor_fcgi_12701(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Los eventos que empiecen con ECM_XXXX y el LMA se van a actualizar a el sistema ECM
 insert into isys_querys_tx values ('112703',15,30,1,'select actualiza_evento_ecm_12701(''$$__JSONCOMPLETO__$$'') as __JSON__',0,0,0,1,1,-1,0);
 --Flujo consulta bitacora

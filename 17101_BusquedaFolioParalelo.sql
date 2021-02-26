@@ -21,12 +21,14 @@ BEGIN
 	json2:=put_json(json2,'QUERY_'||get_json('CAT_EST',json2),get_json('QUERY_DATA',json2));
 	i:=0;
 	while(i<20) loop
+		json2:=logjson(json2,'CONTADOR_SECOK='||get_json('CONTADOR_SECOK',json2));
 		json2:=pivote_15101(json2);
+		json2:=logjson(json2,'OUT CONTADOR_SECOK='||get_json('CONTADOR_SECOK',json2));
 		i:=i+1;
 		--La ultima secuencia
-		if get_json('CAT_EST',json2)='FOLIO_EMITIDOS_ERRORES_HIST' then
+		/*if get_json('CAT_EST',json2)='FOLIO_EMITIDOS_ERRORES_HIST' then
 			json2:=logjson(json2,'FOLIO_EMITIDOS_ERRORES_HIST='||get_json('QUERY_DATA',json2));
-		end if;
+		end if;*/
 		json2:=logjson(json2,'CATEGORIA='||get_json('CAT_EST',json2)||' '||get_json('CONTADOR_SECOK',json2)||' '||get_json('rutUsuario',json2));
 		if get_json('CONTADOR_SECOK',json2)='180' then
 			--or get_json('QUERY_DATA',json2)='' then
@@ -64,6 +66,10 @@ DECLARE
 	v_total	integer;
 BEGIN
         json2:=json1;
+	/*if get_json('rutUsuario',json2)='17597643' then
+		perform logfile('select junta_respuestas_17101('''||json2::varchar||''');');
+	end if;*/
+
 	--json2:=logjson(json2,'junta_respuestas_17101='||json2::varchar);
 	--Juntamos los resultados 
 	jbases:='["QUERY_FOLIO_BOLETAS_2014","QUERY_FOLIO_BOLETAS_EMISION_DISTINTA_2016","QUERY_FOLIO_BOLETAS_EMISION_DISTINTA_2014","QUERY_FOLIO_BOLETAS_EMISION_DISTINTA","QUERY_FOLIO_BOLETAS_HISTORICAS","QUERY_FOLIO_BOLETAS_LOCAL","QUERY_FOLIO_BOLETAS_IMP_LOCAL","QUERY_FOLIO_BOLETAS_IMP_AWS","QUERY_FOLIO_EMITIDOS_HIST","QUERY_FOLIO_EMITIDOS_LOCAL","QUERY_FOLIO_EMITIDOS_IMP_LOCAL","QUERY_FOLIO_EMITIDOS_IMP_AWS","QUERY_FOLIO_EMITIDOS_ERRORES_HIST","QUERY_FOLIO_EMITIDOS_ERRORES_LOCAL","QUERY_FOLIO_EMITIDOS_COLAS_13","QUERY_FOLIO_EMITIDOS_COLAS_14"]';
@@ -74,17 +80,30 @@ BEGIN
 		aux2:=get_json(replace(aux1,'QUERY_',''),json2);
 		if aux2<>'' then
 			if get_json('array_to_json',aux2::json)<>'' then
-				--json2:=logjson(json2,'CAT='||aux1::varchar||' aux2='||aux2::varchar);
+				if get_json('rutUsuario',json2)='17597643' then
+					perform logfile('json_merge_lists_17101 CAT='||aux1::varchar||' '||substring(aux2::varchar,1,100));
+					--||' aux2='||aux2::varchar);
+					json2:=logjson(json2,'CAT='||aux1::varchar||' aux2='||aux2::varchar);
+				end if;
 				v_out_resultado:=json_merge_lists(v_out_resultado::varchar,get_json('array_to_json',aux2::json));
 			else
-				json2:=logjson(json2,'FALLA QUERY '||aux2);
+				if get_json('rutUsuario',json2)='17597643' then
+					perform logfile('json_merge_lists_17101 FALLA QUERY '||aux2::varchar);
+				end if;
+				json2:=logjson(json2,'FALLA QUERY '||aux1::varchar||aux2);
 			end if;
 		else
+			if get_json('rutUsuario',json2)='17597643' then
+				perform logfile('json_merge_lists_17101 FALLA QUERY1 '||aux1::varchar||aux2::varchar);
+			end if;
 			json2:=logjson(json2,'FALLA QUERY1 '||aux2);
 		end if;
 		i:=i+1;
 		aux1:=get_json_index(jbases,i);
 	end loop;
+	if get_json('rutUsuario',json2)='17597643' then
+		perform logfile('json_merge_lists_17101 FIN LOOP');
+	end if;
 	v_total:=count_array_json(v_out_resultado);
 	--json2:=logjson(json2,'junta_respuestas_17101 v_out_resultado='||v_out_resultado::varchar||' v_total='||v_total::varchar);
 	json2:=put_json(json2,'v_out_resultado',v_out_resultado::varchar);

@@ -161,8 +161,6 @@ DECLARE
 	json_aux	json;
 	lista_mail1	json;
 	flag_ya_enviado1	boolean;
-	json3	json;
-	json_par2	json;
 BEGIN
 	json2:=json1;
         json2:=put_json(json2,'__SECUENCIAOK__','0');
@@ -200,6 +198,7 @@ BEGIN
 		end if;
     	end if;	
 
+	json2:=logjson(json2,'Valor Flag_10k-->'|| get_json('__FLAG_PUB_10K__',json2));
 	json2:=logjson(json2,'RAZON_SOCIAL_EMISOR-->'|| get_json('mailMandato',json2));
 
     	--Mandatos que vienen desde Escritorio
@@ -208,16 +207,9 @@ BEGIN
 		json2:=logjson(json2,'Entra a __FLAG_PUB_10K__');
 		mail1:=get_json('mailMandato',json2);
 		if get_json('RAZON_SOCIAL_EMISOR', json2) = ''  then
-			json_par2:=get_parametros_motor_json('{}','BASE_MOTOR');
-	                json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par2),get_json('__IP_PORT_CLIENTE__',json_par2)::integer,'select razon_social from maestro_clientes where rut_emisor='||get_json('RUT_EMISOR',json2));
-        	        if (get_json('STATUS',json3)<>'OK') then
-                	        json2:=put_json(json, 'RAZON_SOCIAL_EMISOR','ACEPTA COM S A');
-                	else
-                        	json2:=put_json(json2, 'RAZON_SOCIAL_EMISOR', get_json('razon_social',json3));
-	                end if;	
-	                --json2:=put_json(json2, 'RAZON_SOCIAL_EMISOR', (select razon_social from maestro_clientes where rut_emisor=get_json('RUT_EMISOR',json2)::integer));
+	                json2:=put_json(json2, 'RAZON_SOCIAL_EMISOR', (select razon_social from maestro_clientes where rut_emisor=get_json('RUT_EMISOR',json2)::integer));
+	        end if;
 		--subject1:=encode(('Documento de ACEPTA COM S A: Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');
-		end if;
 		subject1:=encode(('Documento de '||get_json('RAZON_SOCIAL_EMISOR', json2)||': Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');
 		json2:=put_json(json2,'MANDATO_MAIL_EMISOR','noreply@acepta.com');
     	end if;
@@ -496,14 +488,7 @@ BEGIN
 	json2:=logjson(json2,'Entra a __FLAG_PUB_10K__');
         mail1:=get_json('mailMandato',json2);
 	if get_campo('RAZON_SOCIAL_EMISOR', xml3) = ''  then
-		json_par2:=get_parametros_motor_json('{}','BASE_MOTOR');
-                json3:=query_db_json(get_json('__IP_CONEXION_CLIENTE__',json_par2),get_json('__IP_PORT_CLIENTE__',json_par2)::integer,'select razon_social from maestro_clientes where rut_emisor='||get_json('RUT_EMISOR',json2));
-                if (get_json('STATUS',json3)<>'OK') then
-                        xml3:=put_campo(xml3, 'RAZON_SOCIAL_EMISOR','ACEPTA COM S A');
-                else
-                        xml3:=put_campo(xml3, 'RAZON_SOCIAL_EMISOR', get_json('razon_social',json3));
-                end if;
---                xml3:=put_campo(xml3, 'RAZON_SOCIAL_EMISOR', (select razon_social from maestro_clientes where rut_emisor=get_campo('RUT_EMISOR',xml3)::integer));
+                xml3:=put_campo(xml3, 'RAZON_SOCIAL_EMISOR', (select razon_social from maestro_clientes where rut_emisor=get_campo('RUT_EMISOR',xml3)::integer));
         end if;
         subject1:=encode(('Documento de '||get_campo('RAZON_SOCIAL_EMISOR', xml3)||': Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');
 --        subject1:=encode(('Documento de ACEPTA COM S A: Folio '||ltrim(get_json('FOLIO',json2),'0')||' de '||get_json('FECHA_EMISION',json2))::bytea,'hex');

@@ -239,7 +239,6 @@ begin
         v_json_devengo_sigfe:=put_json(v_json_devengo_sigfe,'areaTransaccional', substring(v_area_tx, 5, 3));
         v_json_devengo_sigfe:=put_json(v_json_devengo_sigfe,'ejercicio', v_ejercicio);
         v_json_devengo_sigfe:=put_json(v_json_devengo_sigfe,'folio',v_folio_compromiso);
-        v_json_devengo_sigfe:=put_json(v_json_devengo_sigfe,'rutCliente', get_json('rutCliente', json2));
 
         --xml2:='{}'::json;
         xml2:=put_campo(xml2,'codigo_dv',v_codigo_devengo::varchar);
@@ -454,7 +453,6 @@ begin
         --return json2;
 end;
 $$ LANGUAGE plpgsql;
-
 
 
 

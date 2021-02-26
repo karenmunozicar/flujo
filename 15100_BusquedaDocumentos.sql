@@ -686,6 +686,8 @@ BEGIN
 	if (vin_tipo_dte='*' or vin_tipo_dte='') then
 		v_tipo_dte:=(select '('||string_agg(codigo,',')||')' from detalle_parametros where id_parametro = 31 and codigo not in ('39','41'));
 		v_tipo_dte_com:=(select '('||string_agg(quote_literal(codigo),',')||')' from detalle_parametros where id_parametro = 31 and codigo not in ('39','41'));
+		--v_tipo_dte:=(select '('||string_agg(codigo,',')||')' from detalle_parametros where id_parametro = 31 );
+		--v_tipo_dte_com:=(select '('||string_agg(quote_literal(codigo),',')||')' from detalle_parametros where id_parametro = 31 );
 
 	elsif(get_json('LISTA_TIPO_BOLETA',json2)<>'') then
                 flag_boleta1:='SI';
@@ -722,6 +724,11 @@ BEGIN
 			v_lista_errores:=stEstadoDte.flag_lista_errores;
 			if (v_lista_errores='SI') then
 				json2:=put_json(json2,'v_lista_errores','SI');
+				--DAO 20210201, los errores tienen todos los tipos dtes
+				if (vin_tipo_dte='*' or vin_tipo_dte='') then
+					v_tipo_dte:=(select '('||string_agg(codigo,',')||')' from detalle_parametros where id_parametro = 31);
+					v_tipo_dte_com:=(select '('||string_agg(quote_literal(codigo),',')||')' from detalle_parametros where id_parametro = 31);
+				end if;
 			end if;
 			if (stEstadoDte.codigo='CES') then
 				flag_cuenta_estado:=true;
@@ -1675,7 +1682,7 @@ begin
 		json2:=put_json(json2,'BASE_RS','BASE_REDSHIFT_BOLETAS');
                 campo1:='codigo_txel';
                 campo2:=',mes as m ';
-        elsif (strpos(v_tipo_dte,'39')>0 or strpos(v_tipo_dte,'41')>0) then
+        elsif (strpos(v_tipo_dte,'39')>0 or strpos(v_tipo_dte,'41')>0) and get_json('flag_errores',json1)<>'SI' then
                 flag_saca_tablas_hoy:=true;
                 tabla_base1:='dte_boletas_diarias';
                 --tabla_base1:='dte_boletas_no_borrar_fay';
@@ -1820,7 +1827,9 @@ begin
 			execute query2 into json4;
 		else
 			if(flag_saca_tablas_hoy) then
-				query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes_emision::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes_emision::varchar,3) as mes_emision from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||v_in_cant_reg||') sql';
+				--DAO 20210201
+				--query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes_emision::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes_emision::varchar,3) as mes_emision from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||v_in_cant_reg||') sql';
+				query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes::varchar,3) as mes from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||v_in_cant_reg||') sql';
 				if(get_json('rutUsu',json2)='7621836') then
 					perform logfile('DAO_BOL Paso1');
 				end if;
@@ -1856,7 +1865,9 @@ begin
 				execute query2 into json4;
 			else
 				if(flag_saca_tablas_hoy) then
-					query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes_emision::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes_emision::varchar,3) as mes_emision from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||sobra_base1||') sql';
+					--DAO 20210201
+					--query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes_emision::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes_emision::varchar,3) as mes_emision from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||sobra_base1||') sql';
+					query2:='select string_agg('||campo1||'::varchar,'','') as c,''"''||string_agg(distinct mes::varchar,''","'')||''"'' as m from (select '||campo1||',substring(mes::varchar,3) as mes from '||tabla_base1||' where dia='||dia1||' and '||v_estado||v_parametro_rut_emisor||' and tipo_dte in '||v_tipo_dte||' '||filtro_dia1||' '||v_in_rut_receptor||' '||v_parametro_tipo_dte||' '||v_parametro_var||v_parametro_referencias||v_parametro_adicional|| ' and codigo_txel is not null '||order1||' offset '||v_in_offset1||' limit '||sobra_base1||') sql';
 					if (get_json('rutUsuario',json2)='7621836') then 
 						perform logfile(' QUERY2.1 '||query2);
 					end if;

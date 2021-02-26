@@ -14,7 +14,10 @@ insert into isys_querys_tx values ('112704',8,1,14,'{"f":"INSERTA_JSON","p1":{"_
 insert into isys_querys_tx values ('112704',9,1,16,'["URI_IN","FLAG_FILE_CUS","__PUBLICADO_OK__","LEN_FILE","RUTA"]',0,0,0,1,1,0,0);
 
 --Preguntamos por donde nos vamos, solo boletas por ahora sin pasar por la traza
-insert into isys_querys_tx values ('112704',10,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"BOLETA"}',0,0,0,0,0,11,12);
+insert into isys_querys_tx values ('112704',10,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"BOLETA"}',0,0,0,0,0,11,100);
+--20210218, agregamos los DTEs al proxy por ms
+insert into isys_querys_tx values ('112704',100,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"DTE"}',0,0,0,0,0,11,101);
+insert into isys_querys_tx values ('112704',101,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"DTE_NORMAL"}',0,0,0,0,0,11,12);
 
 --Si no esta publicado vamos a publicar la Boleta (Sin traza)
 insert into isys_querys_tx values ('112704',11,19,1,'select proc_consulta_publicacion_112704_colas(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);

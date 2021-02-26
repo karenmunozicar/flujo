@@ -1,18 +1,13 @@
 --Publica documento
 delete from isys_querys_tx where llave='12702';
-insert into isys_querys_tx values ('12702',1,1,16,'["TIPO_DTE"]',0,0,0,1,1,2,2);
---En el caso de las facturas, asumimos que el proxy maneja la logica de si fue o no enviado al SII
-insert into isys_querys_tx values ('12702',2,1,14,'{"f":"IGUAL","p1":"$$TIPO_DTE$$","p2":"33"}',0,0,0,0,0,40,3);
-insert into isys_querys_tx values ('12702',3,1,14,'{"f":"IGUAL","p1":"$$TIPO_DTE$$","p2":"34"}',0,0,0,0,0,40,4);
-insert into isys_querys_tx values ('12702',4,1,14,'{"f":"IGUAL","p1":"$$TIPO_DTE$$","p2":"52"}',0,0,0,0,0,40,10);
 insert into isys_querys_tx values ('12702',10,1,14,'{"f":"INSERTA_JSON","p1":{"FILTRO_LEE_TRAZA_HEX":"206576656e746f20696e202827505349272c27415349272c27435349272c27525349272c27455349272920"}}',0,0,0,0,0,20,20);
 insert into isys_querys_tx values ('12702',20,1,8,'Flujo LeeTraza ',8070,0,0,0,0,40,40);
 --Llamamos a Escribir Directo
 insert into isys_querys_tx values ('12702',40,19,1,'select proc_prepara_grabacion_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('12702',50,1,3,'Llamada a Escribir en EDTE',8016,0,0,0,0,60,60);
 
-insert into isys_querys_tx values ('12702',60,19,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('12702',65,19,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12702',60,8021,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12702',65,8021,1,'select proc_respuesta_edte_12702(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION proc_prepara_grabacion_edte_12702(varchar) RETURNS varchar AS $$
 DECLARE
@@ -64,14 +59,10 @@ then
     end if;
 
     if get_campo('STATUS_LEE_TRAZA',xml2)<>'OK' then
-	if get_campo('TIPO_DTE',xml2) in ('33','34','52') then
-		xml2:=put_campo(xml2,'RESPUESTA_LEE_TRAZA','[]');
-	else
-		xml2 := logapp(xml2,'Falla Leer Traza');
-		xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
-		xml2 := put_campo(xml2,'__EDTE_OK__','NO');
-		return xml2;
-	end if;
+	xml2 := logapp(xml2,'Falla Leer Traza');
+	xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
+	xml2 := put_campo(xml2,'__EDTE_OK__','NO');
+	return xml2;
     end if;
     jtraza:=get_campo('RESPUESTA_LEE_TRAZA',xml2)::json;
     xml2 := logapp(xml2,'JTRAZA='||jtraza::varchar);
@@ -164,13 +155,11 @@ BEGIN
 	if (sts1='FILE_YA_EXISTE') then
 		xml2 := logapp(xml2,'EDTE:File ya existe en EDTE');	
         	xml2 := put_campo(xml2,'__EDTE_OK__','SI');
-		--FAY-DAO 20210218, dejamos de grabar el evento, no se utiliza y no se visualiza
-		--xml2 := graba_bitacora(xml2,'ENVIO_DIRECTO_EDTE*');
+		xml2 := graba_bitacora(xml2,'ENVIO_DIRECTO_EDTE*');
 	elsif (sts1='OK') then
                 xml2 := logapp(xml2,'EDTE:OK Escritos '||get_campo('_STS_FILE_BYTES_WRITTEN_',xml2)||' ContentLength:'||get_campo('CONTENT_LENGTH',xml2)||' Largo Data:'||get_campo('LEN_INPUT_CUSTODIUM',xml2));
         	xml2 := put_campo(xml2,'__EDTE_OK__','SI');
-		--FAY-DAO 20210218, dejamos de grabar el evento, no se utiliza y no se visualiza
-		--xml2 := graba_bitacora(xml2,'ENVIO_DIRECTO_EDTE');
+		xml2 := graba_bitacora(xml2,'ENVIO_DIRECTO_EDTE');
 	else
                	xml2 := logapp(xml2,'EDTE:Falla EDTE Directo '||get_campo('_STS_FILE_',xml2));
 		--20171214 FAY_DAOSi es una Factura de escritorio10k siempre responde OK
@@ -183,12 +172,10 @@ BEGIN
 		        execute 'insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values ( now(),'||quote_literal(get_campo('URI_IN',xml2))||',0,'||quote_literal(xml3)||',10,'||quote_literal(get_campo('RUT_EMISOR',xml2))||',''NO'',''REENVIO_EDTE_10K'') returning id ' into id1;
 			xml2 := put_campo(xml2,'__EDTE_OK__','SI');	
 			xml2 := logapp(xml2,'EDTE:Se graba en las colas REENVIO_EDTE_10K ID='||id1::varchar);
-			--FAY-DAO 20210218, dejamos de grabar el evento, no se utiliza y no se visualiza
-			--xml2 := graba_bitacora(xml2,'FALLA_EDTE_GRABA_COLAS');
+			xml2 := graba_bitacora(xml2,'FALLA_EDTE_GRABA_COLAS');
 		else
         		xml2 := put_campo(xml2,'__EDTE_OK__','NO');
-			--FAY-DAO 20210218, dejamos de grabar el evento, no se utiliza y no se visualiza
-			--xml2 := graba_bitacora(xml2,'FALLA_ENVIO_DIRECTO_EDTE');
+			xml2 := graba_bitacora(xml2,'FALLA_ENVIO_DIRECTO_EDTE');
 		end if;
         end if;
 	xml2 := put_campo(xml2,'_STS_FILE_','');

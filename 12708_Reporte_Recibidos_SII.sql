@@ -244,7 +244,7 @@ BEGIN
                         xml3:=put_campo(xml3,'FECHA_RECEPCION_SII',fechaRecepcion1::varchar);
                         xml3:=put_campo(xml3,'ID_REGLA_CONTROLLER',campo.id_cabecera::varchar);
                         cola1:=nextval('id_cola_procesamiento');
-                        tx1:='30';
+                        tx1:='20';
                         nombre_tabla1:='cola_motor_'||cola1::varchar;
                         query1:='insert into ' || nombre_tabla1 || ' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria, nombre_cola) values ( '''||fecha_cola1||'''::timestamp,'||quote_literal(uri1)||',0,'||quote_literal(xml3)||','||tx1||','||quote_literal(split_part(rutEmisor1,'-',1)::varchar)||',''NO'',''CONTROLLER_FECHA'','|| quote_literal(nombre_tabla1) ||') returning id';
 			execute query1 into id1;

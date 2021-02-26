@@ -403,6 +403,7 @@ DECLARE
 	nombre_tabla1	varchar;
 	--id1	bigint;
 	xml7	varchar;
+	xml8	varchar;
 BEGIN
 	json2:=json1;
 	json3:=json_data;
@@ -462,7 +463,7 @@ BEGIN
 
 	--Si tiene comentario se agrega a la traza
 	
-        xml4:=put_campo(xml4,'COMENTARIO_TRAZA',case when get_json('comentario',json_data)='' then '' else get_json('comentario',json_data)||chr(10) end||'Receptor: '||split_part(get_json('Original-Recipient',json4),';',2)||chr(10)||'Entrega: '||accion1||' Estado: '||get_json('Status',json4)||chr(10)||'Servidor Informante: '||split_part(get_json('Reporting-MTA',json4),';',2)||chr(10)||'Servidor Remoto: '||server_remoto1||chr(10)||'Codigo de Respuesta: '||status1||'.');
+        xml4:=put_campo(xml4,'COMENTARIO_TRAZA',replace(case when get_json('comentario',json_data)='' then '' else get_json('comentario',json_data)||chr(10) end||'Receptor: '||split_part(get_json('Original-Recipient',json4),';',2)||chr(10)||'Entrega: '||accion1||' Estado: '||get_json('Status',json4)||chr(10)||'Servidor Informante: '||split_part(get_json('Reporting-MTA',json4),';',2)||chr(10)||'Servidor Remoto: '||server_remoto1||chr(10)||'Codigo de Respuesta: '||status1||'.',chr(39),' '));
         xml4:=put_campo(xml4,'FOLIO',get_json('FOLIO',json3));
         xml4:=put_campo(xml4,'TIPO_DTE',get_json('TIPO_DTE',json3));
         xml4:=put_campo(xml4,'CANAL',get_json('CANAL',json3));
@@ -474,22 +475,25 @@ BEGIN
 
 	--FAY-DAO 20210116 grabamos en las colas el graba bitacora
         --xml4:=graba_bitacora(xml4,get_json('evento_confirmacion',json3));
-	nombre_tabla1:='cola_motor_5';
-        xml7:=put_campo('','TX','8060');
-        xml7:=put_campo(xml7,'CATEGORIA','MOTOR_MOTOR');
-        xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_5075');
-        xml7:=put_campo(xml7,'URI_IN',get_json('uri_dte',json3));
-        xml7:=put_campo(xml7,'QUERY',encode_hex('select graba_bitacora('''||replace(xml4,chr(39),'')||''','''||get_json('evento_confirmacion',json3)||''')'));
-        execute 'insert into '||nombre_tabla1||' (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values (now(),'||quote_literal(get_campo('URI_IN',xml7))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ACT_REMOTO'') returning id' into id1;
-        json2:=logjson(json2,'Inserto GRABA_BITACORA_5075 '||get_campo('URI_IN',xml7)||' id='||id1::varchar);
-
-	--perform logfile('confirmacion_mail_5075 graba_bitacora '||get_json('evento_confirmacion',json3)||' '||get_json('uri_dte',json3)||' Fin'||' '||id1::varchar);
-	--Se limpia el json
+	nombre_tabla1:='cola_motor_4';
+	
+	--FAY 20210219 para ir cambiando la traza vamos por evento subiendolo
+	
+	--if (get_json('evento_confirmacion',json3)='EMS' and not exists (select 1 from tmp_fay)) then
 	json2:='{}';
+	
+	--FAY-DAO No se graba evento si no hay URI
+	if get_campo('URI_IN',xml4)<>'' and strpos(get_campo('URI_IN',xml4),'http')>0 then
+		xml4:=graba_bitacora_aws(xml4,get_json('evento_confirmacion',json3));
+		json2:=logjson(json2,get_campo('_LOG_',xml4));
+	else
+		json2:=logjson(json2,'No grabamos evento, no hay URI');
+	end if;
+
+	--Se limpia el json
 	--json2:=logjson(json2,get_json('_LOG_',json1));
         json2:=put_json(json2,'__SECUENCIAOK__','0');
 	json2:=put_json(json2,'__FLUJO_ACTUAL__',get_json('__FLUJO_ACTUAL__',json1));
-	json2:=logjson(json2,'Encolo graba_bitacora URI='||get_json('uri_dte',json3)||' Evento='||get_json('evento_confirmacion',json3)||' ID='||id1::varchar);
 	return response_requests_6000('1','Evento OK','',json2);
 	/*
 	json2:=logjson(json2,get_campo('_LOG_',xml4));

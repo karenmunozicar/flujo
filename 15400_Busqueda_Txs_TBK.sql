@@ -48,6 +48,7 @@ DECLARE
 	query_base1	varchar;
 BEGIN
         json2:=json1;
+	return app_dinamica_txs_tbk_v1(json2);
 	if get_json('rutUsuario',json2)<>'17597643' then
 		return app_dinamica_txs_tbk_v1(json2);
 	end if;

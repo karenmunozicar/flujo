@@ -1,6 +1,6 @@
 delete from isys_querys_tx where llave='8050';
 
-insert into isys_querys_tx values ('8050',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+insert into isys_querys_tx values ('8050',5,1,14,'{"f":"INSERTA_JSON","p1":{"__SECUENCIAOK__":"10","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,10,10);
 
 insert into isys_querys_tx values ('8050',10,1,1,'select ensobra_crt_8050(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 

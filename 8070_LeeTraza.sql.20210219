@@ -17,11 +17,9 @@ insert into isys_querys_tx values ('8070',2019,49,1,'$$QUERY_DATA$$',0,0,0,9,1,1
 --Traza 2020
 insert into isys_querys_tx values ('8070',2020,50,1,'$$QUERY_DATA$$',0,0,0,9,1,1000,1000);
 --Traza 2021
-insert into isys_querys_tx values ('8070',2021,2021,1,'$$QUERY_DATA$$',0,0,0,9,1,1000,1000);
+insert into isys_querys_tx values ('8070',2021,60,1,'$$QUERY_DATA$$',0,0,0,9,1,1000,1000);
 --Local
-insert into isys_querys_tx values ('8070',4000,2021,1,'$$QUERY_DATA$$',0,0,0,9,1,4010,4010);
-insert into isys_querys_tx values ('8070',4010,1,14,'{"f":"INSERTA_JSON","p1":{"JSON_RDS":$$RES_JSON_1$$}}',0,0,0,0,0,4020,4020);
-insert into isys_querys_tx values ('8070',4020,8021,1,'$$QUERY_DATA$$',0,0,0,9,1,1000,1000);
+insert into isys_querys_tx values ('8070',4000,8021,1,'$$QUERY_DATA$$',0,0,0,9,1,1000,1000);
 
 insert into isys_querys_tx values ('8070',1000,19,1,'select respuesta_lee_traza_8070(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 
@@ -31,22 +29,9 @@ DECLARE
         json2   json;
         campo   record;
         per1    varchar;
-	json_rds_actual1	varchar;
 BEGIN
         json2:=json1;
         json2:=put_json(json2,'__SECUENCIAOK__','0');
-	json_rds_actual1:=get_json('JSON_RDS',json2);
-	if is_json_dict(json_rds_actual1) is false then
-		json_rds_actual1:='';
-	elsif get_json('STATUS',json_rds_actual1::json)='SIN_DATA' then
-		json_rds_actual1:='';
-	else
-		if get_json('array_to_json',json_rds_actual1::json)='' then
-			json_rds_actual1:='';
-		else
-			json_rds_actual1:=get_json('array_to_json',json_rds_actual1::json);
-		end if;
-	end if;
 	if get_json('RES_JSON_1',json2)='' or is_json_dict(get_json('RES_JSON_1',json2)) is false then
 		json2:=put_json(json2,'MSG_LEE_TRAZA','Falla Query '||get_json('RES_JSON_1',json2));
 		json2:=put_json(json2,'STATUS_LEE_TRAZA','NK');
@@ -54,28 +39,15 @@ BEGIN
 		json2:=put_json(json2,'MSG_LEE_TRAZA','Sin data');
                 json2:=put_json(json2,'STATUS_LEE_TRAZA','OK');
 		json2:=put_json(json2,'RESPUESTA_LEE_TRAZA','[]');
-		if json_rds_actual1<>'' then
-			json2:=put_json(json2,'MSG_LEE_TRAZA','OK');
-			json2:=put_json(json2,'RESPUESTA_LEE_TRAZA',json_rds_actual1);
-		end if;
         elsif get_json('STATUS',get_json('RES_JSON_1',json2)::json)='OK' then
 		if get_json('array_to_json',get_json('RES_JSON_1',json2)::json)='' then
 			json2:=put_json(json2,'MSG_LEE_TRAZA','Sin data.');
 			json2:=put_json(json2,'STATUS_LEE_TRAZA','OK');
 			json2:=put_json(json2,'RESPUESTA_LEE_TRAZA','[]');
-			if json_rds_actual1<>'' then
-				json2:=put_json(json2,'MSG_LEE_TRAZA','OK');
-				json2:=put_json(json2,'RESPUESTA_LEE_TRAZA',json_rds_actual1);
-			end if;
 		else
+			json2:=put_json(json2,'RESPUESTA_LEE_TRAZA',get_json('array_to_json',get_json('RES_JSON_1',json2)::json));
 			json2:=put_json(json2,'STATUS_LEE_TRAZA','OK');
 			json2:=put_json(json2,'MSG_LEE_TRAZA','OK');
-			if json_rds_actual1<>'' then
-				json2:=logjson(json2,'FLUJO_8070 Merge');
-				json2:=put_json(json2,'RESPUESTA_LEE_TRAZA',json_merge_lists(json_rds_actual1,get_json('array_to_json',get_json('RES_JSON_1',json2)::json)));
-			else
-				json2:=put_json(json2,'RESPUESTA_LEE_TRAZA',get_json('array_to_json',get_json('RES_JSON_1',json2)::json));
-			end if;
 		end if;
         else
 		json2:=put_json(json2,'MSG_LEE_TRAZA','Repuesta Fallida');
@@ -120,8 +92,6 @@ BEGIN
 	else
 		query1:='select array_to_json(array_agg(row_to_json(sql))) from ('||replace(replace(campo.funcion,'##URI##',get_json('URI_IN',json2)),'##PERIODO##',per1)||') sql';
 	end if;
-	--Ya q la base rds cambia el timestamp y le pone una "T", casteamos a varchar lass fechas
-	query1:=replace(query1,'select * from ','select fecha::varchar,folio,tipo_dte,rut_emisor,rut_receptor,canal,evento,uri,comentario1,comentario2,url_get,codigo_txel,veces,fecha_actualizacion::varchar,fecha_emision::varchar,fecha_ingreso::varchar,fecha_despacho_erp::varchar,comentario_erp from ');
 	json2:=put_json(json2,'QUERY_DATA',query1);
 	--Si es local...
 	if campo.parametro is null then

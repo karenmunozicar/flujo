@@ -93,7 +93,9 @@ DECLARE
 	tabla_boleta1	varchar;
 BEGIN
 	json2:=json1;
-        json2:=graba_bitacora(json2,'ESI');
+	if get_json('FLAG_TRAZA_AWS',json2)<>'SI' then
+        	json2:=graba_bitacora(json2,'ESI');
+	end if;
         cod1:=get_json('CODIGO_TXEL',json2);
 	--Temporal
 	tabla_boleta1:=get_json('TABLA_BOLETA',json2);
@@ -140,6 +142,10 @@ BEGIN
 
 	jresp:=put_json(jresp,'CODIGO_TXEL',get_campo('CODIGO_TXEL',xml2));
 	jresp:=put_json(jresp,'TABLA_BOLETA',get_campo('TABLA_BOLETA',xml2));
+	xml7:=graba_bitacora_aws_colas(json_to_xml(jresp::varchar,''),'ESI');
+	xml2:=logapp(xml2,get_campo('_LOG_',xml7));
+	jresp:=put_json(jresp,'FLAG_TRAZA_AWS','SI');
+	
 	--Encolamos hacia motor7 la act de la boleta
         nombre_tabla1:='cola_motor_10';
 	xml7:=put_campo('','TX','8060');
@@ -156,6 +162,7 @@ BEGIN
         xml3:=put_campo(xml3,'FLAG_BOLETAS_MASIVAS',get_campo('FLAG_BOLETAS_MASIVAS',xml2));
         xml3:=put_campo(xml3,'RUT_EMISOR',get_campo('RUT_EMISOR',xml2));
         xml3:=put_campo(xml3,'TIPO_DTE',get_campo('TIPO_DTE',xml2));
+        xml3:=put_campo(xml3,'FOLIO',get_campo('FOLIO',xml2));
         xml3:=put_campo(xml3,'RUT_RECEPTOR',get_campo('RUT_RECEPTOR',xml2));
         xml3:=put_campo(xml3,'TRACK_ID',get_json('TRACK_ID',jresp));
         xml3:=put_campo(xml3,'FECHA_RECEPCION',get_json('FECHA_RECEPCION',jresp));

@@ -23,6 +23,8 @@ insert into isys_querys_tx values ('8060','61',46,1,'$$QUERY_DATA$$',0,0,0,9,1,9
 insert into isys_querys_tx values ('8060','62',49,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 --Traza 2020
 insert into isys_querys_tx values ('8060','63',50,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
+--Traza 2021
+insert into isys_querys_tx values ('8060','64',2021,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 
 --Base Boletas
 --Boletas 2014
@@ -41,6 +43,7 @@ insert into isys_querys_tx values ('8060','114',1914,1,'$$QUERY_DATA$$',0,0,0,9,
 
 --Base MOTOR ahora por api motor edr
 insert into isys_querys_tx values ('8060','120',8022,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
+--Categoria MOTOR_MOTOR
 insert into isys_querys_tx values ('8060','122',8022,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 
 --Borra sobre base motor usando base 8021 api motor edr
@@ -48,6 +51,8 @@ insert into isys_querys_tx values ('8060','900',8022,1,'select valida_respuesta_
 insert into isys_querys_tx values ('8060','910',19,1,'select valida_respuesta_insert_8060_colas(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1010);
 insert into isys_querys_tx values ('8060',1000,8022,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 insert into isys_querys_tx values ('8060',1010,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+--Borrado en Base Traza
+insert into isys_querys_tx values ('8060',1020,2021,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__["__ID_DTE__","__COLA_MOTOR__","CODIGO_TXEL","RESPUESTA","MENSAJE_XML_FLAGS","__FECHA_FUTURO_COLA__"]$$''::json) as __json__',0,0,0,1,1,0,0);
 
 
 CREATE or replace FUNCTION pivote_borrado_8060(json) RETURNS json AS $$
@@ -59,6 +64,8 @@ BEGIN
         json2:=logjson(json2,'BD_ORIGEN='||get_json('_CATEGORIA_BD_',json2));
         if(get_json('_CATEGORIA_BD_',json2)='COLAS')then
 		json2 := put_json(json2,'__SECUENCIAOK__','1010');
+        elsif(get_json('_CATEGORIA_BD_',json2)='TRAZA')then
+		json2 := put_json(json2,'__SECUENCIAOK__','1020');
         else
 		json2 := put_json(json2,'__SECUENCIAOK__','1000');
         end if;
@@ -159,6 +166,7 @@ BEGIN
 	json2:='{}';
 	json2:=put_json(json2,'CATEGORIA',get_campo('CATEGORIA',xml2));
 	json2:=put_json(json2,'PARAMETRO',get_campo('PARAMETRO',xml2));
+	json2:=put_json(json2,'_CATEGORIA_BD_',get_campo('_CATEGORIA_BD_',xml2));
 	json2:=put_json(json2,'__FLUJO_ACTUAL__',get_campo('__FLUJO_ACTUAL__',xml2));
 	json2:=put_json(json2,'__IDPROC__',get_campo('__IDPROC__',xml2));
 	--Si tengo sub categoria se la agrego a la __CATEGORIA_COLA__
@@ -171,6 +179,13 @@ BEGIN
 		parametro1:=get_campo('PARAMETRO',xml2);
 		json2:=logjson(json2,'Ejecuta Remoto '||categoria1||' '||parametro1||' '||get_campo('URI_IN',xml2));
 		query1:=decode_hex(get_campo('QUERY',xml2));
+		--parche
+		if (parametro1 in ('TRAZA_2021','TRAZA_2020')) then
+			query1:=replace(query1,'recipient'||chr(39)||'s','recipient'||chr(39)||chr(39)||'s');
+			query1:=replace(query1,'domain'||chr(39)||'s','domain'||chr(39)||chr(39)||'s');
+			query1:=replace(query1,'won'||chr(39)||'t','won'||chr(39)||chr(39)||'t');
+			json2:=logjson(json2,'recipient '||query1);
+		end if;
 		xml2:=put_campo(xml2,'QUERY_DATA',query1);
 		json2:=put_json(json2,'QUERY_DATA',query1);
 		if (parametro1='TRAZA_2014') then
@@ -187,13 +202,22 @@ BEGIN
 			json2:=put_json(json2,'__SECUENCIAOK__','62');
 		elsif (parametro1='TRAZA_2020') then
 			json2:=put_json(json2,'__SECUENCIAOK__','63');
+		elsif (parametro1='TRAZA_2021') then
+			json2:=put_json(json2,'__SECUENCIAOK__','64');
 		else
+			--Parche xq grabamos unos eventos sin URI que no correspondian
+			if get_campo('URI_IN',xml2)='' or strpos(get_campo('URI_IN',xml2),'http')=0 then
+				json2:=logjson(json2,'Traza no definida '||parametro1||' SIN URI');
+				json2:=put_json(json2,'RESPUESTA','Status: 200 OK');
+				--json2:=put_json(json2,'__SECUENCIAOK__','1000');
+				json2:=pivote_borrado_8060(json2);
+				return json2;
+			end if;
 			--Traza no definida
 			json2:=logjson(json2,'Traza no definida '||parametro1);
 			json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
 			--json2:=put_json(json2,'__SECUENCIAOK__','1000');
 			json2:=pivote_borrado_8060(json2);
-
 		end if;
 	elsif categoria1 in ('BOLETA_AMAZON') then
 		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');

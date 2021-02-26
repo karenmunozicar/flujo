@@ -71,12 +71,7 @@ begin
     end if;
 
     if v_catalogo_propio <> '' then
-        -- FGE - 20200121 - Caso especial de Capredena
-        if get_json('rutCliente', json2) = '61108000' then
-            update dp_devengo set catalogo_propio = (v_catalogo_propio::integer)::varchar where codigo_dv = v_codigo_dv::bigint returning dte_codigo_txel into cod1;
-        else
-            update dp_devengo set catalogo_propio = v_catalogo_propio where codigo_dv = v_codigo_dv::bigint returning dte_codigo_txel into cod1;
-        end if;
+        update dp_devengo set catalogo_propio = v_catalogo_propio where codigo_dv = v_codigo_dv::bigint returning dte_codigo_txel into cod1;
     end if;
 
     -- FGE - 20200616 - Se incluye catalogo iniciativaInversion
@@ -121,13 +116,12 @@ begin
         return json2;
     end if;
 
-    -- FGE - 20210224 - Agregamos el estado GENERANDO para controlar la multiple generacion con doble click.
-    if v_reg_devengo.estado in( 'EN_PROCESO' , 'FINALIZADO_SIN_ERRORES','FINALIZADO_CON_ERRORES','MANUAL_SIGFE', 'GENERANDO' ) then
+    if v_reg_devengo.estado in( 'EN_PROCESO' , 'FINALIZADO_SIN_ERRORES','FINALIZADO_CON_ERRORES','MANUAL_SIGFE' ) then
         json2:=response_requests_6000('2', 'El Devengo ya fue generado anteriormente', '', json2);
         return json2;
     else
         -- Si está completo entonces marco el devengo como NO_ENVIADO
-       perform dp_act_estado_devengo(v_reg_devengo.codigo_dv, 'GENERANDO', '');
+       perform dp_act_estado_devengo(v_reg_devengo.codigo_dv, 'NO_ENVIADO', '');
        --update dp_devengo set estado = 'NO_ENVIADO' where codigo_dv = v_reg_devengo.codigo_dv;
     end if;
 
@@ -652,7 +646,5 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
-
-
 
 

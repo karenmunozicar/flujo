@@ -228,7 +228,10 @@ begin
 	        json5:=put_json(json5,'ESTADO_ACEPTA','estado');
        		json5:=put_json(json5,'TABLA','dte_emitidos_errores');
 	        json5:=put_json(json5,'ALIAS',' ,monto_exento as monto_excento ');
+		--Ocupamos el filtro fecha para poner un limit en caso de que la cantidad de errore se exceda
+		json5:=put_json(json5,'FILTRO_FECHA',' order by codigo_txel desc limit 40 ');
 		query1:=remplaza_tags_json_c(json5,query2);
+		json5:=put_json(json5,'FILTRO_FECHA','');
 		json2:=put_json(json2,'QUERY_DATA',query1);
 		json2:=put_json(json2,'JSON5',encode_hex(json5::varchar));
 		json2:=put_json(json2,'TAG_MENSAJE','BUSCO FOLIO Emitidos Historicos Errores');
@@ -280,7 +283,9 @@ begin
 			v_total:=0;
 			json2:=put_json(json2,'CODIGO_RESPUESTA','2');
 			json2:=put_json(json2,'MENSAJE_RESPUESTA','No se encontro el folio');
-			json2:=responde_pantalla_15100(json2);
+			if get_json('SOLO_QUERY',json2)<>'SI' then
+				json2:=responde_pantalla_15100(json2);
+			end if;
 			return json2;
 		else
                 	v_total:=count_array_json(get_json('v_out_resultado',json2)::json);

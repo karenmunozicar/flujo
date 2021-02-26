@@ -66,7 +66,9 @@ insert into isys_querys_tx values ('8010',38,1,2,'Llamada directo al AML',14008,
 insert into isys_querys_tx values ('8010',39,1,2,'Llamada directo al AML CGE',14009,102,101,0,0,40,40);
 --Respuesta del AML
 --insert into isys_querys_tx values ('8010',40,45,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('8010',40,8021,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
+--DAO 20210225 insert into isys_querys_tx values ('8010',40,8021,1,'select proc_procesa_respuesta_dte_8010(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
+--Vamos a la base de las colas
+insert into isys_querys_tx values ('8010',40,19,1,'select proc_procesa_respuesta_dte_8010_colas(''$$__XMLCOMPLETO__$$'') as __xml__ ',0,0,0,1,1,-1,0);
 
 --Flujo de Mandato de Boletas y DTE
 --Va directo al 1000 para verificar si le fue bien en el flujo y se borra de la cola
@@ -496,6 +498,11 @@ BEGIN
 	RETURN xml2;
     end if;
 
+    if get_campo('__SECUENCIAOK__',xml2)='28' then
+	--FAY 2021-02-25
+	--Si la proxima secuencia es la 28, no es necesario ejecutarla, ya que estamos en la misma base, la ejecutamos inmediatamente, nos evitamos idas y vueltas del procesador
+	xml2 := proc_procesa_input_dte_8010_parte2(xml2);
+    end if;
     return xml2;
 END;
 $$ LANGUAGE plpgsql;
@@ -603,6 +610,72 @@ BEGIN
     end if; 
 
    return xml2;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE or replace FUNCTION proc_procesa_respuesta_dte_8010_colas(varchar) RETURNS varchar AS $$
+DECLARE
+    xml1	alias for $1;
+    xml2	varchar;
+    --data1	varchar;
+    resp1	varchar;
+    sts		integer;
+    texto_resp1	varchar;
+    respuesta1	varchar;
+    status1	varchar;
+BEGIN
+    xml2:=xml1;
+    --data1:=get_campo('INPUT',xml2);
+    xml2 := put_campo(xml2,'__SECUENCIAOK__','0');
+    --Si hay respuesta del AML
+
+    --Limpio el INPUT para el LOG
+    resp1:= get_campo('RESPUESTA',xml2);
+    --Si viene este texto entonces AML responde OK
+    texto_resp1 := 'URL(True): '||get_campo('URI_IN',xml2);
+
+    --Verifico si me fue bien con el AML
+    --Debe contestar un OK y debe venir la URI que se envio a la entrada
+    --if strpos(resp1,'200 OK')>0 then
+    if (strpos(resp1,'200 OK')>0 and strpos(resp1,texto_resp1)>0) then
+	--Un documento reprocesado, que se envia al AML, se puede borrar de la cola de procesamiento
+	if (get_campo('_REPROCESO_',xml2)='SI') then
+		xml2 := put_campo(xml2,'_ESTADO_REPROCESO_','OK');
+		xml2 := logapp(xml2,'Reproceso Marcado OK');
+	end if;
+
+    	--xml2 := put_campo(xml2,'ESTADO','ENVIADO_EDTE');
+        --xml2 := graba_bitacora(xml2,'ENVIADO_AML');
+	xml2 := logapp(xml2,'FOLIO='||get_campo('FOLIO',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2)||' EMITIDO');
+    
+	--Saco los datos que requiero de la respuesta
+	xml2 := put_campo(xml2,'URI',get_tag_http(resp1,'URL(True): '));
+    
+	--SI se activo en alguna regla el TAG __FLUJO_POST_EXIT__ se ejecuta la secuencia de __SECUENCIA_POST_OK__
+        if (get_campo('__FLUJO_POST_EXIT__',xml2)='SI') then
+		xml2 := logapp(xml2,'Activa Flujo Post Secuencia '||get_campo('__SECUENCIA_POST_OK__',xml2));
+                xml2 := put_campo(xml2,'__SECUENCIAOK__',get_campo('__SECUENCIA_POST_OK__',xml2));
+        end if;
+    else
+	xml2 := logapp(xml2,'FOLIO='||get_campo('FOLIO',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2)||' Falla Respuesta AML');
+	xml2 := logapp(xml2,resp1);
+    end if; 
+
+    --TODO hacer un control cuando falle el update
+    --xml2 := put_campo(xml2,'INPUT','');
+    respuesta1:=split_part(resp1,chr(10)||chr(10),2);
+    if (strpos(resp1,'200 OK')>0) then
+    	xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
+        xml2 := logapp(xml2,'Respuesta Servicio 200 OK URI'||get_campo('URI',xml1));
+    else
+    	xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
+        xml2 := logapp(xml2,'Respuesta Servicio 400 Rechazado (8010) URI'||get_campo('URI',xml1));
+    end if;
+                
+    --No borro y voy a borrar en la secuencia 1010
+    xml2 := pivote_borrado_8010(xml2);
+    --Respondo lo que viene
+    RETURN xml2;
 END;
 $$ LANGUAGE plpgsql;
 

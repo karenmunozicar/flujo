@@ -1,8 +1,9 @@
 delete from isys_querys_tx where llave='8020';
 
+insert into isys_querys_tx values ('8020',5,1,14,'{"f":"INSERTA_JSON","p1":{"__SECUENCIAOK__":"7","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,7,7);
 
 --Procesa solo los datos que necesita
-insert into isys_querys_tx values ('8020',5,19,1,'select proc_casilla_digital_8020_parte1(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,20);
+insert into isys_querys_tx values ('8020',7,19,1,'select proc_casilla_digital_8020_parte1(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,20);
 --Casilla
 insert into isys_querys_tx values ('8020',10,42,1,'select proc_casilla_digital_8020_amz(''$$JSON_DATA_CD$$'') as __json__',0,0,0,1,1,-1,20);
 --Para Carpeta Legal

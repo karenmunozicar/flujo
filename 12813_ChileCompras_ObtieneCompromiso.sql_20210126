@@ -161,7 +161,7 @@ begin
                 return json2;
         END;
         json2:=logjson(json2,'[procesa_resp_ms_12813] resp1='||resp1);
-        resp1:=procesa_json_12813(resp1, v_rut_cliente);
+        resp1:=procesa_json_12813(resp1);
         json2:=logjson(json2,'[procesa_resp_ms_12813] resp2='||resp1);
 --      BEGIN
                 v_codigo_dv:=get_json('codigo_dv', json2);
@@ -357,7 +357,7 @@ end;
 $function$ language plpgsql;
 
 
-create or replace function procesa_json_12813(json_in text, rut_emisor text)
+create or replace function procesa_json_12813(json_in text)
 returns text
 as $function$
 import json

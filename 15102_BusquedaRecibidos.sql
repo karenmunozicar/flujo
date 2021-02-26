@@ -896,6 +896,14 @@ BEGIN
 	--raise notice 'consulta1=% where1=% order_excel1=%',consulta1,where1,order_excel1;
 	--query_data1:=replace(replace('SELECT array_to_json(array_agg(row_to_json(sql))) FROM (' ||  consulta1 || where1 || order_excel1||') sql',chr(10),''),chr(13),'');
 	query_data1:=replace(replace('/*'||chr(36)||chr(36)||chr(36)||'TABLA'||chr(36)||chr(36)||chr(36)||'*/  SELECT array_to_json(array_agg(row_to_json(sql))) FROM (' ||  consulta1 || where1 || order_excel1||') sql',chr(10),''),chr(13),'');
+	if query_data1 is null then
+		json2:=logjson(json2,'query_data1 nulo '||substring(coalesce(consulta1,'consulta1_nulo'),1,20)||' '||substring(coalesce(where1,'where1_nulo'),1,20)||' '||coalesce(order_excel1,'order_excel1_nulo'));
+		json2:=put_json(json2,'MENSAJE_RESPUESTA','Falla Consultar Data. Reintente');
+		json2:=put_json(json2,'CODIGO_RESPUESTA','2');
+		json2:=put_json(json2,'__SECUENCIAOK__','0');
+		json2:=responde_pantalla_15102(json2);
+		return json2;
+	end if;
 	json2:=put_json(json2,'PATRON_QUERY',encode_hex(query_data1));	
 	json2:=put_json(json2,'JSON5_QUERY',encode_hex('{}'));
 	json2:=logjsonfunc(json2,'QUERY_RS='||get_json('QUERY_RS',json2));

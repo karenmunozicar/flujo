@@ -19,10 +19,8 @@ declare
         v_tipo                varchar;
 
         folio1                varchar;
-    v_codigo_txel         bigint;
-    v_fecha_emision       date;
-        v_rut_cliente         bigint;  -- FGE - 20201223 - para caso capredena
-
+	v_codigo_txel         bigint;
+	v_fecha_emision       date;
 begin
         json2:=json1;
         json3:='{}';
@@ -30,12 +28,11 @@ begin
         v_area_transaccional:=get_json('area_transaccional', json2);
         v_codigo_dv:=get_json('codigo_dv', json2);
         v_tipo:=get_json('tipo_compromiso', json2);
-        v_rut_cliente:=get_json('rutCliente', json2);
 
         --json2:=logjson('MVG 1i - ' || json2::varchar);
 
         --if get_json('LLAMA_FLUJO_DEVENGO',json2)='NO' or get_json('LLAMA_FLUJO_DEVENGO',json2)='' or folio1 = '' then
-    if folio1 = '' then
+	if folio1 = '' then
                 return grilla_obtiene_compromiso_chile_compras(json2);
         end if;
 
@@ -60,7 +57,7 @@ begin
 
         --update dp_devengo set folio_requerimiento = folio1 where codigo_dv = v_codigo_dv::integer;
         select ejercicio,dte_codigo_txel::bigint into v_ejercicio,v_codigo_txel from dp_devengo where codigo_dv = v_codigo_dv::integer;
-    select fecha_emision into v_fecha_emision from dte_recibidos where codigo_txel = v_codigo_txel;
+	select fecha_emision into v_fecha_emision from dte_recibidos where codigo_txel = v_codigo_txel;
 
         v_par:=substring(v_area_transaccional, 1, 2);
         v_cap:=substring(v_area_transaccional, 3, 2);
@@ -71,10 +68,7 @@ begin
         json3:=put_json(json3,'areaTransaccional', v_are);
         json3:=put_json(json3,'ejercicio', v_ejercicio);
         json3:=put_json(json3,'folio',folio1);
-    json3:=put_json(json3, 'fechaEmision', v_fecha_emision::varchar);
-
-        -- FGE - 20201223 - Agrego el rut del emisor de la OC por caso capredena
-        json3:=put_json(json3, 'rut_emisor', v_rut_cliente::varchar);
+	json3:=put_json(json3, 'fechaEmision', v_fecha_emision::varchar);
 
         --llamo al flujo y paso los parametros del servicios para hacer la peticion
         json2:=put_json(json2,'LLAMA_FLUJO','SI');
@@ -129,12 +123,10 @@ declare
         err_msg         varchar:='';
         msj_defecto     varchar;
         pg_context      TEXT;
-        v_rut_cliente   varchar;
 begin
         json2:=json1;
         --json2:=logjson(json2,'[procesa_resp_ms_12813] json2 entrada=>'||json2::varchar);
-    json2:=logjson(json2,'[procesa_resp_ms_12813] RESPUESTA='||get_json('RESPUESTA',json2));
-    v_rut_cliente:=get_json('rutCliente', json2);
+	json2:=logjson(json2,'[procesa_resp_ms_12813] RESPUESTA='||get_json('RESPUESTA',json2));
 
         --v_folio:=get_json('folio', json2);
 
@@ -161,16 +153,16 @@ begin
                 return json2;
         END;
         json2:=logjson(json2,'[procesa_resp_ms_12813] resp1='||resp1);
-        resp1:=procesa_json_12813(resp1, v_rut_cliente);
+        resp1:=procesa_json_12813(resp1);
         json2:=logjson(json2,'[procesa_resp_ms_12813] resp2='||resp1);
 --      BEGIN
                 v_codigo_dv:=get_json('codigo_dv', json2);
                 --delete from dp_devengo_detalle where codigo_dv = v_codigo_dv;
-        -- FGE - 20191219 - Mensaje de error proviene de sigfe
-        json3:=put_json(json3, 'MENSAJE_VACIO', get_json('error_descripcion',resp1::json));
+		-- FGE - 20191219 - Mensaje de error proviene de sigfe
+		json3:=put_json(json3, 'MENSAJE_VACIO', get_json('error_descripcion',resp1::json));
                 if get_json('RESPUESTA',resp1::json)='OK' then
-            -- FGE - 20200608 - Agregamos tipo de demanda
-            json2:=put_json(json2, 'TIPO_DEMANDA', get_json('tipoDemanda',resp1::json));
+			-- FGE - 20200608 - Agregamos tipo de demanda
+			json2:=put_json(json2, 'TIPO_DEMANDA', get_json('tipoDemanda',resp1::json));
 
                         json_respuesta := REGEXP_REPLACE(get_json('LISTA',resp1::json)::varchar, '\d{1}\#\#', '','g')::json;
                         json2:=logjson(json2,'json_respuesta=' || json_respuesta::varchar);
@@ -197,18 +189,13 @@ begin
                                 if not exists(select 1 from dp_devengo_detalle where codigo_dv = v_codigo_dv::bigint and folio = v_folio and requerimiento = v_requerimiento and cod_imputacion = v_codigo_imputacion and cuenta_debe = v_cuenta_debe) then
                                         insert into dp_devengo_detalle (id, codigo_dv, folio, unidad_demandante, monto, debe, cuenta_debe, cuenta_haber, concepto_presupuestario_debe, concepto_presupuestario_haber, cod_imputacion, cod_combinacion, tipo_detalle, catalogo_nombre, requerimiento, nombre_imputacion, catalogo_tipo, cod_catalogo) values (default, v_codigo_dv::bigint, v_folio, v_unidad_demandante, v_monto::numeric, v_debe::numeric, v_cuenta_debe, v_cuenta_haber, v_concepto_presupuestario_debe, v_concepto_presupuestario_haber, v_codigo_imputacion, v_codigo_combinacion, v_tipo_detalle::integer, v_catalogos, v_requerimiento, v_nombre_imputacion, v_catalogo_tipo, v_catalogo_codigo);
                                 end if;
-                                -- FGE - 20200120 - Manejo catalogo Capredena
-                                if v_rut_cliente = '61108000' and v_catalogo_tipo = 'propioContabilidad' then
-                                        update dp_devengo set catalogo_propio = (v_catalogo_codigo::integer)::varchar where codigo_dv = v_codigo_dv::bigint;
-                                end if;
-
                                 index_json:=index_json+1;
                                 json_requerimiento:=get_json_index(json_respuesta, index_json);
                         end loop;
 
                         --json2:=logjson(json2,'datos json3: ' || json3::varchar);
                         json2:=put_json(json2,'V_CODIGO_DV',v_codigo_dv::varchar);
-            
+			
                         --json2:=put_json(json2, 'codigo_txel', get_json('codigo_txel', json2));
                         return grilla_obtiene_compromiso_chile_compras(json2);
 
@@ -216,8 +203,8 @@ begin
 
                 elsif get_json('RESPUESTA',resp1::json)='SIN_DATA' then
                         json3:=put_json(json3,'MENSAJE_VACIO','No hay registros');
-            -- FGE - 20191219 - Mensaje de Error de SIGFE
-            json3:=put_json(json3, 'MENSAJE_VACIO', get_json('error_descripcion',resp1::json));
+			-- FGE - 20191219 - Mensaje de Error de SIGFE
+			json3:=put_json(json3, 'MENSAJE_VACIO', get_json('error_descripcion',resp1::json));
                 elsif get_json('RESPUESTA',resp1::json)='ERROR' then
                         json3:=put_json(json3,'MENSAJE_VACIO','Ha ocurrido un error al consultar la informacion');
                 end if;
@@ -297,7 +284,7 @@ begin
         -- buscar cod_txel no codigo_dv
         v_codigo_dv:=get_json('V_CODIGO_DV',json2);
         v_codigo_txel:=get_json('codigo_txel', json2);
-    json2:=logjson(json2,'v_codigo_dv='||v_codigo_dv::varchar||' codigo_txel='||v_codigo_txel);
+	json2:=logjson(json2,'v_codigo_dv='||v_codigo_dv::varchar||' codigo_txel='||v_codigo_txel);
         v_reversa:=get_json('reversa', json2);
 
         --if v_codigo_dv='' then
@@ -347,7 +334,7 @@ begin
         json3:=put_json(json3, 'NO_RELOAD_DIVS', put_json_list(put_json_list(put_json_list('[]', 'form_devengo_manual_cabecera'), 'form_devengo_manual_cuentas'), 'form_devengo_manual_catalogo'));
         json_form_respuesta:=put_json('{}','LLAMA_FLUJO_DEVENGO', 'SI');
         json3:=put_json(json3,'FORM_RESPUESTA',json_form_respuesta);
-    json2:=logjson(json2,'tabla_json3: ' || json3::varchar);
+	json2:=logjson(json2,'tabla_json3: ' || json3::varchar);
 
 
         json2:=put_json(json2,'RESPUESTA_COLA','OK');
@@ -357,7 +344,7 @@ end;
 $function$ language plpgsql;
 
 
-create or replace function procesa_json_12813(json_in text, rut_emisor text)
+create or replace function procesa_json_12813(json_in text)
 returns text
 as $function$
 import json
@@ -365,113 +352,109 @@ json_out={}
 lista=[]
 #try:
 if 1==1:
-    json1=json_in
-    json1=json1.decode('ascii', 'ignore')
-    json1=json.loads(json_in, strict = 'false')
-    if 'compromiso' in json1:
-        if json1['compromiso'] != None:
-            folio = json1['compromiso']['folio']
-            # FGE - 20200601 - Agregamos informacion del tipo de demanda
-            #json_out['tipoDemanda'] = json1['compromiso']['tipoDemanda']
-            # FGE - 20200712 - Info del tipo de demanda si no se encuentra suponemos que es tipo 01
-            if 'tipoDemanda' in json1['compromiso']:
-                json_out['tipoDemanda'] = str(json1['compromiso']['tipoDemanda'])
-            else:
-                json_out['tipoDemanda'] = '01'
+        json1=json_in
+        json1=json1.decode('ascii', 'ignore')
+        json1=json.loads(json_in, strict = 'false')
+        if 'compromiso' in json1:
+		if json1['compromiso'] != None:
+                	folio = json1['compromiso']['folio']
+			# FGE - 20200601 - Agregamos informacion del tipo de demanda
+                        #json_out['tipoDemanda'] = json1['compromiso']['tipoDemanda']
+                        # FGE - 20200712 - Info del tipo de demanda si no se encuentra suponemos que es tipo 01
+                        if 'tipoDemanda' in json1['compromiso']:
+			    json_out['tipoDemanda'] = str(json1['compromiso']['tipoDemanda'])
+                        else:
+                            json_out['tipoDemanda'] = '01'
 
-            for documento in json1['compromiso']['documentos']['documento']:
-                for principal in documento['principales']['principal']:
-                    for transaccion in principal['transaccionesPrevias']['transaccion']:
-                        unidadesDemandantes = ''
-                        for agrupacion in transaccion['agrupacionesDeImputacionesACatalogos']['agrupacion']:
-                            catalogosDescripcion = ''
-                            catalogo_tipo = ''
-                            catalogo_codigo = ''
-                            for catalogo in agrupacion['imputacionesACatalogosDeReagrupacion']['catalogo']:
-                                if catalogo['catalogo'] == 'UnidadesDemandantes':
-                                    unidadesDemandantes = catalogo['descripcion']
-                                if ((catalogo['descripcion'] != 'No Aplica') and (catalogo['catalogo'] != 'programaPresupuestario')):
-                                    catalogosDescripcion = '%s%s / ' % (catalogosDescripcion, catalogo['descripcion'])
-                                if ((catalogo['catalogo'] != 'programaPresupuestario') and (catalogo['catalogo'] != 'UnidadesDemandantes')):
-                                    catalogo_tipo = catalogo['catalogo']
-                                    catalogo_codigo = catalogo['elemento']
-                                if ((catalogo['catalogo'] == 'programaPresupuestario') and (rut_emisor == '61108000') and (catalogo['elemento'] in ['01', '02'])):
-                                    if not 'propioContabilidad' in agrupacion['imputacionesACatalogosDeReagrupacion']['catalogo']:
-                                        agrupacion['imputacionesACatalogosDeReagrupacion']['catalogo'].append({'catalogo':'propioContabilidad', 'descripcion': catalogo['descripcion'], 'elemento': catalogo['elemento']})
+			for documento in json1['compromiso']['documentos']['documento']:
+				for principal in documento['principales']['principal']:
+					for transaccion in principal['transaccionesPrevias']['transaccion']:
+						unidadesDemandantes = ''
+						for agrupacion in transaccion['agrupacionesDeImputacionesACatalogos']['agrupacion']:
+							catalogosDescripcion = ''
+							catalogo_tipo = ''
+							catalogo_codigo = ''
+							for catalogo in agrupacion['imputacionesACatalogosDeReagrupacion']['catalogo']:
+								if catalogo['catalogo'] == 'UnidadesDemandantes':
+									unidadesDemandantes = catalogo['descripcion']
+								if ((catalogo['descripcion'] != 'No Aplica') and (catalogo['catalogo'] != 'programaPresupuestario')):
+									catalogosDescripcion = '%s%s / ' % (catalogosDescripcion, catalogo['descripcion'])
+								if ((catalogo['catalogo'] != 'programaPresupuestario') and (catalogo['catalogo'] != 'UnidadesDemandantes')):
+									catalogo_tipo = catalogo['catalogo']
+									catalogo_codigo = catalogo['elemento']
+							for imputacion in agrupacion['imputacionesAConceptosPresupuestarios']['imputacion']:
+								for cuentaDebe in imputacion['cuentas']['cuentasDebe']:
+									jaux = {}
+									jaux['folio'] = folio
+									if transaccion['tipo'] == '01':
+										jaux['requerimiento'] = str(transaccion['folio'])
+									else:
+										jaux['requerimiento'] = ''
+									jaux['unidad_demandante'] = unidadesDemandantes
+									jaux['catalogos'] = catalogosDescripcion[:-2]
+									jaux['catalogo_tipo'] = catalogo_tipo
+									jaux['catalogo_codigo'] = catalogo_codigo
+									jaux['cuenta_debe'] = str(cuentaDebe['codigo'])
+									jaux['cuenta_haber'] = str(imputacion['cuentas']['cuentasHaber'][0]['codigo'])
+									jaux['concepto_presupuestario_debe'] = cuentaDebe['nombre']
+									jaux['concepto_presupuestario_haber'] = imputacion['cuentas']['cuentasHaber'][0]['nombre']
+									jaux['monto_compromiso'] = str(imputacion['monto'])
+									jaux['monto_debe'] = str(0)
+									jaux['codigo_imputacion'] = str(imputacion['idConcepto'])
+									jaux['nombre_imputacion'] = imputacion['nombreConcepto']
+									jaux['codigo_combinacion'] = str(transaccion['idCombinacion'])
+									jaux['tipo_detalle'] = '2'
+                                                                	lista.append(jaux)
+        elif 'requerimiento' in json1:
+		#FGE - 20191219 - En caso de que no venga el requerimiento....
+		if json1['requerimiento'] != None:
+			unidadesDemandantes = ''
+			for agrupacion in json1['requerimiento']['agrupacionesDeImputacionesACatalogos']['agrupacion']:
+				catalogosDescripcion = ''
+				catalogo_tipo = ''
+				catalogo_codigo = ''
+				for catalogo in agrupacion['imputacionesACatalogosDeReagrupacion']['imputacion']:
+					if catalogo['catalogo'] == 'UnidadesDemandantes':
+						unidadesDemandantes = catalogo['descripcion']
+					if ((catalogo['descripcion'] != 'No Aplica') and (catalogo['catalogo'] != 'programaPresupuestario')):
+						catalogosDescripcion = '%s%s / ' % (catalogosDescripcion, catalogo['descripcion'])
+					if ((catalogo['catalogo'] != 'programaPresupuestario') and (catalogo['catalogo'] != 'UnidadesDemandantes')):
+						catalogo_tipo = catalogo['catalogo']
+						catalogo_codigo = catalogo['elemento']
+				for imputacion in agrupacion['imputacionesAConceptosPresupuestarios']['imputacion']:
+					for cuentaDebe in imputacion['cuentas']['cuentasDebe']:
+						jaux = {}
+						jaux['folio'] = ''
+						jaux['requerimiento'] = str(json1['requerimiento']['requerimiento'])
+						jaux['unidad_demandante'] = unidadesDemandantes
+						jaux['catalogos'] = catalogosDescripcion[:-2]
+						jaux['catalogo_tipo'] = catalogo_tipo
+						jaux['catalogo_codigo'] = catalogo_codigo
+						jaux['cuenta_debe'] = str(cuentaDebe['codigo'])
+						jaux['cuenta_haber'] = str(imputacion['cuentas']['cuentasHaber'][0]['codigo'])
+						jaux['concepto_presupuestario_debe'] = cuentaDebe['nombre']
+						jaux['concepto_presupuestario_haber'] = imputacion['cuentas']['cuentasHaber'][0]['nombre']
+						jaux['monto_compromiso'] = str(imputacion['monto'])
+						jaux['monto_debe'] = str(0)
+						jaux['codigo_imputacion'] = str(imputacion['idConcepto'])
+						jaux['nombre_imputacion'] = imputacion['nombreConcepto']
+						jaux['codigo_combinacion'] = str(agrupacion['idAgrupacionAjustada'])
+						jaux['tipo_detalle'] = '1'
+                                        	lista.append(jaux)
 
-                            for imputacion in agrupacion['imputacionesAConceptosPresupuestarios']['imputacion']:
-                                for cuentaDebe in imputacion['cuentas']['cuentasDebe']:
-                                    jaux = {}
-                                    jaux['folio'] = folio
-                                    if transaccion['tipo'] == '01':
-                                        jaux['requerimiento'] = str(transaccion['folio'])
-                                    else:
-                                        jaux['requerimiento'] = ''
-                                    jaux['unidad_demandante'] = unidadesDemandantes
-                                    jaux['catalogos'] = catalogosDescripcion[:-2]
-                                    jaux['catalogo_tipo'] = catalogo_tipo
-                                    jaux['catalogo_codigo'] = catalogo_codigo
-                                    jaux['cuenta_debe'] = str(cuentaDebe['codigo'])
-                                    jaux['cuenta_haber'] = str(imputacion['cuentas']['cuentasHaber'][0]['codigo'])
-                                    jaux['concepto_presupuestario_debe'] = cuentaDebe['nombre']
-                                    jaux['concepto_presupuestario_haber'] = imputacion['cuentas']['cuentasHaber'][0]['nombre']
-                                    jaux['monto_compromiso'] = str(imputacion['monto'])
-                                    jaux['monto_debe'] = str(0)
-                                    jaux['codigo_imputacion'] = str(imputacion['idConcepto'])
-                                    jaux['nombre_imputacion'] = imputacion['nombreConcepto']
-                                    jaux['codigo_combinacion'] = str(transaccion['idCombinacion'])
-                                    jaux['tipo_detalle'] = '2'
-                                    lista.append(jaux)
-    elif 'requerimiento' in json1:
-        #FGE - 20191219 - En caso de que no venga el requerimiento....
-        if json1['requerimiento'] != None:
-            unidadesDemandantes = ''
-            for agrupacion in json1['requerimiento']['agrupacionesDeImputacionesACatalogos']['agrupacion']:
-                catalogosDescripcion = ''
-                catalogo_tipo = ''
-                catalogo_codigo = ''
-                for catalogo in agrupacion['imputacionesACatalogosDeReagrupacion']['imputacion']:
-                    if catalogo['catalogo'] == 'UnidadesDemandantes':
-                        unidadesDemandantes = catalogo['descripcion']
-                    if ((catalogo['descripcion'] != 'No Aplica') and (catalogo['catalogo'] != 'programaPresupuestario')):
-                        catalogosDescripcion = '%s%s / ' % (catalogosDescripcion, catalogo['descripcion'])
-                    if ((catalogo['catalogo'] != 'programaPresupuestario') and (catalogo['catalogo'] != 'UnidadesDemandantes')):
-                        catalogo_tipo = catalogo['catalogo']
-                        catalogo_codigo = catalogo['elemento']
-                for imputacion in agrupacion['imputacionesAConceptosPresupuestarios']['imputacion']:
-                    for cuentaDebe in imputacion['cuentas']['cuentasDebe']:
-                        jaux = {}
-                        jaux['folio'] = ''
-                        jaux['requerimiento'] = str(json1['requerimiento']['requerimiento'])
-                        jaux['unidad_demandante'] = unidadesDemandantes
-                        jaux['catalogos'] = catalogosDescripcion[:-2]
-                        jaux['catalogo_tipo'] = catalogo_tipo
-                        jaux['catalogo_codigo'] = catalogo_codigo
-                        jaux['cuenta_debe'] = str(cuentaDebe['codigo'])
-                        jaux['cuenta_haber'] = str(imputacion['cuentas']['cuentasHaber'][0]['codigo'])
-                        jaux['concepto_presupuestario_debe'] = cuentaDebe['nombre']
-                        jaux['concepto_presupuestario_haber'] = imputacion['cuentas']['cuentasHaber'][0]['nombre']
-                        jaux['monto_compromiso'] = str(imputacion['monto'])
-                        jaux['monto_debe'] = str(0)
-                        jaux['codigo_imputacion'] = str(imputacion['idConcepto'])
-                        jaux['nombre_imputacion'] = imputacion['nombreConcepto']
-                        jaux['codigo_combinacion'] = str(agrupacion['idAgrupacionAjustada'])
-                        jaux['tipo_detalle'] = '1'
-                        lista.append(jaux)
-
-    if len(lista)==0:
-        json_out['RESPUESTA']='SIN_DATA'
-    else:
-        json_out['RESPUESTA']='OK'
-        json_out['LISTA']=lista
-    # FGE - 20191219 - Anexamos la descripcion de status
-    if 'descripcion' in json1:
-        descripcion_extendida = ''
-        if 'errors' in json1:
-            for d_extendida in json1['errors']:
-                descripcion_extendida = descripcion_extendida + d_extendida['descripcion'] + ', '
-            descripcion_extendida = descripcion_extendida[:-2]
-            json_out['error_descripcion'] = '%s - %s - %s' % (json1['status'], json1['descripcion'], descripcion_extendida)
+        if len(lista)==0:
+                json_out['RESPUESTA']='SIN_DATA'
+        else:
+                json_out['RESPUESTA']='OK'
+                json_out['LISTA']=lista
+	# FGE - 20191219 - Anexamos la descripcion de status
+        if 'descripcion' in json1:
+                 descripcion_extendida = ''
+                 if 'errors' in json1:
+                         for d_extendida in json1['errors']:
+                                 descripcion_extendida = descripcion_extendida + d_extendida['descripcion'] + ', '
+                         descripcion_extendida = descripcion_extendida[:-2]
+                         json_out['error_descripcion'] = '%s - %s - %s' % (json1['status'], json1['descripcion'], descripcion_extendida)
 #except Exception as e:
 #       json_out['RESPUESTA']='ERROR'
 
@@ -531,7 +514,6 @@ BEGIN
         RETURN json2;
 END;
 $function$
-
 
 
 

@@ -939,6 +939,9 @@ BEGIN
 	        	--query1:='select array_to_json(array_agg(row_to_json(sql))) from (select '||monto_cantidad1||',tipo_dte::varchar from dte_boletas_generica where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2 order by 1) sql';
 			--FAY dia1 es hoy que se guarda en la tabla de boletas diarias
 	        	query1:='select array_to_json(array_agg(row_to_json(sql))) from (select '||monto_cantidad1||',tipo_dte::varchar from dte_boletas_diarias where dia='||dia1||' and '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2 order by 1) sql';
+			if get_json('rutUsuario',json2)='17597643' then
+				json2:=logjson(json2,'QUERY_BOLi_DIA='||query1);
+			end if;
 	else
 		--Si es un error (cuadro1 o cuadro2) 
 		--perform logfile('evento_tot='||get_json('evento_tot',json2)||' '||get_json('flag_excepciones',json2));
@@ -1396,6 +1399,9 @@ BEGIN
 	        query1:='select sum(monto_total) as count,tipo_dte from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2';
 	else
 	        query1:='select count(*),tipo_dte from dte_boletas where '||v_parametro_rut_emisor||' '||v_parametro_tipo_dte||'  and dia'||tipoFecha1||'>='|| v_fecha_inicio::varchar||' and dia'||tipoFecha1||'<='||v_fecha_fin::varchar||' '||v_parametro_var||v_parametro_referencias1||v_parametro_adicional1||'  group by 2';
+		if get_json('rutUsuario',json2)='17597643' then
+			json2:=logjson(json2,'QUERY_BOL='||query1);
+		end if;
 	end if;
 	json2:=put_json(json2,'QUERY_RS',query1);
 	json2 := put_json(json2,'__SECUENCIAOK__','20');

@@ -1,11 +1,15 @@
 delete from isys_querys_tx where llave='7010';
 
-insert into isys_querys_tx values ('7010',10,9,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+--insert into isys_querys_tx values ('7010',5,19,1,'select split_part(''$$INPUT$$'',''url='',2) as URI_IN where strpos(''$$INPUT$$'',''http://acepta2102.acepta.com/v01/0000000_1721614177_0415324432_173592022_?k=a36466a4612799835a9a62b66a569677'')>0',0,0,0,1,1,100,10);
+insert into isys_querys_tx values ('7010',5,19,1,'select split_part(''$$INPUT$$'',''url='',2) as URI_IN ',0,0,0,1,1,100,10);
+insert into isys_querys_tx values ('7010',100,1,8,'Flujo LeeTraza ',8070,0,0,0,0,110,110);
+insert into isys_querys_tx values ('7010',110,9,1,'select arma_respuesta_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
+
+insert into isys_querys_tx values ('7010',10,9,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('7010',12,11,1,'select proc_procesa_bitacora_7010(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Copia desde Traza Antigua registro de la URI
 insert into isys_querys_tx values ('7010',20,1,10,'/opt/acepta/motor/Procesos/copia_registro_traza_antigua.sh $$URI_IN$$ $$TABLA_TRAZA$$',0,0,0,1,1,10,10);
-
 --Bases Traza
 --Traza 2014
 insert into isys_querys_tx values ('7010',2014,38,1,'select proc_procesa_bitacora_7010_Amazon2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
@@ -22,6 +26,203 @@ insert into isys_querys_tx values ('7010',2019,49,1,'select proc_procesa_bitacor
 --Traza 2020
 insert into isys_querys_tx values ('7010',2020,50,1,'select proc_procesa_bitacora_7010_Amazon2(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
+
+CREATE or replace FUNCTION arma_respuesta_7010(varchar) RETURNS varchar AS $$
+DECLARE
+	xml1	alias for $1;
+	xml2	varchar;
+	data1	varchar;
+        temp    integer;
+	resp1	varchar;
+	respuesta1	varchar;
+	output1 varchar;
+	query1  varchar;
+	url1    varchar;
+	query2  json;
+	header1 json;
+	jsonq	varchar;
+	relacionados1 varchar;
+	json_traza_traza1	json;
+	json_aux1		json;
+	lista1		json;
+	query_json1	json;
+	parametro1	varchar;
+	json_traza1	json;
+	aux1		varchar;
+	aux2		varchar;
+	aux3		json;
+	traza_config	json;
+	i	integer;
+	campo record;
+BEGIN
+	xml2:=xml1;
+	xml2:=put_campo(xml2,'__SECUENCIAOK__','0');
+    	data1:=get_campo('INPUT',xml2);
+	url1:=get_campo('URI_IN',xml2);
+	xml2:=logapp(xml2,'URI='||url1);
+
+	if get_campo('STATUS_LEE_TRAZA',xml2)!='OK' then
+		query_json1:='{"HEADER":"","EVENTOS":"","RELACIONADOS":""}';
+		resp1:='Status: 200 OK'||chr(10)||
+                 'Content-type: application/json;'||chr(10)||
+                 'Content-length: '||octet_length(query_json1::varchar)||chr(10);
+                xml2:=put_campo(xml2,'RESPUESTA',resp1||chr(10)||query_json1::varchar);
+                xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
+                return xml2;
+	end if;	
+
+	select ('{'||string_agg(data,',')||'}')::json from (select '"'||evento||'":{"g":"'||coalesce(grupo,'')||'","d":"'||coalesce(descripcion1,'')||'","i":"'||coalesce(icono,'')||'"}' as data from traza.config)x into traza_config;
+	
+	json_traza1:=get_campo('RESPUESTA_LEE_TRAZA',xml2);
+	xml2:=logapp(xml2,'json_traza1='||json_traza1::varchar);
+	json_traza1:=sort_list_json(json_traza1::varchar,'fecha_ingreso')::json;
+	xml2:=logapp(xml2,'json_traza1='||json_traza1::varchar);
+	--Buscamos el registro para armar el header
+	i:=0;
+	aux1:=get_json_index(json_traza1,i);
+	while (aux1<>'') loop
+		if length(get_json('folio',aux1::json))>0 and get_json('fecha_emision',aux1::json)<>'' then
+			header1:='{}';
+			header1:=put_json(header1,'nodetimestamp',to_char(coalesce(nullif(get_json('fecha_ingreso',aux1::json),''),get_json('fecha',aux1::json))::timestamp,'YYYY-MM-DD HH24:MI:SS'));
+			header1:=put_json(header1,'nodeid',replace(get_json('folio',aux1::json),'-',''));
+			aux2:=get_json('tipo_dte',aux1::json);
+			if get_json(aux2,traza_config)<>'' then
+				header1:=put_json(header1,'nodeicon',get_json('i',get_json(aux2,traza_config)::json));
+				header1:=put_json(header1,'nodelabel',get_json('d',get_json(aux2,traza_config)::json));
+			end if;
+			aux2:=get_json('evento',aux1::json);
+			if get_json(aux2,traza_config)<>'' then
+				header1:=put_json(header1,'eventoemisor',get_json('d',get_json(aux2,traza_config)::json));
+			end if;
+			header1:=put_json(header1,'noowneruid',get_json('rut_emisor',aux1::json)||'-'||modulo11(get_json('rut_emisor',aux1::json)));
+			aux2:=get_json('rut_emisor',aux1::json);
+			select * into campo from recipient_traza_historico where rut=aux2::integer;
+			if found then
+				header1:=put_json(header1,'noowner',campo.name);
+			else
+				header1:=put_json(header1,'noowner',(select nombre from contribuyentes where rut_emisor=aux2::integer));
+			end if;
+			header1:=put_json(header1,'noownermail',campo.email);
+			header1:=put_json(header1,'owneruid',get_json('rut_receptor',aux1::json)||'-'||modulo11(get_json('rut_receptor',aux1::json)));
+			aux2:=get_json('rut_receptor',aux1::json);
+			select * into campo from recipient_traza_historico where rut=aux2::integer;
+			header1:=put_json(header1,'owner',campo.name);
+			header1:=put_json(header1,'ownermail',case when campo.recipt_type is null then '(receptor manual)' when campo.recipt_type='M' then '(receptor manual)' else campo.email end);
+			header1:=put_json(header1,'timestamp',(case get_json('tipo_dte',aux1::json) when 'COMPRA' then (replace(get_json('folio',aux1::json),'-','')||'01')::integer when 'VENTA' then (replace(get_json('folio',aux1::json),'-','')||'01')::integer else to_char(coalesce(nullif(get_json('fecha_ingreso',aux1::json),''),get_json('fecha',aux1::json))::timestamp,'YYYYMMDD')::integer end)::varchar);
+			
+			EXIT;
+		end if;
+		i:=i+1;
+		aux1:=get_json_index(json_traza1,i);
+	end loop;
+
+	xml2:=logapp(xml2,'header1='||header1::varchar);
+	--listado de documentos relacionados
+	relacionados1 := array_to_json(array_agg(row_to_json(related))) from (select r.folio, cfg.descripcion1 as tipodte, r.url_relacion as url, cfg.icono  from (select * from documentos_relacionados where url = url1 ) r left join traza.config cfg  on r.tipo_dte = cfg.evento ) related;
+	xml2:=logapp(xml2,'relacionados1='||coalesce(relacionados1,'REL_NULOS'));
+	query2:='[]';
+	i:=0;
+	aux1:=get_json_index(json_traza1,i);
+	while (aux1<>'') loop
+		aux3:='{}';
+		aux3:=put_json(aux3,'processeddate',to_char(get_json('fecha',aux1::json)::timestamp,'YYYY-MM-DD HH24:MI:SS'));
+		aux3:=put_json(aux3,'canal',get_json('canal',aux1::json));
+		aux2:=get_json('evento',aux1::json);
+		if aux2 in ('MALO_RSI') and get_json('tipo_dte',aux1::json) in ('39','41') and strpos(get_json('comentario1',aux1::json),'Repetido')>0 then
+			--Se ignora
+			i:=i+1;
+			aux1:=get_json_index(json_traza1,i);
+			continue;
+		end if;
+		if get_json(aux2,traza_config)<>'' then
+			aux3:=put_json(aux3,'grupo',get_json('g',get_json(aux2,traza_config)::json));
+			if aux2 in ('CONTROLLER','ADJ') then
+				aux3:=put_json(aux3,'description',decode_utf8(get_json('comentario2',aux1::json)));
+			else
+				aux3:=put_json(aux3,'description',replace(get_json('d',get_json(aux2,traza_config)::json),chr(10),'<br>'));
+			end if;
+			aux3:=put_json(aux3,'icon',get_json('i',get_json(aux2,traza_config)::json));
+		else
+			--Se ignora Si no esta definido en traza.config, no se muestra
+			i:=i+1;
+			aux1:=get_json_index(json_traza1,i);
+			continue;
+		end if;
+		if get_json('comentario_erp',aux1::json)<>'' then
+			aux3:=put_json(aux3,'comment2',replace(decode_utf8(get_json('comentario1',aux1::json))||chr(10)||decode_utf8(get_json('comentario_erp',aux1::json)),chr(10),'<br>'));
+		else
+			aux3:=put_json(aux3,'comment2',replace(decode_utf8(get_json('comentario1',aux1::json)),chr(10),'<br>'));
+		end if; 
+		aux3:=put_json(aux3,'commentfragment',decode_utf8(get_json('comentario2',aux1::json)));
+		aux3:=put_json(aux3,'url',get_json('url_get',aux1::json));
+
+		query2:=put_json_list(query2,aux3::varchar);
+		i:=i+1;
+		aux1:=get_json_index(json_traza1,i);
+	end loop;
+	
+	query1 := '[';
+	IF (header1 IS NOT NULL) THEN
+		query1:=query1||header1||',';
+	END IF;
+	IF (relacionados1 IS NOT NULL) THEN
+		query1 := query1||relacionados1||',';
+	ELSE
+		query1 := query1||'[],';
+	END IF;
+	IF (query2 IS NOT NULL) THEN
+		query1:= query1 || query2;
+	END IF;
+
+	query1 := query1 || ']';
+
+	--Traza Responsiva 
+	if(get_campo('FLAG_ESCRITORIO',xml2)='SI') then
+		xml2:=logapp(xml2,'TRAZA FLAG_ESCRITORIO');
+                query_json1:='{}';
+		xml2:=logapp(xml2,'header1='||header1);
+		
+                IF (header1 IS NOT NULL) THEN
+                        query_json1:=put_json(query_json1,'HEADER',header1);
+                else
+                        query_json1:=put_json(query_json1,'HEADER','');
+                end if;
+                if(relacionados1 is not null) then
+                        query_json1:=put_json(query_json1,'RELACIONADOS',relacionados1);
+                else
+                        query_json1:=put_json(query_json1,'RELACIONADOS','');
+                end if;
+                IF (query2 IS NOT NULL) THEN
+                        query_json1:=put_json(query_json1,'EVENTOS',query2);
+                else
+                        query_json1:=put_json(query_json1,'EVENTOS','');
+                end if;
+
+                 --'Content-type: application/json;charset=UTF-8;'||chr(10)||
+                resp1:='Status: 200 OK'||chr(10)||
+                 'Content-type: application/json;'||chr(10)||
+                 'Content-length: '||octet_length(query_json1::varchar)||chr(10);
+                xml2:=put_campo(xml2,'RESPUESTA',resp1||chr(10)||query_json1::varchar);
+                --xml2:=put_campo(xml2,'RESPUESTA',query_json1::varchar);
+                xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
+                return xml2;
+        end if;
+
+
+	xml2:=logapp(xml2,'respuesta query'||query1);
+	--envio respuesta content tipe para json es application/json, en otro caso la respuesta llega como error
+        resp1:='Status: 200 OK'||chr(10)||
+                 'Content-type: application/json;charset=UTF-8;'||chr(10)||
+                 'Content-length: '||length(query1)||chr(10);
+	xml2:=put_campo(xml2,'RESPUESTA',resp1||chr(10)||query1);
+	--xml2:=put_campo(xml2,'RESPUESTA',query1);
+	xml2 := put_campo(xml2,'__SOCKET_RESPONSE__','RESPUESTA');
+        xml2 := logapp(xml2,'Respuesta Servicio 200 OK');
+	xml2 := logapp(xml2,'JSONSend '||query1);
+	xml2 := logapp(xml2,'fin_bitacora_get_datos');
+    	RETURN xml2;
+END;
+$$ LANGUAGE plpgsql;
 
 
 CREATE or replace FUNCTION proc_procesa_bitacora_7010(varchar) RETURNS varchar AS $$

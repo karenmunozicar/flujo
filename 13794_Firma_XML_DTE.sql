@@ -1,11 +1,11 @@
 --Publica documento
 delete from isys_querys_tx where llave='13794';
 
-insert into isys_querys_tx values ('13794',30,1,1,'select emitir_documento_firmado_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('13794',30,9,1,'select emitir_documento_firmado_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('13794',40,1,2,'Servicio de Firma 192.168.3.17',4013,109,106,0,0,50,50);
 
-insert into isys_querys_tx values ('13794',50,1,1,'select emitir_documento_firmado_resp_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('13794',50,9,1,'select emitir_documento_firmado_resp_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 --Publicamos el DTE
 insert into isys_querys_tx values ('13794',65,1,8,'Publica DTE',12704,0,0,0,0,70,70);
@@ -15,7 +15,7 @@ insert into isys_querys_tx values ('13794',65,1,8,'Publica DTE',12704,0,0,0,0,70
 insert into isys_querys_tx values ('13794',67,1,8,'Publica DTE',80103,0,0,0,0,70,70);
 
 --Validamos la publicacion
-insert into isys_querys_tx values ('13794',70,1,1,'select valida_publicacion_dte_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('13794',70,9,1,'select valida_publicacion_dte_13794(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 CREATE or replace FUNCTION emitir_documento_pivote_13794(json)
 RETURNS json AS $$
@@ -357,7 +357,7 @@ BEGIN
        -- razon_rec1:=escape_xml_characters_simple(substring(get_xml_hex1('RznSocRecep',xml_dte1),1,40));
 	razon_rec1:=escape_xml_characters_simple(substring(hex_2_ascii2(get_xml_hex('527a6e536f635265636570',xml_dte1)),1,35));
 
-        fecha1:=to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MM:SS');
+        fecha1:=to_char(now(),'YYYY-MM-DD')||'T'||to_char(now(),'HH24:MI:SS');
 
 	if get_json('FLAG_PRE_VISUALIZACION',json2)<>'SI' then
           ted1:='<DD><RE>' || rut1 || '-' || modulo11(rut1) || '</RE><TD>' || tipo_dte1 || '</TD><F>' || folio1 || '</F><FE>' || get_xml_hex1('FchEmis',xml_dte1) || '</FE><RR>'||get_xml_hex1('RUTRecep',xml_dte1)||'</RR><RSR>'||razon_rec1||'</RSR><MNT>'||get_xml_hex1('MntTotal',xml_dte1)||'</MNT><IT1>'||producto1||'</IT1>' || caf1 || '<TSTED>'||fecha1||'</TSTED></DD>';

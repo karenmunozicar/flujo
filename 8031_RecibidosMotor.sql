@@ -3,14 +3,14 @@ delete from isys_querys_tx where llave='8031';
 insert into isys_querys_tx values ('8031',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
 
 --XX insert into isys_querys_tx values ('8031',10,45,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
-insert into isys_querys_tx values ('8031',10,8021,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
+insert into isys_querys_tx values ('8031',10,1,1,'select ensobra_dte_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
 
 --Primero que hacemos el publicar DTE Recibido
 insert into isys_querys_tx values ('8031',40,1,8,'Publica DTE',112704,0,0,0,0,50,50);
 
 --Proceso el DTE REcibido
 --XX insert into isys_querys_tx values ('8031',50,45,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('8031',50,8021,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8031',50,1,1,'select verifica_publicacion_rec_8031(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --Genera Solicitud de CRT
 insert into isys_querys_tx values ('8031',60,19,1,'select genera_solicitud_crt_8031(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,1000);
@@ -20,7 +20,7 @@ insert into isys_querys_tx values ('8031',70,19,1,'select genera_solicitud_sii_8
 
 insert into isys_querys_tx values ('8031',1000,19,1,'select sp_procesa_respuesta_cola_motor88_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 -- XXinsert into isys_querys_tx values ('8031',1010,45,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
-insert into isys_querys_tx values ('8031',1010,8021,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('8031',1010,1,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,0,0);
 
 CREATE or replace FUNCTION verifica_publicacion_rec_8031(varchar) RETURNS varchar AS $$
 DECLARE
@@ -42,6 +42,11 @@ DECLARE
 	aux1	varchar;
 	port            varchar;
 	j3	json;
+	campo	record;
+	tipo1	integer;
+	folio1	bigint;
+	flag_asi	boolean;
+	flag_emi	boolean;
 BEGIN
     xml2:=xml1;
     xml2 := put_campo(xml2,'FLAG_NO_LIMPIA','SI');
@@ -51,13 +56,30 @@ BEGIN
     
     --Se guarda Evento RCP (Procesado por el receptor)
     rut1:=get_campo('RUT_EMISOR',xml2);
+    tipo1:=get_campo('TIPO_DTE',xml2)::integer;
+    folio1:=get_campo('FOLIO',xml2)::bigint;
+
     aux1:=(select email from contribuyentes where rut_emisor=rut1::integer);
     --perform logfile('F_8031 '||aux1||' '||rut1::varchar);
     xml2:=put_campo(xml2,'MAIL_EMISOR',aux1);
 
+    flag_emi:=false;
+    flag_asi:=false;
+    select * into campo from dte_recibidos where rut_emisor=rut1::integer and tipo_dte=tipo1 and folio=folio1::bigint;
+    if found then
+	if campo.uri=get_campo('URI_IN',xml2) then
+		flag_emi:=true;
+		if strpos(campo.estado_sii,'ACEPTADO')>0 then
+			flag_asi:=true;
+		end if;
+	end if;
+    end if;
+
     --Leemos antes de procesar, si el Recibido ya esta emitido
-    j3:=lee_traza_evento(get_campo('URI_IN',xml2),'EMI');
-    if get_json('status',j3)='SIN_DATA' then
+    --FAY-DAO Cambiamos el lee traza por un select al dte_recibidos
+    --j3:=lee_traza_evento(get_campo('URI_IN',xml2),'EMI');
+    --if get_json('status',j3)='SIN_DATA' then
+    if flag_emi is false then
 	     xml2 := proc_recibidos_fcgi_12703(xml2);
     	     xml2:=put_campo(xml2,'CERTIFICADO_X509','');
              xml2:=put_campo(xml2,'XML3','');
@@ -114,12 +136,14 @@ BEGIN
 		xml2 := put_campo(xml2,'__SECUENCIAOK__','60');
 		return xml2;
     	    end if;
+    /*
     --Si falla la lectura de la traza
     elsif (get_json('status',j3)<>'OK') then
-	xml2 := logapp(xml2,'Falla leer traza');
+	xml2 := logapp(xml2,'Falla leer traza j3='||j3::varchar);
 	xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
 	return xml2;
+    */
     else
 	--Si no viene INPUT... Lo sacamos DAO 20180507
 	if get_campo('INPUT',xml2)='' then
@@ -142,14 +166,17 @@ BEGIN
     end if;
 
     --Si no esta aprobado por el SII vamos 
-    j3:=lee_traza_evento(get_campo('URI_IN',xml2),'ASI');
-    if get_json('status',j3)='SIN_DATA' then
+    if flag_asi is false then
+    --j3:=lee_traza_evento(get_campo('URI_IN',xml2),'ASI');
+    --if get_json('status',j3)='SIN_DATA' then
     	xml2 := put_campo(xml2,'__SECUENCIAOK__','70');
+    /*
     --Si falla la lectura de la traza
     elsif (get_json('status',j3)<>'OK') then
 	xml2 := logapp(xml2,'Falla leer traza');
 	xml2:=put_campo(xml2,'RESPUESTA','Status: 400 NK');
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
+    */
     else
 	xml2 := logapp(xml2,'Ya existe evento ASI, voy directo al enviar el CRT');
 	xml2 := put_campo(xml2,'__SECUENCIAOK__','60');

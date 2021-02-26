@@ -69,7 +69,7 @@ BEGIN
      --verifico si el documento ya fue publicado en el almacen, em caso contrario no sigo procesando
     	if (get_json_upper('__PUBLICADO_OK__',json2)<>'SI') then
         	json2:=logjson(json2,'Falla la Publicacion en Almacen '||get_json_upper('URI_IN',json2));
-		json2:=response_requests_6000('2', 'Falla Lectura DTE del Almacen','', json2);
+		json2:=response_requests_6000('2', 'Falla Publicacion en Almacen','', json2);
 		return json2;
     	end if;
 
