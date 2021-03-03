@@ -75,7 +75,8 @@ BEGIN
 	
 	json_traza1:=get_campo('RESPUESTA_LEE_TRAZA',xml2);
 	xml2:=logapp(xml2,'json_traza1='||json_traza1::varchar);
-	json_traza1:=sort_list_json(json_traza1::varchar,'fecha_ingreso')::json;
+	--json_traza1:=sort_list_json(json_traza1::varchar,'fecha_ingreso')::json;
+	json_traza1:=sort_list_json(json_traza1::varchar,'fecha')::json;
 	xml2:=logapp(xml2,'json_traza1='||json_traza1::varchar);
 	--Buscamos el registro para armar el header
 	i:=0;

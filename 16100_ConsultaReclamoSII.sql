@@ -248,7 +248,7 @@ BEGIN
                 xml3:=put_campo(xml3,'CANAL','EMITIDOS');
                 xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
                 xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Glosa SII: Documento no ha sido recibido.'||chr(10)||'No se reintenta.'||chr(10)||'Consulta: '||get_campo('DIA_CONSULTA',xml2));
-                xml3:=graba_bitacora(xml3,'IRECLAMO');
+                xml3:=graba_bitacora_aws(xml3,'IRECLAMO');
                 xml2:=logapp(xml2,get_campo('_LOG_',xml3));
                 update dte_emitidos set fecha_ult_modificacion=now(),data_dte=actualiza_data_dte_16100(data_dte,get_campo('DIA_CONSULTA',xml2)) where codigo_txel=v_cod_txel::bigint and coalesce(estado_reclamo,'') in ('','SIN_RECLAMO_SII');
 
@@ -268,7 +268,7 @@ BEGIN
                 xml3:=put_campo(xml3,'CANAL','EMITIDOS');
                 xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
                 xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Glosa SII: '||ws_descResp::varchar||chr(10)||'Consulta: '||get_campo('DIA_CONSULTA',xml2));
-                xml3:=graba_bitacora(xml3,'SIN_RECLAMO_SII');
+                xml3:=graba_bitacora_aws(xml3,'SIN_RECLAMO_SII');
                 xml2:=logapp(xml2,get_campo('_LOG_',xml3));
 
                 update dte_emitidos set fecha_ult_modificacion=now(),estado_reclamo='SIN_RECLAMO_SII',fecha_reclamo=now(),mensaje_reclamo=ws_descResp,data_dte=actualiza_data_dte_16100(data_dte,get_campo('DIA_CONSULTA',xml2)) where codigo_txel=v_cod_txel::bigint and coalesce(estado_reclamo,'') in ('','SIN_RECLAMO_SII');
@@ -290,7 +290,7 @@ BEGIN
                 xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
                 --xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Consulta Reclamos: '||ws_descResp::varchar);
                 xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Glosa SII: '||ws_descResp::varchar||chr(10)||'Consulta: '||get_campo('DIA_CONSULTA',xml2));
-                xml3:=graba_bitacora(xml3,'SIN_PERMISOS_SII');
+                xml3:=graba_bitacora_aws(xml3,'SIN_PERMISOS_SII');
                 xml2:=logapp(xml2,get_campo('_LOG_',xml3));
 
                 update dte_emitidos set fecha_ult_modificacion=now(),estado_reclamo='SIN_PERMISOS_SII',fecha_reclamo=now(),mensaje_reclamo=ws_descResp,data_dte=actualiza_data_dte_16100(data_dte,get_campo('DIA_CONSULTA',xml2)) where codigo_txel=v_cod_txel::bigint and coalesce(estado_reclamo,'') in ('','SIN_PERMISOS_SII');
@@ -380,7 +380,7 @@ BEGIN
                                 xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
                                 --xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Glosa SII: '||ws_descEvento::varchar);
                 		xml3:=put_campo(xml3,'COMENTARIO_TRAZA','Glosa SII: '||ws_descEvento::varchar||chr(10)||'Fecha SII:'||to_timestamp(te_fecha,'DD-MM-YYYY HH24:MI:SS')::varchar||chr(10)||'Consulta: '||get_campo('DIA_CONSULTA',xml2));
-                                xml3:=graba_bitacora(xml3,evento1);
+                                xml3:=graba_bitacora_aws(xml3,evento1);
                                 xml2:=logapp(xml2,get_campo('_LOG_',xml3));
                                	xml2 :=put_campo(xml2,'RESPUESTA','Status: 200 OK');
                         else

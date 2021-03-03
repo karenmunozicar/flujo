@@ -34,7 +34,6 @@ declare
         cod1    varchar;
         v_iva_pantalla            varchar;
         v_catalogo_propio_inversion  varchar;
-    v_json_log                varchar;
 begin
     json2:=json1;
     v_codigo_dv:=coalesce(get_json('codigo_dv', json2), '0');
@@ -124,18 +123,12 @@ begin
 
     -- FGE - 20210224 - Agregamos el estado GENERANDO para controlar la multiple generacion con doble click.
     if v_reg_devengo.estado in( 'EN_PROCESO' , 'FINALIZADO_SIN_ERRORES','FINALIZADO_CON_ERRORES','MANUAL_SIGFE', 'GENERANDO' ) then
-        select respuesta into v_json_log from dp_medicion_servicios where devengo = v_codigo_dv::varchar order by fecha desc limit 1;
-        if found then
-            if get_json('codigo', v_json_log::json) <> '' then
-                update dp_devengo set ticket_id = get_json('codigo', v_json_log::json), estado = 'EN_PROCESO' where codigo_dv = v_codigo_dv::bigint;
-                json2:=response_requests_6000('1', 'Enviado: TrackID - ' || get_json('codigo', v_json_log::json) || ', Descripción: ' || get_json('descripcion', v_json_log::json), '', json2);
-            else
-                json2:=response_requests_6000('2', 'El Devengo ya fue generado anteriormente', '', json2);
-            end if;
-        end if;
+        json2:=response_requests_6000('2', 'El Devengo ya fue generado anteriormente', '', json2);
         return json2;
     else
+        -- Si está completo entonces marco el devengo como NO_ENVIADO
        perform dp_act_estado_devengo(v_reg_devengo.codigo_dv, 'GENERANDO', '');
+       --update dp_devengo set estado = 'NO_ENVIADO' where codigo_dv = v_reg_devengo.codigo_dv;
     end if;
 
     -- Info del devengo
@@ -659,7 +652,6 @@ begin
     return json2;
 end;
 $function$ language plpgsql;
-
 
 
 

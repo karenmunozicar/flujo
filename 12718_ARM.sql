@@ -416,7 +416,7 @@ BEGIN
         end if;
 
         xml2 := put_campo(xml2,'ESTADO','ENVIADO_EDTE');
-        xml2 := graba_bitacora(xml2,'ENVIADO_AML');
+        --xml2 := graba_bitacora(xml2,'ENVIADO_AML');
         xml2 := logapp(xml2,'ARM: FOLIO='||get_campo('FOLIO',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2)||' ARM URI_DTE='||get_campo('URI_DTE',xml2));
 
         --Saco los datos que requiero de la respuesta
@@ -430,7 +430,7 @@ BEGIN
     else
 
         xml2 := logapp(xml2,'ARM: FOLIO='||get_campo('FOLIO',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2)||' TIPO_DTE='||get_campo('TIPO_DTE',xml2)||' Falla ARM URI_DTE='||get_campo('URI_DTE',xml2));
-        xml2 := put_campo(xml2,'ESTADO','ERROR_AML');
+        --xml2 := put_campo(xml2,'ESTADO','ERROR_AML');
         xml2 := logapp(xml2,resp1);
 	--Si falla el AML, lo guardamos en una tabla y lo sacamos de la cola porque tiene la caga
 	--insert into cola_rechazo_arm (fecha,xml_in) values (now(),xml2);

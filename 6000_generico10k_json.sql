@@ -169,6 +169,9 @@ insert into isys_querys_tx values ('6000',501,30,1,'select $$FUNCION_INPUT$$(''$
 insert into isys_querys_tx values ('6000',551,34,1,'select pivote_webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,553,553);
 insert into isys_querys_tx values ('6000',553,1,1,'select salida_webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 
+insert into isys_querys_tx values ('6000',700,1913,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('6000',710,1914,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
+
 -- OC 20190509
 insert into isys_querys_tx values ('6000',15300,1,8,'Llama Flujo 15300',15300,0,0,1,1,0,0);
 
@@ -676,6 +679,18 @@ BEGIN
 	if (stSec.base_datos='BASE_SEND_MAIL') then
 		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_FINANCIAMIENTO');
 		json2:=put_json(json2,'__SECUENCIAOK__','501');
+		return json2;
+	end if;
+	--COLASM13
+	if (stSec.base_datos='BASE_COLAS_MOTOR13') then
+		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_COLAS_MOTOR13');
+		json2:=put_json(json2,'__SECUENCIAOK__','700');
+		return json2;
+	end if;
+	--COLASM14
+	if (stSec.base_datos='BASE_COLAS_MOTOR14') then
+		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_COLAS_MOTOR14');
+		json2:=put_json(json2,'__SECUENCIAOK__','710');
 		return json2;
 	end if;
 

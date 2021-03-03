@@ -8,7 +8,7 @@ insert into isys_querys_tx values ('8050',10,19,1,'select ensobra_crt_8050(''$$_
 insert into isys_querys_tx values ('8050',40,1,8,'Publica DTE',112704,0,0,0,0,50,50);
 
 --Proceso el CRT
-insert into isys_querys_tx values ('8050',50,19,1,'select verifica_publicacion_crt_8050(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('8050',50,1,1,'select verifica_publicacion_crt_8050(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 insert into isys_querys_tx values ('8050',60,19,1,'select envio_correo_op_venta_8050(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
@@ -59,7 +59,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE or replace FUNCTION graba_bitacora_8050(varchar) RETURNS varchar AS $$
+CREATE or replace FUNCTION verifica_publicacion_crt_8050(varchar) RETURNS varchar AS $$
 DECLARE
         xml1        alias for $1;
         xml2    varchar;
@@ -82,22 +82,46 @@ DECLARE
 	mail1	varchar;
 BEGIN
     xml2:=xml1;
-        categoria1:=get_campo('CATEGORIA_MAIL',xml2);
-        xml2:=logapp(xml2,'Se procesa detalle '||categoria1);
-        html1:='';
-	json_aux:=get_campo('DETALLE_DOC_CRT',xml2)::json;
+    xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
+    if (get_campo('__PUBLICADO_OK__',xml2)<>'SI') then
+    	xml2:=logapp(xml2,'Falla la Publicacion CRT en Almacen '||get_campo('URI_IN',xml2));
+    	xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
+	return xml2;
+    end if;
+
+    --Recorremos el detalle del CRT para grabar los respectivos eventos...
+    detalle_crt:=get_campo('DETALLE',xml2);
+    BEGIN
+	json_detalle1:=detalle_crt::json;	
+    EXCEPTION WHEN OTHERS THEN
+	xml2:=logapp(xml2,'Detalle CRT no es un json valido '||get_campo('URI_IN',xml2));
+    	xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
+        return xml2;
+    END;
+
+    categoria1:=get_campo('CATEGORIA_MAIL',xml2);
+    xml2:=logapp(xml2,'Se procesa detalle '||categoria1);
+    html1:='';
+    i:=0;
+    aux:=get_json_index(json_detalle1,i);
+    while(aux<>'') loop
+	json_aux:=aux::json;
 	rut_emisor1:=split_part(get_json('RUT_EMISOR',json_aux),'-',1);
 	tipo1:=get_json('TIPO_DTE',json_aux);
 	folio1:=get_json('FOLIO',json_aux);
     	xml2:=logapp(xml2,'Procesa '||i::varchar||' '||rut_emisor1||' '||tipo1||' '||folio1);
 	if(is_number(rut_emisor1) is false or is_number(tipo1) is false or is_number(folio1) is false) then
 		xml2:=logapp(xml2,'Datos no numericos... rut_emisor1='||rut_emisor1||' tipo1='||tipo1||' folio1='||folio1);
-		return xml2;
+		i:=i+1;
+		aux:=get_json_index(json_detalle1,i);
+		continue;
 	end if;
 	select * into campo from dte_emitidos where rut_emisor=rut_emisor1::bigint and tipo_dte=tipo1::integer and folio=folio1::bigint;
 	if not found then
 		xml2:=logapp(xml2,'No se encuentra DTE en dte_emitidos... rut_emisor1='||rut_emisor1||' tipo1='||tipo1||' folio1='||folio1);
-		return xml2;
+		i:=i+1;
+		aux:=get_json_index(json_detalle1,i);
+		continue;
 	else
 		xml2:=logapp(xml2,'Se encuentra DTE emitido con URI='||campo.uri||' para '||categoria1);
 	end if;
@@ -144,72 +168,6 @@ BEGIN
 	end if;
 	xml3:=graba_bitacora_aws(xml3,get_campo('EVENTO',xml3));
 	xml2:=logapp(xml2,get_campo('_LOG_',xml3));
-	
-	return xml2;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE or replace FUNCTION verifica_publicacion_crt_8050(varchar) RETURNS varchar AS $$
-DECLARE
-        xml1        alias for $1;
-        xml2    varchar;
-	json_detalle1	json;
-	detalle_crt	varchar;
-	aux1	varchar;
-	json_aux	json;
-	xml3 	varchar;
-	xml7 	varchar;
-	id1	bigint;
-	campo 	record;	
-	tipo1	varchar;
-	folio1	varchar;
-	rut_emisor1	varchar;
-	rut_receptor1	varchar;
-	i	integer;
-	aux	varchar;
-	categoria1	varchar;
-	html1		varchar;
-        patron_html1     varchar;
-	json3	json;
-	mail1	varchar;
-BEGIN
-    xml2:=xml1;
-    xml2 := put_campo(xml2,'__SECUENCIAOK__','1000');
-    if (get_campo('__PUBLICADO_OK__',xml2)<>'SI') then
-    	xml2:=logapp(xml2,'Falla la Publicacion CRT en Almacen '||get_campo('URI_IN',xml2));
-    	xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
-	return xml2;
-    end if;
-
-    --Recorremos el detalle del CRT para grabar los respectivos eventos...
-    detalle_crt:=get_campo('DETALLE',xml2);
-    BEGIN
-	json_detalle1:=detalle_crt::json;	
-    EXCEPTION WHEN OTHERS THEN
-	xml2:=logapp(xml2,'Detalle CRT no es un json valido '||get_campo('URI_IN',xml2));
-    	xml2 := put_campo(xml2,'RESPUESTA','Status: 400 NK');
-        return xml2;
-    END;
-
-    categoria1:=get_campo('CATEGORIA_MAIL',xml2);
-    xml2:=logapp(xml2,'Se procesa detalle '||categoria1);
-    html1:='';
-    i:=0;
-    aux:=get_json_index(json_detalle1,i);
-    while(aux<>'') loop
-	xml3:='';
-	xml3:=put_campo(xml3,'CATEGORIA_MAIL',categoria1);
-	xml3:=put_campo(xml3,'URI_IN',get_campo('URI_IN',xml2));
-	xml3:=put_campo(xml3,'DETALLE_DOC_CRT',aux::varchar);
-
-	--Grabamos en en las colas para q ejecute 8060 yendo a motor por cada registro
-	xml7:=put_campo('','TX','8060');
-        xml7:=put_campo(xml7,'CATEGORIA','MOTOR');
-        xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_8050');
-        xml7:=put_campo(xml7,'URI_IN',get_campo('URI_IN',xml2));
-        xml7:=put_campo(xml7,'QUERY',encode_hex('select graba_bitacora_8050('||quote_literal(xml3)||')'));
-        execute 'insert into cola_motor_10 (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values ( now(),'||quote_literal(get_campo('URI_IN',xml2))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ACT_REMOTO'') returning id' into id1;
-	xml2:=logapp(xml2,'Encolo GRABA_BITACORA_8050 ID='||id1::varchar);
 	
 	i:=i+1;
 	aux:=get_json_index(json_detalle1,i);

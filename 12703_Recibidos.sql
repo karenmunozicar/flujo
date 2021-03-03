@@ -240,12 +240,14 @@ BEGIN
 		if (get_campo('FLAG_DTE_RECIBIDO_GRABADO_OK',xml2)='SI') then
 			--Guardo los eventos en traza
 			xml2:= put_campo(xml2,'COMENTARIO_TRAZA','');
-			xml2 := graba_bitacora(xml2,'INGRESADO');
+			--xml2 := graba_bitacora(xml2,'INGRESADO');
 			xml2:= put_campo(xml2,'FECHA_EVENTO',get_campo('FECHA_FIRMA',xml2));
-			xml2 := graba_bitacora(xml2,'FRM');
+			--FAY-DAO 20210301 grabamos hacia aws
+    			xml2 := graba_bitacora_aws(xml2,'FRM');
 		
 			xml2:= put_campo(xml2,'FECHA_EVENTO',now()::varchar);
-			xml2 := graba_bitacora(xml2,'EMI');
+			--FAY-DAO 20210301 grabamos hacia aws
+			xml2 := graba_bitacora_aws(xml2,'EMI');
 
 			-- Se revisa si el dte esta en tabla pendientes del reporte consolidado
 			xml2 := revisa_pendientes(xml2); 	

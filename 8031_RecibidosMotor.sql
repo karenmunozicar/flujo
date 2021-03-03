@@ -121,7 +121,7 @@ BEGIN
 
 	    --Guardo en la traza el sobre de envio
 	    xml2:=put_campo(xml2,'COMENTARIO_TRAZA',get_campo('eml',xml2));
-	    xml2:=graba_bitacora(xml2,'SOBRE_ENVIO');
+	    xml2:=graba_bitacora_aws(xml2,'SOBRE_ENVIO');
 		
 
 	    --Antes de ir al sii verificamos que no haya estado en el reporte consolidado..

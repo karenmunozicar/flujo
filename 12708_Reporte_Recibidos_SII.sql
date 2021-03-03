@@ -188,7 +188,8 @@ BEGIN
 		END;
 		xml3:=put_campo(xml3,'ID_PENDIENTE',id_pend1::varchar);
         	xml3:=put_campo(xml3,'EVENTO','DNR');
-		xml3:=graba_bitacora(xml3,'DNR');
+		--FAY-DAO 20210301 grabamos el evento hacia aws
+		xml3:=graba_bitacora_aws(xml3,'DNR');
 		xml2:=logapp(xml2,get_campo('_LOG_',xml3));
 		perform logfile_rc('Graba Evento DNR URI='||uri1);
 		

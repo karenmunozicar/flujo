@@ -11,7 +11,7 @@ insert into isys_querys_tx values ('112704',7,1,14,'{"f":"IGUAL","p1":"$$FLAG_FI
 --Si el archivo existia insertamos el flag de publicado OK
 insert into isys_querys_tx values ('112704',8,1,14,'{"f":"INSERTA_JSON","p1":{"__PUBLICADO_OK__":"SI"}}',0,0,0,0,0,9,9);
 --LOG y nos vamos del flujo si existia el archivo..
-insert into isys_querys_tx values ('112704',9,1,16,'["URI_IN","FLAG_FILE_CUS","__PUBLICADO_OK__","LEN_FILE","RUTA","__CATEGORIA_COLA__"]',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('112704',9,1,16,'["URI_IN","FLAG_FILE_CUS","__PUBLICADO_OK__","LEN_FILE","RUTA"]',0,0,0,1,1,0,0);
 
 --Preguntamos por donde nos vamos, solo boletas por ahora sin pasar por la traza
 insert into isys_querys_tx values ('112704',10,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"BOLETA"}',0,0,0,0,0,11,100);
@@ -19,15 +19,14 @@ insert into isys_querys_tx values ('112704',10,1,14,'{"f":"IGUAL","p1":"$$__CATE
 insert into isys_querys_tx values ('112704',100,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"DTE"}',0,0,0,0,0,11,101);
 insert into isys_querys_tx values ('112704',101,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"DTE_NORMAL"}',0,0,0,0,0,11,102);
 insert into isys_querys_tx values ('112704',102,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"CRT_MOTOR"}',0,0,0,0,0,11,103);
-insert into isys_querys_tx values ('112704',103,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"ENVIO_CRT"}',0,0,0,0,0,11,104);
-insert into isys_querys_tx values ('112704',104,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"EMISION_12794"}',0,0,0,0,0,11,12);
+insert into isys_querys_tx values ('112704',103,1,14,'{"f":"IGUAL","p1":"$$__CATEGORIA_COLA__$$","p2":"ENVIO_CRT"}',0,0,0,0,0,11,12);
 
 --Si no esta publicado vamos a publicar la Boleta (Sin traza)
 insert into isys_querys_tx values ('112704',11,19,1,'select proc_consulta_publicacion_112704_colas(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 --Si no existia hacemos lo mismo por ahora
 --Consultamos en la base de traza si el DTE ya esta publicado
-insert into isys_querys_tx values ('112704',12,8021,1,'select proc_consulta_publicacion_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###__PUBLICADO_OK__[]=$$__PUBLICADO_OK__$$###'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',12,8021,1,'select proc_consulta_publicacion_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###'') as __xml__',0,0,0,1,1,-1,0);
 
 --20200110 proxy en Amazon
 --Traza 2014
@@ -45,7 +44,7 @@ insert into isys_querys_tx values ('112704',2019,49,1,'select proxy_traza_amazon
 --Traza 2020
 insert into isys_querys_tx values ('112704',2020,50,1,'select proxy_traza_amazon_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###URI_IN[]=$$URI_IN$$###TABLA_TRAZA[]=$$TABLA_TRAZA$$###'') as __xml__',0,0,0,1,1,-1,0);
 
-insert into isys_querys_tx values ('112704',20,8021,1,'select proc_consulta_publicacion_112704_2(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###__PUBLICADO_OK__[]=$$__PUBLICADO_OK__$$###'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',20,8021,1,'select proc_consulta_publicacion_112704_2(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###REQUEST_METHOD[]=$$REQUEST_METHOD$$###HTTP_USER_AGENT[]=$$HTTP_USER_AGENT$$###QUERY_STRING[]=$$$QUERY_STRING$$###URI_IN[]=$$URI_IN$$###RUT_EMISOR[]=$$RUT_EMISOR$$###TIPO_DTE[]=$$TIPO_DTE$$###FOLIO[]=$$FOLIO$$###MONTO_TOTAL[]=$$MONTO_TOTAL$$###SCRIPT_NAME[]=$$SCRIPT_NAME$$###CONTENIDO[]=$$CONTENIDO$$###XML_FLAGS[]=$$XML_FLAGS$$###__FLAG_PUB_10K__[]=$$__FLAG_PUB_10K__$$###GRABA_PUB_8010[]=$$GRABA_PUB_8010$$###'') as __xml__',0,0,0,1,1,-1,0);
 
 --Sacamos el XML del DTE Emitido en caso de ser necesario
 --insert into isys_querys_tx values ('112704',20,1,8,'GET XML desde Almacen',12705,0,0,1,1,40,40);
@@ -61,8 +60,7 @@ insert into isys_querys_tx values ('112704',56,1,2,'Llamada a Escribir en Almace
 --Se eejecuta en la base de colas
 insert into isys_querys_tx values ('112704',66,19,1,'select proc_respuesta_almacen_112704_3(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 --Se eejecuta en la base principal
---FAY-DAO 20210226, grabamos el evento hacia aws insert into isys_querys_tx values ('112704',70,8021,1,'select graba_estado_publicacion_traza_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###$$XML3$$'') as __xml__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('112704',70,19,1,'select graba_estado_publicacion_traza_112704_colas(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###$$XML3$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('112704',70,8021,1,'select graba_estado_publicacion_traza_112704(''__FLUJO_ACTUAL__[]=$$__FLUJO_ACTUAL__$$###$$XML3$$'') as __xml__',0,0,0,1,1,-1,0);
 
 
 CREATE or replace FUNCTION pre_emision_controller_112704(varchar) RETURNS varchar AS $$
@@ -257,10 +255,50 @@ BEGIN
 
     --FAY 2015-03-26 Solo para EMITIDOS
     if (strpos(uri1,'?k=')>0) then
-	    if get_campo('__PUBLICADO_OK__',xml2)='SI' then
-                xml2 := logapp(xml2,'Uri '||uri1||' ya publicado* __PUBLICADO_OK__ por Archivo');
-		return xml2;
-	    end if;
+	    fecha1:=get_fecha_uri(uri1);
+	    --Verifico sie debo buscar en trazas antiguas
+            tabla_traza1:=get_tabla_traza(uri1);
+	    select * into campo from config_tabla_traza where periodo_desde<=fecha1::integer and periodo_hasta>=fecha1::integer;
+	    --Si debo hacer lo mismo
+	    if (found and campo.parametro is null) then
+		   if get_campo('FLAG_FILE_CUS',xml2)='NO' then
+			xml2 := logapp(xml2,'Uri '||uri1||' no se lee la traza');
+		   else
+ 	            --Si ya tiene el evento PUB en traza, no se publica
+	            begin
+        	       execute 'select * from '||tabla_traza1||' where uri=$1 and evento=''PUB''' into stTraza using uri1;
+	               --Si no esta el evento..
+        	       if stTraza.uri is not null then
+                	        xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+                        	xml2 := logapp(xml2,'Uri '||uri1||' ya publicado');
+	                        return xml2;
+        	       end if;
+	            exception WHEN OTHERS THEN
+        	       select * into stTraza from traza.traza where uri=uri1 and evento='PUB';
+	               if found then
+        	                --Si no esta el evento PUB vamos a publicar
+                        	xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+                	        xml2 := logapp(xml2,'Uri '||uri1||' ya publicado*');
+                        	return xml2;
+	               end if;
+        	    end;
+		   end if;
+	     --Si es de una traza antigua >=2014
+	     elsif is_number(split_part(campo.parametro,'_',2)) then
+		xml2:=put_campo(xml2,'TABLA_TRAZA',tabla_traza1);
+		xml2:=put_campo(xml2,'__SECUENCIAOK__',split_part(campo.parametro,'_',2));
+		xml2 := logapp(xml2,'URI='||uri1||' Valida proxy en Amazon');
+		return xml2;	
+	     else
+		xml2 := logapp(xml2,'lee_traza_evento');
+		json_aux1:=lee_traza_evento(uri1,'PUB');
+                if (get_json('status',json_aux1)='OK') then
+                --if (json_aux1::varchar<>'{}') then
+                       xml2 := put_campo(xml2,'__PUBLICADO_OK__','SI');
+                       xml2 := logapp(xml2,'Uri '||uri1||' ya publicado');
+                       return xml2;
+                end if;
+	     end if;
     end if;
 
     return proc_consulta_publicacion_112704_2(xml2);
@@ -827,7 +865,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE or replace FUNCTION graba_estado_publicacion_traza_112704_colas(varchar) RETURNS varchar AS $$
+CREATE or replace FUNCTION graba_estado_publicacion_traza_112704(varchar) RETURNS varchar AS $$
 DECLARE
     xml1        alias for $1;
     xml2        varchar;
@@ -852,14 +890,13 @@ BEGIN
 		 xml2:=put_campo(xml2,'CANAL','EMITIDOS');
 		xml2:=put_campo(xml2,'RUT_OWNER',get_campo('RUT_EMISOR',xml2));
 	end if;
-	xml2:=put_campo(xml2,'FECHA_EVENTO',now()::varchar);
-	xml2 := graba_bitacora_aws_colas(xml2,'PUB');
+	xml2 := graba_bitacora(xml2,'PUB');
         --Para no perder los datos del XML2 solo contestamos lo que se necesita saber
 	xml3:='';	
         xml3 := put_campo(xml3,'__PUBLICADO_OK__','SI');
         xml3 := put_campo(xml3,'_LOG_',get_campo('_LOG_',xml2));
 	--Se necesita devolver la fecha para grabar en cuadratura antigua
-	xml3 := put_campo(xml3,'FECHA_EVENTO_PUB',now()::varchar);
+	xml3 := put_campo(xml3,'FECHA_EVENTO_PUB',get_campo('FECHA_EVENTO_PUB',xml2));
         return xml3;
 END;
 $$ LANGUAGE plpgsql;

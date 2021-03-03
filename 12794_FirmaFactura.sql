@@ -1130,6 +1130,8 @@ BEGIN
                         json2:=put_json(json2,'__SECUENCIAOK__','67');
 			--Si viene por las colas lo mandamos al 8010 normal (No api web)
 			if is_number(get_json('__ID_DTE__',json2)) then
+				--20210226 limpiamos el formEmitirdocumento que ya cumplio su proposito
+				json2:=put_json(json2,'formEmitirdocumento','');
                         	json2:=put_json(json2,'__SECUENCIAOK__','68');
 			end if;
                         json2:=put_json(json2,'RESPUESTA','');
@@ -1144,6 +1146,7 @@ BEGIN
 				resp1:='Servicio Firma Electronica no responde.<br>Reintente más tarde.';
 			   end if;
                         json2:=response_requests_6000_upper_12794('2', resp1, '',json2);
+			json2:=put_json(json2,'MENSAJE_XML_FLAGS',resp1);
                         insert into log_firma_10k_hsm (fecha,rut_firma,estado,respuesta,doc_firmado,uri) values (now(),get_json_upper('rut_firma',json2),'FALLA',resp1,'DTE',get_json_upper('URI_IN',json2));
                         json2:=bitacora10k(json2,'EMITIR','Firma Falla');
                 end if;
@@ -1162,6 +1165,7 @@ BEGIN
                    	json2:=response_requests_6000_upper_12794('2', resp1, '',json2);
 		   else
                    	json2:=response_requests_6000_upper_12794('2', resp1, '',json2);
+		   	json2:=put_json(json2,'MENSAJE_XML_FLAGS',resp1||' rut '||get_json('rut_firma',json2)||'-'||modulo11(get_json('rut_firma',json2))||' ');
 		   end if;
                    --resp1:='Error: '||split_part(split_part(resp1,'<faultstring>com.acepta.custodiafirma.servicios.ServicioFirmaXMLException:',2),'</faultstring>',1);
                    insert into log_firma_10k_hsm (fecha,rut_firma,estado,respuesta,doc_firmado,uri) values (now(),get_json_upper('rut_firma',json2),'FALLA',resp1,'DTE',get_json_upper('URI_IN',json2));

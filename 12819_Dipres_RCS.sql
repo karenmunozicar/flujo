@@ -101,7 +101,7 @@ begin
        
 	--if (get_campo('__GRABA_TRAZA__',v_campo.xml2) in ('SI','SOLO_OK','')) then
 		--json2 := logjson(json2,'----- FGE - traza: ' || xml2);
-		xml2 := graba_bitacora(xml2,'CONTROLLER');
+		xml2 := graba_bitacora_aws(xml2,'CONTROLLER');
 	--end if;
 
         v_uuid:=uuid_in(md5(random()::text || clock_timestamp()::text)::cstring)::varchar;
@@ -205,7 +205,7 @@ begin
         xml3:=put_campo(xml3,'EVENTO','CONTROLLER');
         xml3:=put_campo(xml3,'COMENTARIO_TRAZA','<b>RESPUESTA RCS</b><br><li>' || get_json('mensaje', v_respuesta::json) || '</li><b>');
         xml3:=put_campo(xml3,'COMENTARIO2','Aplica Regla RCS');
-	xml3:=graba_bitacora(xml3,'CONTROLLER');
+	xml3:=graba_bitacora_aws(xml3,'CONTROLLER');
     else
         --perform mp_ingresa_oc(v_respuesta::json);
 	v_resp_oc:=mp_ingresa_oc(v_respuesta::json);

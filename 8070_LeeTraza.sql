@@ -123,8 +123,12 @@ BEGIN
 	--Ya q la base rds cambia el timestamp y le pone una "T", casteamos a varchar lass fechas
 	query1:=replace(query1,'select * from ','select fecha::varchar,folio,tipo_dte,rut_emisor,rut_receptor,canal,evento,uri,comentario1,comentario2,url_get,codigo_txel,veces,fecha_actualizacion::varchar,fecha_emision::varchar,fecha_ingreso::varchar,fecha_despacho_erp::varchar,comentario_erp from ');
 	json2:=put_json(json2,'QUERY_DATA',query1);
+	--Para ciertos eventos q solo queremos leer en aws. Ej: EMA
+	if get_json('SOLO_TRAZA_AWS',json2)='SI' then
+		json2:=logjson(json2,'QUERY='||query1);
+		json2:=put_json(json2,'__SECUENCIAOK__','2021');
 	--Si es local...
-	if campo.parametro is null then
+	elsif campo.parametro is null then
 		json2:=logjson(json2,'QUERY='||query1);
 		json2:=put_json(json2,'__SECUENCIAOK__','4000');
 	else

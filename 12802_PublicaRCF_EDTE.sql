@@ -34,6 +34,8 @@ stTraza	traza.traza%ROWTYPE;
 	dia1	integer;
 	digest1	varchar;
 	input1	varchar;
+	jmontos	json;
+	xml_aux1	varchar;
 BEGIN
     xml2:=xml1; 
     xml2:=put_campo(xml2,'__SECUENCIAOK__','0');
@@ -56,8 +58,22 @@ BEGIN
 	digest1:=get_xml('DigestValue',input1);
         uri1:=get_campo('URI_IN',xml2);
 
+	jmontos:='{}';
+	--39
+	xml_aux1:=split_part(split_part(input1,'<TipoDocumento>39</TipoDocumento>',2),'</Resumen>',1);	
+	jmontos:=put_json(jmontos,'monto_total_39',coalesce(nullif(get_xml('MntTotal',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_iva_39',coalesce(nullif(get_xml('MntIva',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_neto_39',coalesce(nullif(get_xml('MntNeto',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_exento_39',coalesce(nullif(get_xml('MntExento',xml_aux1),''),'0'));
+	--41
+	xml_aux1:=split_part(split_part(input1,'<TipoDocumento>41</TipoDocumento>',2),'</Resumen>',1);	
+	jmontos:=put_json(jmontos,'monto_total_41',coalesce(nullif(get_xml('MntTotal',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_iva_41',coalesce(nullif(get_xml('MntIva',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_neto_41',coalesce(nullif(get_xml('MntNeto',xml_aux1),''),'0'));
+	jmontos:=put_json(jmontos,'monto_exento_41',coalesce(nullif(get_xml('MntExento',xml_aux1),''),'0'));
+
 	--Insertamos
-	insert into rcf_data (rut_emisor,dia_emision,uri,fecha_ingreso,dia,digest,secuencial) values (rut_emisor1::bigint,dia_emision1,uri1,fecha_ingreso1,dia1,digest1,coalesce(nullif(get_xml('SecEnvio',input1),''),'1')::integer);
+	insert into rcf_data (rut_emisor,dia_emision,uri,fecha_ingreso,dia,digest,secuencial,montos) values (rut_emisor1::bigint,dia_emision1,uri1,fecha_ingreso1,dia1,digest1,coalesce(nullif(get_xml('SecEnvio',input1),''),'1')::integer,jmontos);
 	--FAY-DAO 2020-02-27 ya no se necesita grabar en uri_key2
 	--insert into uri_key2 (fecha,uri,key,canal) values (now(),uri1,digest1,'E');
 
@@ -67,7 +83,7 @@ BEGIN
 	xml2:=put_campo(xml2,'FOLIO',dia_emision1::varchar);
 	xml2:=put_campo(xml2,'RUT_RECEPTOR','66666666');
 	xml2:=put_campo(xml2,'EVENTO','FRM');
-	xml2 := graba_bitacora(xml2,'FRM');
+	xml2 := graba_bitacora_aws(xml2,'FRM');
 
 
     --Si es un get salgo altiro
@@ -192,16 +208,16 @@ BEGIN
 	if (sts1='FILE_YA_EXISTE') then
 		xml2 := logapp(xml2,'EDTE AERCF:File ya existe en EDTE');	
     		xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','OK');
-		xml2 := graba_bitacora(xml2,'ENVIADO_EDTE_AERCF');
+		xml2 := graba_bitacora_aws(xml2,'ENVIADO_EDTE_AERCF');
 	--	codigo1:=get_campo('CODIGO_TXEL_IECV',xml2);
 	elsif (sts1='OK') then
                 xml2 := logapp(xml2,'EDTE:OK Escritos '||get_campo('_STS_FILE_BYTES_WRITTEN_',xml2)||' ContentLength:'||get_campo('CONTENT_LENGTH',xml2)||' Largo Data:'||get_campo('LEN_INPUT_CUSTODIUM',xml2));
     		xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','OK');
-		xml2 := graba_bitacora(xml2,'ENVIADO_EDTE_AERCF');
+		xml2 := graba_bitacora_aws(xml2,'ENVIADO_EDTE_AERCF');
 	else
                 xml2 := logapp(xml2,'EDTE AERCF:Falla EDTE Directo '||get_campo('_STS_FILE_',xml2));
     		xml2 := put_campo(xml2,'__EDTE_AERCF_OK__','NK');
-		xml2 := graba_bitacora(xml2,'FALLA_ENVIADO_EDTE_AERCF');
+		xml2 := graba_bitacora_aws(xml2,'FALLA_ENVIADO_EDTE_AERCF');
         end if;
         xml2 := put_campo(xml2,'_STS_FILE_','');
 

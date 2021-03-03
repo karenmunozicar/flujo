@@ -688,7 +688,11 @@ BEGIN
 		v_tipo_dte_com:=(select '('||string_agg(quote_literal(codigo),',')||')' from detalle_parametros where id_parametro = 31 and codigo not in ('39','41'));
 		--v_tipo_dte:=(select '('||string_agg(codigo,',')||')' from detalle_parametros where id_parametro = 31 );
 		--v_tipo_dte_com:=(select '('||string_agg(quote_literal(codigo),',')||')' from detalle_parametros where id_parametro = 31 );
-
+	elsif (vin_tipo_dte='BOLETA') then
+                flag_boleta1:='SI';
+                v_tipo_dte:='(39,41)';
+                v_tipo_dte_com:='(''39'',''41'')';
+                v_parametro_tipo_dte:=' and tipo_dte in (''39'', ''41'')';
 	elsif(get_json('LISTA_TIPO_BOLETA',json2)<>'') then
                 flag_boleta1:='SI';
                 v_tipo_dte:='('||get_json('LISTA_TIPO_BOLETA',json2)||')';
@@ -778,7 +782,12 @@ BEGIN
 					v_estado:='estado_inter='||quote_literal(v_in_evento)||' and ';
 				else
 					if(get_json('TIPO_DTE',json2)<>'801') then
-						v_estado:='estado_sii='||quote_literal(v_in_evento)||' and ';
+						if get_json('TIPO_DTE',json2) not in ('39','41','BOLETA') then
+                                  			v_estado:='estado_sii='||quote_literal(v_in_evento)||' and ';
+                         			else
+                                  			v_estado:='(estado_sii='||quote_literal(v_in_evento)||' or split_part(split_part(data_dte,''ESTADO_BOLETA>'',2),''<'',1)='||quote_literal(v_in_evento)||' ) and ';
+                         			end if;
+						--v_estado:='estado_sii='||quote_literal(v_in_evento)||' and ';
 					else
                                                 v_estado:='estado='||quote_literal(stEstadoDte.descripcion)||' and ';
                                                 flag_cuenta_estado:=true;

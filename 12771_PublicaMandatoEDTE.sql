@@ -82,6 +82,9 @@ BEGIN
 	else
 		if(get_json('__FLAG_PUB_10K__',json2)<>'SI' and get_json('__FLAG_REENVIO_MANDATO__',json2)<>'SI') then
 			json2:=logjson(json2,'Vamos a leer la traza para el proxy');
+			--Solo EMA
+			json2:=put_json(json2,'SOLO_TRAZA_AWS','SI');
+			json2:=put_json(json2,'FILTRO_LEE_TRAZA_HEX','206576656e746f20696e202827454d41272920');
 			json2:=put_json(json2,'__SECUENCIAOK__','19');
 		else
 			return lista_mandato_v2_12771(json2);
@@ -132,6 +135,9 @@ BEGIN
 	--RME 20170713 Se agregan los datos de Casilla Digital
 	json2:=put_json(json2,'FLAG_CASILLA_DIGITAL',get_campo('FLAG_CASILLA_DIGITAL',xml3));
 	if(get_json('__FLAG_PUB_10K__',json2)<>'SI' and get_json('__FLAG_REENVIO_MANDATO__',json2)<>'SI') then
+		--Solo EMA
+		json2:=put_json(json2,'SOLO_TRAZA_AWS','SI');
+		json2:=put_json(json2,'FILTRO_LEE_TRAZA_HEX','206576656e746f20696e202827454d41272920');
 		json2:=put_json(json2,'__SECUENCIAOK__','19');
 	else
         	json2:=put_json(json2,'__SECUENCIAOK__','25');

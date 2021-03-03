@@ -1,9 +1,16 @@
 delete from isys_querys_tx where llave='14001';
 
 --Llamamos a Escribir Directo
-insert into isys_querys_tx values ('14001',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+--insert into isys_querys_tx values ('14001',5,19,1,'select control_flujo_80101(''$$__JSONCOMPLETO__["__PROC_ACTIVOS__","TX","REQUEST_URI","__ARGV__","__CATEGORIA_COLA__","__FLUJO_ACTUAL__"]$$''::json) as __json__',0,0,0,1,1,-1,10);
+insert into isys_querys_tx values ('14001',5,1,14,'{"f":"INSERTA_JSON","p1":{"__SECUENCIAOK__":"10","__SOCKET_RESPONSE__":"RESPUESTA","__TIPO_SOCKET_RESPONSE__":"SCGI","RESPUESTA":"Status: 555 OK\nContent-Type: text/plain\n\n{\"STATUS\":\"Responde sin Espera\",\"__PROC_ACTIVOS__\":\"$$__PROC_ACTIVOS__$$\"}"}}',0,0,0,0,0,10,10);
 
-insert into isys_querys_tx values ('14001',10,1,1,'select verifica_modulo_importacion(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+--Si es MODULO=DOCUMENTO solo vamos a las colas
+insert into isys_querys_tx values ('14001',10,1,14,'{"f":"IGUAL","p1":"$$MODULO$$","p2":"DOCUMENTO"}',0,0,0,0,0,12,20);
+
+insert into isys_querys_tx values ('14001',12,19,1,'select verifica_modulo_importacion_colas(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
+
+
+insert into isys_querys_tx values ('14001',20,1,1,'select verifica_modulo_importacion(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
 
 /**BEGIN PROCESA LOS DOCUMENTOS EMITIDOS*/
 insert into isys_querys_tx values ('14001',30,1,1,'select procesa_emitidos(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
@@ -43,6 +50,36 @@ END
 $BODY$
 LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION verifica_modulo_importacion_colas(i_parametros json)
+    RETURNS json AS
+$BODY$
+DECLARE
+    o_json json := i_parametros;
+BEGIN
+    o_json := put_json(o_json,'__SECUENCIAOK__','0');
+    --FAY Solo MODULO=DOCUMENTO
+    IF (get_json('MODULO', o_json) = 'DOCUMENTO') THEN
+	o_json := logjson(o_json,'MODULO DOCUMENTO');
+	o_json := put_json(o_json,'FLAG_COLAS','SI');
+	o_json := finaliza_carga(o_json);
+    ELSIF (get_json('MODULO', o_json) = 'LIBRO') THEN
+        o_json := put_json(o_json,'__SECUENCIAOK__','50');
+        IF (get_json('TipoOperacion', o_json) = '1') THEN
+            o_json := put_json(o_json,'TIPO_OPERACION','COMPRA');
+        ELSIF (get_json('TipoOperacion', o_json) = '2') THEN
+            o_json := put_json(o_json,'TIPO_OPERACION','VENTA');
+        ELSE
+            o_json := put_json(o_json,'TIPO_OPERACION','NO_APLICA');
+            o_json := put_json(o_json,'__SECUENCIAOK__','100');
+        END IF;
+    ELSE
+        o_json := put_json(o_json,'__SECUENCIAOK__','100');
+    END IF;
+    o_json := logjson(o_json, ' Importando URI: [ ' || get_json('Uri', o_json) || ' ] ');
+    RETURN o_json;
+END
+$BODY$
+LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION verifica_modulo_importacion(i_parametros json)
     RETURNS json AS
@@ -53,18 +90,8 @@ BEGIN
     o_json := put_json(o_json,'__SECUENCIAOK__','0');
     /**Validamos a que modulo corresponde --> Documentos(Emitidos o Recibidos) o Libros*/
     IF (get_json('MODULO', o_json) = 'DOCUMENTO') THEN
+	o_json := logjson(o_json,'MODULO DOCUMENTO');
 	o_json := finaliza_carga(o_json);
-        --o_json := put_json(o_json,'__SECUENCIAOK__','90');
-        /*o_json := put_json(o_json,'TIPO_DTE', get_json('TipoDTE', o_json));
-        IF (lower(get_json('Emitido', o_json)) = 'true') THEN 
-            o_json := put_json(o_json,'__SECUENCIAOK__','30');
-            o_json := put_json(o_json,'CANAL','EMITIDOS');
-        ELSIF (lower(get_json('Recibido', o_json)) = 'true') THEN 
-            o_json := put_json(o_json,'__SECUENCIAOK__','40');
-            o_json := put_json(o_json,'CANAL','RECIBIDOS');
-        ELSE
-            o_json := put_json(o_json,'__SECUENCIAOK__','100');
-        END IF;*/
     ELSIF (get_json('MODULO', o_json) = 'LIBRO') THEN
         o_json := put_json(o_json,'__SECUENCIAOK__','50');
         IF (get_json('TipoOperacion', o_json) = '1') THEN
@@ -112,6 +139,7 @@ BEGIN
              raise notice 'FALLA CREACION DE TABLAS DE BOLETAS IMPORTER';
         END IF;
 
+        o_json := logjson(o_json, 'Tabla='||v_tabla_insert);
         EXECUTE format('SELECT codigo_txel, uri FROM %I WHERE rut_emisor = $1 AND tipo_dte = $2 AND folio = $3', v_tabla_insert) 
           USING rw_dte_emitidos.rut_emisor, rw_dte_emitidos.tipo_dte, rw_dte_emitidos.folio INTO rw_boletas.codigo_txel, rw_boletas.uri;
 
@@ -344,6 +372,7 @@ DECLARE
     v_xml3  varchar;
     v_json json;
     v_sql varchar;
+    aux	varchar;
 BEGIN
     o_json := put_json(o_json,'__SECUENCIAOK__','1000');
     o_json := logjson(o_json, ' Importando URI: [ ' || get_json('Uri', o_json) || ' ] en Finalizacion Prod [' ||  get_json('INSERT_EXITOSO', o_json) || ']');
@@ -364,7 +393,14 @@ BEGIN
         o_json := put_json(o_json, 'RUT_EMISOR', get_json('RutEmisor', o_json));
         o_json := put_json(o_json, 'RUT_RECEPTOR', get_json('RUTRecep', o_json));
         
-        o_json := graba_bitacora(o_json,'IMP');
+  	--FAY 20210228 Traza hacia AWS
+	if get_json('FLAG_COLAS',o_json)='SI' then
+	        aux := graba_bitacora_aws_colas(json_to_xml(o_json::varchar,''),'IMP');
+	else
+	        aux := graba_bitacora_aws(json_to_xml(o_json::varchar,''),'IMP');
+	end if;
+	o_json := logjson(o_json,get_campo('_LOG_',aux));
+        --o_json := graba_bitacora(ojon::varchar,''),'IMP');
 	o_json := put_json(o_json,'RESPUESTA','Status: 200 OK');
 
         /**Borramos de la Cola el proceso

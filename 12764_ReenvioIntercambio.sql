@@ -28,20 +28,24 @@ begin
 	else
 		--Se graba el evento de reenvio
 		if (get_campo('FLAG_EVENTO_REE',xml2)<>'NO') then
-			--FAY-DAO 20210117 Encolamos el graba_bitacora
-        		xml7:=put_campo('','TX','8060');
-			xml7:=put_campo(xml7,'CATEGORIA','MOTOR');
-			xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_12764');
-			xml7:=put_campo(xml7,'URI_IN',get_campo('URI_IN',xml2));
 			xml9:=put_campo(xml2,'XML_ALMACEN','');
 			xml9:=put_campo(xml9,'INPUT_CUSTODIUM','');
 			xml9:=put_campo(xml9,'RESPUESTA','');
 			xml9:=put_campo(xml9,'SCRIPT_EDTE','');
 			xml9:=put_campo(xml9,'ALMACEN','');
 			xml9:=put_campo(xml9,'FILE','');
+			xml9:=graba_bitacora_aws_colas(replace(xml9,chr(39),''),'REE');
+			xml2:=logapp(xml2,get_campo('_LOG_',xml9));
+			/*
+			--FAY-DAO 20210117 Encolamos el graba_bitacora
+        		xml7:=put_campo('','TX','8060');
+			xml7:=put_campo(xml7,'CATEGORIA','MOTOR');
+			xml7:=put_campo(xml7,'SUB_CATEGORIA','GRABA_BITACORA_12764');
+			xml7:=put_campo(xml7,'URI_IN',get_campo('URI_IN',xml2));
 			xml7:=put_campo(xml7,'QUERY',encode_hex('select graba_bitacora('''||replace(xml9,chr(39),'')||''',''REE'')'));
         		execute 'insert into cola_motor_10 (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria) values (now(),'||quote_literal(get_campo('URI_IN',xml7))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ACT_REMOTO'') returning id' into id1;
         		xml2:=logapp(xml2,'Inserto GRABA_BITACORA_12764 '||get_campo('URI_IN',xml7)||' id='||id1::varchar);
+			*/
 		else
 			xml2:=logapp(xml2,'Sin GRABA_BITACORA_12764');
 			--xml2:=graba_bitacora(xml2,'REE');

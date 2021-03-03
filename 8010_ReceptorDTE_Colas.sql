@@ -125,8 +125,11 @@ BEGIN
 	execute 'insert into cola_motor_4 (fecha,uri,reintentos,data,tx,rut_emisor,reproceso,categoria,nombre_cola) values (now(),'||quote_literal(get_campo('URI_IN',xml2))||',0,'||quote_literal(xml7)||','||'10'||',null,''NO'',''ENVIO_BOLETA_SII'',''cola_motor_4'') returning id' into id1;
 	xml2:=logapp(xml2,'Inserto ENVIO_BOLETA_SII '||get_campo('URI_IN',xml2)||' id='||id1::varchar);
 
+	--DAO 20210226 Si viene por el flujo 12794 no borramos porque continua
 	xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
-	xml2 := sp_procesa_respuesta_cola_motor_original(xml2);
+	if get_campo('__FLAG_PUB_10K__',xml2)<>'SI' then
+		xml2 := sp_procesa_respuesta_cola_motor_original(xml2);
+	end if;
         return xml2;
 END;
 $$ LANGUAGE plpgsql;
@@ -212,7 +215,9 @@ BEGIN
 		end if;
 		xml2:=put_campo(xml2,'COMENTARIO_TRAZA','');
 		xml2:=put_campo(xml2,'COMENTARIO2','');
-		xml2 := graba_bitacora(xml2,'PUB');
+		--FAY-DAO 20210226 Grabamos hacia aws
+		xml2:= put_campo(xml2,'FECHA_EVENTO',now()::varchar);
+		xml2 := graba_bitacora_aws(xml2,'PUB');
 	end if;
 
     --xml2:=logapp(xml2,'Paso1');
@@ -457,7 +462,7 @@ BEGIN
          return xml2;
     elsif (get_campo('__BASURA__',xml2)='SI') then
 	 --Grabo Evento en la traza con error
-	 xml2 := graba_bitacora(xml2,'ERROR_DTE');
+	 xml2 := graba_bitacora_aws(xml2,'ERROR_DTE');
 	 xml2 := put_campo(xml2,'__SECUENCIAOK__','500');
 	 return xml2;
     end if;
@@ -558,13 +563,15 @@ BEGIN
     end if;
         
     --Graba Bitacora
-    xml2:= put_campo(xml2,'COMENTARIO_TRAZA','');
-    xml2 := graba_bitacora(xml2,'INGRESADO');
+    xml2:= put_campo(xml2,'COMENTARIO_TRAZA',''); 
+    --FAY-DAO 20210226 no tiene sentido tanto evento
+    --xml2 := graba_bitacora(xml2,'INGRESADO');
     --Grabo Eventos de Timbre y Firma
     --xml2:= put_campo(xml2,'FECHA_EVENTO',get_campo('FECHA_TIMBRE',xml2));
     --xml2 := graba_bitacora(xml2,'TMB');
     xml2:= put_campo(xml2,'FECHA_EVENTO',get_campo('FECHA_FIRMA',xml2));
-    xml2 := graba_bitacora(xml2,'FRM');
+    --FAY-DAO 20210226 grabamos hacia aws 
+    xml2 := graba_bitacora_aws(xml2,'FRM');
 
     --Este flag indica que no se procesara con el AML
     if get_campo('__FLUJO_EXIT__',xml2)='SI' then
@@ -720,7 +727,7 @@ BEGIN
 	-- Guardo la boleta en Por ahora. Pendiente las Boletas Exentas
 	if (get_campo('TIPO_DTE',xml2) in ('39','41')) then
 	    --Actualizo esta de la boleta
-            xml2 := graba_bitacora(xml2,'GRABADO_BOLETA_OK');
+            --xml2 := graba_bitacora(xml2,'GRABADO_BOLETA_OK');
 	    xml2 := logapp(xml2,'GRABADO BOLETA OK FOLIO='||get_campo('FOLIO',xml2)||' RUT_EMISOR='||get_campo('RUT_EMISOR',xml2));
     	    xml2 := put_campo(xml2,'ESTADO','BOLETA_GRABADA_OK');
     	    xml2 := put_campo(xml2,'ESTADO_SII','BOLETA_GRABADA_OK');
@@ -784,7 +791,7 @@ BEGIN
             return xml2;
         elsif (get_campo('__BASURA__',xml2)='SI') then
              --Grabo Evento en la traza con error
-             xml2 := graba_bitacora(xml2,'ERROR_DTE');
+             xml2 := graba_bitacora_aws(xml2,'ERROR_DTE');
              xml2 := put_campo(xml2,'__SECUENCIAOK__','500');
              return xml2;
         end if;
@@ -806,7 +813,7 @@ BEGIN
 	
 
         if get_campo('__EXIT__',xml2)='1' then
-        	xml2 := graba_bitacora(xml2,'ERROR_IMP');
+        	xml2 := graba_bitacora_aws(xml2,'ERROR_IMP');
 		xml2 := put_campo(xml2,'RESPUESTA','Status: 200 OK');
 		xml2 := pivote_borrado_8010(xml2);
                 return xml2;
@@ -814,7 +821,7 @@ BEGIN
 	--RME 20151202 se agrega Traza con comentario de Importado
         xml2:= put_campo(xml2,'COMENTARIO_TRAZA','Documento Importado');
         xml2:= put_campo(xml2,'FECHA_EVENTO',now()::varchar);
-        xml2 := graba_bitacora(xml2,'IMP');
+        xml2 := graba_bitacora_aws(xml2,'IMP');
         --Insertamos
         xml2 := put_campo(xml2,'ESTADO_INICIAL_DTE','IMPORTADO');
         xml2 := put_campo(xml2,'ESTADO_SII','IMPORTADO');
@@ -842,7 +849,7 @@ BEGIN
             return xml2;
         elsif (get_campo('__BASURA__',xml2)='SI') then
              --Grabo Evento en la traza con error
-             xml2 := graba_bitacora(xml2,'ERROR_DTE');
+             xml2 := graba_bitacora_aws(xml2,'ERROR_DTE');
              xml2 := put_campo(xml2,'__SECUENCIAOK__','500');
              return xml2;
         end if;
@@ -851,7 +858,7 @@ BEGIN
         if get_campo('__EXIT__',xml2)='1' then
                 xml2 := logapp(xml2,'CA4IMPORTERREC: Saliendo por Duplicado');
                -- xml2 := put_campo(xml2,'STATUS_HTTP','200 OK');
-        	xml2 := graba_bitacora(xml2,'ERROR_IMP');
+        	xml2 := graba_bitacora_aws(xml2,'ERROR_IMP');
                 xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
 		xml2 := pivote_borrado_8010(xml2);
                 return xml2;
@@ -864,7 +871,7 @@ BEGIN
         --RME 20151202 se agrega Traza con comentario de Importado
         xml2:= put_campo(xml2,'COMENTARIO_TRAZA','Documento Importado');
         xml2:= put_campo(xml2,'FECHA_EVENTO',now()::varchar);
-        xml2 := graba_bitacora(xml2,'IMP');
+        xml2 := graba_bitacora_aws(xml2,'IMP');
         xml2:=put_campo(xml2,'RESPUESTA','Status: 200 OK');
 	xml2 := pivote_borrado_8010(xml2);
         return xml2;

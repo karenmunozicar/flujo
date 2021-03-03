@@ -1,10 +1,10 @@
 --A partir de una URI (URI_IN)
 --Obtiene el XML desde al almacen haciendo un GET y luego deja la respuesta en hex en el tag XML_ALMACEN
 delete from isys_querys_tx where llave='12705';
-insert into isys_querys_tx values ('12705',10,1,1,'select proc_prepara_get_almacen_12705(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12705',10,19,1,'select proc_prepara_get_almacen_12705(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('12705',20,1,2,'Llamada al Storage Writer',4011,104,107,0,0,100,100);
 
-insert into isys_querys_tx values ('12705',100,1,1,'select proc_respuesta_get_almacen_12705(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
+insert into isys_querys_tx values ('12705',100,19,1,'select proc_respuesta_get_almacen_12705(''$$__XMLCOMPLETO__$$'') as __xml__',0,0,0,1,1,-1,0);
 
 
 CREATE or replace FUNCTION proc_prepara_get_almacen_12705(varchar) RETURNS varchar AS $$

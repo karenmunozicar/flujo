@@ -23,8 +23,10 @@ insert into isys_querys_tx values ('8060','61',46,1,'$$QUERY_DATA$$',0,0,0,9,1,9
 insert into isys_querys_tx values ('8060','62',49,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
 --Traza 2020
 insert into isys_querys_tx values ('8060','63',50,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
---Traza 2021
+--Traza 2021 que se borra en motor7
 insert into isys_querys_tx values ('8060','64',2021,1,'$$QUERY_DATA$$',0,0,0,9,1,900,900);
+--Traza 2021 que se borra en las colas
+insert into isys_querys_tx values ('8060','65',2021,1,'$$QUERY_DATA$$',0,0,0,9,1,910,910);
 
 --Base Boletas
 --Boletas 2014
@@ -49,8 +51,10 @@ insert into isys_querys_tx values ('8060','122',8022,1,'$$QUERY_DATA$$',0,0,0,9,
 --Borra sobre base motor usando base 8021 api motor edr
 insert into isys_querys_tx values ('8060','900',8022,1,'select valida_respuesta_insert_8060(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1000);
 insert into isys_querys_tx values ('8060','910',19,1,'select valida_respuesta_insert_8060_colas(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,1010);
-insert into isys_querys_tx values ('8060',1000,8022,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
-insert into isys_querys_tx values ('8060',1010,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+--insert into isys_querys_tx values ('8060',1000,8022,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('8060',1000,8022,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__["__ID_DTE__","__COLA_MOTOR__","CODIGO_TXEL","RESPUESTA","MENSAJE_XML_FLAGS","__FECHA_FUTURO_COLA__"]$$''::json) as __json__',0,0,0,1,1,0,0);
+--insert into isys_querys_tx values ('8060',1010,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('8060',1010,19,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__["__ID_DTE__","__COLA_MOTOR__","CODIGO_TXEL","RESPUESTA","MENSAJE_XML_FLAGS","__FECHA_FUTURO_COLA__"]$$''::json) as __json__',0,0,0,1,1,0,0);
 --Borrado en Base Traza
 insert into isys_querys_tx values ('8060',1020,2021,1,'select sp_procesa_respuesta_cola_motor_original_json(''$$__JSONCOMPLETO__["__ID_DTE__","__COLA_MOTOR__","CODIGO_TXEL","RESPUESTA","MENSAJE_XML_FLAGS","__FECHA_FUTURO_COLA__"]$$''::json) as __json__',0,0,0,1,1,0,0);
 
@@ -161,6 +165,8 @@ DECLARE
 	query1	varchar;
 	parametro1	varchar;
 	json2		json;
+	j1		json;
+	id1		bigint;
 BEGIN
         xml2:=xml1;
 	json2:='{}';
@@ -181,6 +187,7 @@ BEGIN
 		query1:=decode_hex(get_campo('QUERY',xml2));
 		--parche
 		if (parametro1 in ('TRAZA_2021','TRAZA_2020')) then
+			query1:=replace(query1,'Sender'||chr(39)||'s','Sender'||chr(39)||chr(39)||'s');
 			query1:=replace(query1,'recipient'||chr(39)||'s','recipient'||chr(39)||chr(39)||'s');
 			query1:=replace(query1,'domain'||chr(39)||'s','domain'||chr(39)||chr(39)||'s');
 			query1:=replace(query1,'won'||chr(39)||'t','won'||chr(39)||chr(39)||'t');
@@ -203,7 +210,12 @@ BEGIN
 		elsif (parametro1='TRAZA_2020') then
 			json2:=put_json(json2,'__SECUENCIAOK__','63');
 		elsif (parametro1='TRAZA_2021') then
-			json2:=put_json(json2,'__SECUENCIAOK__','64');
+			--FAY si el origen es de las colas vamos a la secuencia 65 para que vaya a borrar a las colas y no pase por la sec 900 que va a motor7
+        		if(get_json('_CATEGORIA_BD_',json2)='COLAS')then
+				json2:=put_json(json2,'__SECUENCIAOK__','65');
+			else
+				json2:=put_json(json2,'__SECUENCIAOK__','64');
+			end if;
 		else
 			--Parche xq grabamos unos eventos sin URI que no correspondian
 			if get_campo('URI_IN',xml2)='' or strpos(get_campo('URI_IN',xml2),'http')=0 then
@@ -286,15 +298,39 @@ BEGIN
 		json2:=put_json(json2,'__TOTAL_RESP_ESPERADAS__','1');
 		json2:=logjson(json2,'Ejecuta Remoto '||categoria1);
 		query1:=decode_hex(get_campo('QUERY',xml2));
+		if get_campo('SUB_CATEGORIA',xml2)='COPIA_GRABA_BITACORA3_COLAS' then
+			--Seteamos la tabla segun el parametro, para poder hacer mantencion
+			if strpos(query1,'##TABLA##')>0 then
+				j1:=get_parametros_motor_json('{}','NOMBRE_COLA_COPIA_GRABA_BITACORA3_COLAS');
+				json2:=logjson(json2,'Reemplazamos ##TABLA## '||get_json('PARAMETRO_RUTA',j1));
+				query1:=replace(query1,'##TABLA##',get_json('PARAMETRO_RUTA',j1));
+			elsif strpos(query1,' cola_motor_11 ')>0 then
+				j1:=get_parametros_motor_json('{}','NOMBRE_COLA_COPIA_GRABA_BITACORA3_COLAS');
+				json2:=logjson(json2,'Reemplazamos ##TABLA## '||get_json('PARAMETRO_RUTA',j1));
+				query1:=replace(query1,'cola_motor_11',get_json('PARAMETRO_RUTA',j1));
+			end if;	
+			json2:=logjson(json2,'Ejecuta Remoto = '||query1);
+			--Ejecutamos aqui mismo ya que es la misma base
+			execute query1 into id1;
+			--Armamos la respuesta
+			j1:=put_json('{}','id',id1::varchar);
+			j1:=put_json(j1,'STATUS','OK');
+			j1:=put_json(j1,'TOTAL_REGISTROS','1');
+			json2:=put_json(json2,'RES_JSON_1',j1::varchar);
+			return valida_respuesta_insert_8060_colas(json2);	
+		end if;
 		xml2:=put_campo(xml2,'QUERY_DATA',query1);
 		json2:=put_json(json2,'QUERY_DATA',query1);
 		json2:=put_json(json2,'__CATEGORIA__',categoria1);
 		json2:=logjson(json2,'Ejecuta Remoto = '||query1);
+		--Ahora que tenemos ProcesaColasMotor132 en ambas maquinas no es necesario el serial
+		json2:=put_json(json2,'__SECUENCIAOK__','110');
+		/*
 		if nextval('alterna_colas')=13 then
 			json2:=put_json(json2,'__SECUENCIAOK__','113');
 		else
 			json2:=put_json(json2,'__SECUENCIAOK__','114');
-		end if;
+		end if;*/
 	else
 		json2:=logjson(json2,'Categoria no reconocida '||categoria1);
 		json2:=put_json(json2,'RESPUESTA','Status: 444 NK');
