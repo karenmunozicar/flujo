@@ -601,7 +601,7 @@ BEGIN
 	--Si es una tx login u otra que no requiere sesion
 	aux1:=get_json('SERVER_NAME_ORI',json2);
 	if (aux1='') then
-		json2:=put_json(json2,'host_canal','escritorio.icar.com');
+		json2:=put_json(json2,'host_canal','escritorio.acepta.com');
 	else
 		json2:=put_json(json2,'host_canal',aux1);
 	end if;
