@@ -9,7 +9,7 @@ insert into isys_querys_tx values ('6001',5,19,1,'select control_flujo_80101(''$
 
 insert into isys_querys_tx values ('6001',10,1,1,'/*$$__JSONCOMPLETO__["tipo_tx"]$$*/ select webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,15);
 
-insert into isys_querys_tx values ('6001',15,1,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
+insert into isys_querys_tx values ('6001',15,19,1,'select secuencia_timeout_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
 
 --Llamada a Script Generico
 insert into isys_querys_tx values ('6001',20,1,10,'$$SCRIPT$$',0,0,0,1,1,25,25);
@@ -112,26 +112,26 @@ insert into isys_querys_tx values ('6001',25106,1,8,'Llama Flujo 25106',25106,0,
 
 CREATE or replace FUNCTION webpay_6000(json) RETURNS json AS $$
 DECLARE
-	json1                alias for $1;
-	json2                json;
-	data1               varchar;
-	file1               varchar;
-	sts                 integer;
-	header1             varchar;
-	url1                varchar;
-	host1               varchar;
-	rut_emisor1         varchar;
-	query1              varchar;
-	resp_json1           varchar;
-	tipo_tx1            varchar;
-	exists_select1      varchar;
-	estado_select1      varchar;
-	tipo_resp1          varchar;
-	estado1             varchar;
-	respuesta1          varchar;
-	stSec               define_secuencia_generico10k%ROWTYPE;
-	file_wsdl1	    varchar;
-        sesion1 	varchar;
+    json1                alias for $1;
+    json2                json;
+    data1               varchar;
+    file1               varchar;
+    sts                 integer;
+    header1             varchar;
+    url1                varchar;
+    host1               varchar;
+    rut_emisor1         varchar;
+    query1              varchar;
+    resp_json1           varchar;
+    tipo_tx1            varchar;
+    exists_select1      varchar;
+    estado_select1      varchar;
+    tipo_resp1          varchar;
+    estado1             varchar;
+    respuesta1          varchar;
+    stSec               define_secuencia_generico10k%ROWTYPE;
+    file_wsdl1  varchar;
+        sesion1 varchar;
         stSesion        sesion_web_10k%ROWTYPE;
         rut_empresa1    varchar;
         stMenu          menu_10k%ROWTYPE;
@@ -141,7 +141,7 @@ DECLARE
         rol1            varchar;
         funcionalidad1  varchar;
         aux1            varchar;
-	campo		record;
+	campo	record;
 BEGIN
     json2:=json1;
     json2:=put_json(json2,'__SECUENCIAOK__','0');
@@ -167,21 +167,7 @@ BEGIN
         json2:=put_json(json2,'__SECUENCIAOK__',get_json('SECUENCIA_FLUJO',json2));
         return json2;
     end if;
-    	/*en caso que entre con sesion entrego los datos para funciones internas, sin generar error*/
-	sesion1:=get_json('session_id',json2);
-	--Obtengo la sesion
-        if length(sesion1)>0 then
-		--Busco la sesion en la tabla de sesiones
-		select * into stSesion from sesion_web_10k where sesion=sesion1;
-		if found then
-			-- agrego las variables para flujos
-			json2:=put_json(json2,'rutCliente',stSesion.id_empresa);
-			json2:=put_json(json2,'rol_usuario',stSesion.rol);
-			if (get_json('aplicacion',json2)='') then
-				json2:=put_json(json2,'aplicacion',stSesion.aplicacion);
-			end if;
-		end if;
-	end if;
+
 
     tipo_tx1:=get_json('tipo_tx',json2);
     --json2:=logjson(json2,'JSON INPUT 6001='||json2::varchar);
@@ -190,7 +176,7 @@ BEGIN
     select * into stSec from define_secuencia_generico10k where tipo_tx=tipo_tx1;
     if not found then
 	if(stSec.tipo_data<>'6001') then
-		perform send_mail_python('Error tx 6001',tipo_tx1,'karen.munoz@i-car.cl','flujos@i-car.cl');
+		perform send_mail_python('Error tx 6001',tipo_tx1,'daniela.ahumada@acepta.com','error_6001@acepta.com');
 	end if;
 	json2:=put_json(json2,'CODIGO_RESPUESTA','2');
 	json2:=put_json(json2,'MENSAJE_RESPUESTA','Servicio '||tipo_tx1||'No Habilitado');
@@ -221,7 +207,6 @@ BEGIN
     --Si no es una base local, vamos a ejecutar a la base que corresponda
     if (stSec.base_datos<>'BASE_1_LOCAL') then
         --Saco la base que corresponda
-	/*
         if (stSec.base_datos='BASE_3_WEBIECV') then
 
                 json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_3_WEBIECV');
@@ -264,7 +249,7 @@ BEGIN
                 json2:=put_json(json2,'__SECUENCIAOK__','430');
                 return json2;
         end if;
-	*/
+
 
     end if;
 

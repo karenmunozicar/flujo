@@ -321,11 +321,20 @@ BEGIN
 	--Busco la sesion en la tabla de sesiones
 	select * into stSesion from sesion_web_10k where sesion=sesion1;
 	if not found then
-		json2:=logjson(json2,'Sesion '||sesion1||' No encontrada');
-		return response_requests_6000('666','Su sesión ha expirado, la aplicacion se cerrara','',json2);
-		return response_requests_6000('666','Se ha abierto otra sesion con su usuario, la aplicacion se cerrara','',json2);
+		--Se verifica la sesion externa (manager)
+		select * into stSesion from sesion_web_10k where sesion_manager=sesion1;
+		if not found then
+			json2:=logjson(json2,'Sesion '||sesion1||' No encontrada');
+			return response_requests_6000('666','Su sesión ha expirado, la aplicacion se cerrara','',json2);
+			return response_requests_6000('666','Se ha abierto otra sesion con su usuario, la aplicacion se cerrara','',json2);
+		end if;
+		--Se abre con sesion manager
+		json2:=put_json(json2,'flag_sesion_manager','SI');
 	end if;
+	--2018-06-04 se graba la fecha del ultimo acceso (mas de 5 minutos) para cerrar las sesiones inactivas
 	update sesion_web_10k set fecha_ultimo_acceso=now() where sesion=sesion1 and now()-coalesce(fecha_ultimo_acceso,'2000-01-01'::timestamp)>interval '5 minutes';
+        --json2:=put_json(json2,'json_data_sesion',stSesion.json_data::varchar);
+	--json2:=put_json(json2,'sesion_manager',stSesion.sesion_manager);
 	rol1:=stSesion.rol;
 	if (get_json('rutCliente',json2)='' or is_number(replace(split_part(get_json('rutCliente',json2),'-',1),'.','')) is false) then
 		json2:=put_json(json2,'rutCliente',stSesion.id_empresa);
@@ -373,7 +382,7 @@ BEGIN
 			json3:=put_json(json3,'rutClienteAnterior',stSesion.id_empresa::varchar);
 			json3:=put_json(json3,'aplicacionAnterior',stSesion.aplicacion);
 	 
-			--json2:=logjson(json2,'DAONOT6000 Validamos Cambio de App o Rut Cliente para sesion '||sesion1||' json3='||json3::varchar);
+			json2:=logjson(json2,'DAONOT6000 Validamos Cambio de App o Rut Cliente para sesion '||sesion1||' json3='||json3::varchar);
 			json3:=valida_super_user_6000(json3);
 			if (get_json('__exit__',json2)='SI') then
 				json2:=logjson(json2,'ERROR_6000 Falla Cambio de  App o Rut Cliente para sesion '||sesion1||' json3='||json3::varchar);
