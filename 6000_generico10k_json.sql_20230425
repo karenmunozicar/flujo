@@ -28,172 +28,12 @@ insert into isys_querys_tx values ('6000',25,1,2,'Servicio HTTP Generico',4013,1
 
 --Procesa la respuesta de los scripts
 insert into isys_querys_tx values ('6000',30,9,1,'select generico10k_resp_6000(''$$__JSONCOMPLETO__$$'') as __json__',0,0,0,1,1,-1,0);
-/*
---BASE DEC
-insert into isys_querys_tx values ('6000',44,44,1,'$$QUERY_DEC$$',0,0,0,9,1,30,30);
-insert into isys_querys_tx values ('6000',48,48,1,'$$QUERY_DEC$$',0,0,0,9,1,30,30);
-insert into isys_querys_tx values ('6000',49,44,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('6000',52,65029,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
-insert into isys_querys_tx values ('6000',59,1,8,'Llamada EMITIR DTE',13794,0,0,0,0,0,0);
-
--- llama a Firma XML DTE
-insert into isys_querys_tx values ('6000',54,1,8,'Llamada a Firma XML DTE',13795,0,0,0,0,0,0);
-
-
---Llama flujo subir firma
-insert into isys_querys_tx values ('6000',55,1,8,'Llamada SUBIR FIRMA',12793,0,0,0,0,0,0);
---Test Firma con funcion respuesta
-insert into isys_querys_tx values ('6000',57,1,8,'Llamada SUBIR FIRMA',12793,0,0,0,0,30,30);
-
---Llama flujo subir firma
-insert into isys_querys_tx values ('6000',56,1,8,'Llamada EMITIR DTE',12794,0,0,0,0,0,0);
-
---Flujo de Agregar Acciones automaticas Controller
-insert into isys_querys_tx values ('6000',58,1,8,'Llamada Agregar Acciones Automaticas',14800,0,0,0,0,0,0);
-
---Graba Archivo en el EDTE NAR
---insert into isys_querys_tx values ('6000',50,1,8,'Llamada NAR EDTE',12779,0,0,0,0,0,0);
---Llama flujo ARM
---insert into isys_querys_tx values ('6000',60,1,8,'Llamada ARM',12762,0,0,0,0,0,0);
---Llama flujo ARM JSON
-insert into isys_querys_tx values ('6000',60,1,8,'Llamada ARM JSON',12767,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',65,1,8,'Llamada NAR JSON',12796,0,0,0,0,0,0);
---Llama flujo 16210 Reclamo Multiple
-insert into isys_querys_tx values ('6000',16210,1,8,'Llamada Reclamo Multiple',16210,0,0,0,0,0,0);
-
---Llama flujo NAR
-insert into isys_querys_tx values ('6000',70,1,8,'Llamada NAR',12765,0,0,0,0,0,0);
---Llamada CESION
-insert into isys_querys_tx values ('6000',80,1,8,'Llamada CESION',12785,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',81,1,8,'Llamada CESION JSON',12797,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',83,1,8,'Llamada CESION BOLSA',12801,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',84,1,8,'REVISA RECLAMO-CESION',16108,0,0,0,0,0,0);
---insert into isys_querys_tx values ('6000',82,1,8,'Llamada CESION JSON2',42797,0,0,0,0,0,0);
---Llamada Get Datos CESION
---insert into isys_querys_tx values ('6000',90,1,8,'Llamada CESION',12787,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',90,1,8,'Llamada Get Datos CESION JSON',12798,0,0,0,0,0,0);
---Firma de Libros WebIecv
-insert into isys_querys_tx values ('6000',201,1,8,'Llamada FIRMA LIBROS IECV',13100,0,0,0,0,96,96);
-insert into isys_querys_tx values ('6000',202,1,8,'Llamada FIRMA LIBROS IECV RECTIFICA',13130,0,0,0,0,96,96);
---FLujo Get_Perfil
-insert into isys_querys_tx values ('6000',150,1,8,'Get Perfil',12799,0,0,0,0,0,0);
---FLujo Match WebPay
-insert into isys_querys_tx values ('6000',160,1,8,'FLujo Match WebPay',12810,0,0,0,0,0,0);
-insert into isys_querys_tx values ('6000',161,1,8,'FLujo Match WebPay',12811,0,0,0,0,0,0);
-
---Llamada al reenvio de mandato
-insert into isys_querys_tx values ('6000',100,1,8,'LLAMADA AL FLUJO 12763 Reenvio Mandato',12763,0,0,1,1,0,0);
-insert into isys_querys_tx values ('6000',101,1,8,'LLAMADA AL FLUJO 12770 Reenvio Mandato',12770,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',102,1,8,'LLAMADA AL FLUJO 12771 Reenvio Mandato',12771,0,0,1,1,30,30);
---Llama al reenvio por intercambio
-insert into isys_querys_tx values ('6000',110,1,8,'LLAMADA AL FLUJO 12764 Reenvio Intercambio',12764,0,0,1,1,0,0);
-
---Para Gestor de Folios en base 15
-insert into isys_querys_tx values ('6000',125,15,1,'select pivote_gestorfolios_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,126,0);
-insert into isys_querys_tx values ('6000',126,1,1,'select salida_gestorfolios_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,30,0);
-
---Base de Replica
-insert into isys_querys_tx values ('6000',127,11,1,'select pivote_base_replica_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
---Base Primaria
-insert into isys_querys_tx values ('6000',128,9,1,'select pivote_base_primaria_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
---LLama a sesion externa Manager
-insert into isys_querys_tx values ('6000',250,1,8,'Sesion Manager',14765,0,0,0,0,0,0);
---Llamada a sesion externa Generica
-insert into isys_querys_tx values ('6000',251,1,8,'Sesion Alianza',14766,0,0,0,0,0,0);
-
-
---Para WebIecv se ejecuta en base 13
-insert into isys_querys_tx values ('6000',95,13,1,'select pivote_webiecv_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,96,96);
-insert into isys_querys_tx values ('6000',96,1,1,'select salida_webiecv_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('6000',98,1,8,'LLAMA AL FLUJO 13110 - Importacion de Libro',13110,0,0,1,1,0,0);
---RME, GAC 20160324 Secuencia para exportar asincrono los archivos
-insert into isys_querys_tx values ('6000',99,1,8,'LLAMA AL FLUJO 13120 - Exportacionn de Libro',13120,0,0,1,1,0,0);
---Wewbiecv
-insert into isys_querys_tx values ('6000',97,13,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
---Llamada al Gestor de Folios
---insert into isys_querys_tx values ('6000',500,15,1,'select pivote_gestor_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,510,510);
---insert into isys_querys_tx values ('6000',510,1,1,'select salida_gestor_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-*/
 -- Flujo 6000 --ICAR - Nuevos
 insert into isys_querys_tx values ('6000',180,1,1,'select icar_spie_pivote_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
 insert into isys_querys_tx values ('6000',181,1,1,'select icar_enviar_decision_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,30,0);
-/*
---Libros Contables en base 16
-insert into isys_querys_tx values ('6000',300,16,1,'select pivote_lce_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,305,305);
-insert into isys_querys_tx values ('6000',305,1,1,'select salida_lce_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
---RME 20170628 Se agregan secuencias para Nuevo ACM
-insert into isys_querys_tx values ('6000',301,7,1,'select pivote_acm_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('6000',302,1,10,'$$SCRIPT$$',0,0,0,1,1,303,303);
-insert into isys_querys_tx values ('6000',303,1,1,'select salida_acm_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
-
-insert into isys_querys_tx values ('6000',306,1,8,'Llamada Firma Libros LCE',13210,0,0,0,0,0,0);
-*/
 insert into isys_querys_tx values ('6000',307,1,10,'$$SCRIPT_NAME$$',0,0,0,1,1,300,300);
-/*
-insert into isys_querys_tx values ('6000',400,27,1,'select pivote_importer_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,401,401);
-insert into isys_querys_tx values ('6000',401,1,1,'select salida_importer_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
---Bolsa de Productos
-insert into isys_querys_tx values ('6000',500,24,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
-
---Llama flujo 12813 mercado publico
-insert into isys_querys_tx values ('6000',12813,1,8,'Llama Flujo 12813',12813,0,0,1,1,0,0);
---Llama flujo 12814 DIPRES
-insert into isys_querys_tx values ('6000',12814,1,8,'Llama Flujo 12814',12814,0,0,1,1,30,30);
---Llama flujo 12814 DIPRES
-insert into isys_querys_tx values ('6000',12816,1,8,'Llama Flujo 12816',12816,0,0,1,1,0,0);
---Llama flujo 12817 DIPRES
-insert into isys_querys_tx values ('6000',12817,1,8,'Llama Flujo 12817',12817,0,0,1,1,0,0);
---Llama flujo 12819 DIPRES
-insert into isys_querys_tx values ('6000',12819,1,8,'Llama Flujo 12819',12819,0,0,1,1,0,0);
---Llama flujo 12821 DIPRES
-insert into isys_querys_tx values ('6000',12821,1,8,'Llama Flujo 12821',12821,0,0,1,1,0,0);
-insert into isys_querys_tx values ('6000',12820,1,8,'Llama Flujo 12820',12820,0,0,1,1,0,0);
-*/
 --Send Mail
 insert into isys_querys_tx values ('6000',501,30,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-/*
--- WEBPAY
-insert into isys_querys_tx values ('6000',551,34,1,'select pivote_webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,553,553);
-insert into isys_querys_tx values ('6000',553,1,1,'select salida_webpay_6000(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,0,0);
-
-insert into isys_querys_tx values ('6000',700,1913,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-insert into isys_querys_tx values ('6000',710,1914,1,'select $$FUNCION_INPUT$$(''$$__JSONCOMPLETO__$$''::json) as __json__',0,0,0,1,1,-1,0);
-
--- OC 20190509
-insert into isys_querys_tx values ('6000',15300,1,8,'Llama Flujo 15300',15300,0,0,1,1,0,0);
-
---Financiamiento
-insert into isys_querys_tx values ('6000',12772,1,8,'LLAMADA AL FLUJO 12772',12772,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',12773,1,8,'LLAMADA AL FLUJO 12773',12773,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',12774,1,8,'LLAMADA AL FLUJO 12774',12774,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',12775,1,8,'LLAMADA AL FLUJO 12775',12775,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',12776,1,8,'LLAMADA AL FLUJO 12776',12776,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',12778,1,8,'LLAMADA AL FLUJO 12778',12778,0,0,1,1,30,30);
-*/
---Llama flujo 13710 Cuadro 1 Emitidos
-insert into isys_querys_tx values ('6000',13710,1,8,'Llama Flujo 13710',13710,0,0,1,1,0,0);
---Llama flujo 15400 Busqueda
-insert into isys_querys_tx values ('6000',15400,1,8,'Llama Flujo 15400',15400,0,0,1,1,0,0);
---Llama flujo 15100 Busqueda
-insert into isys_querys_tx values ('6000',15100,1,8,'Llama Flujo 15100',15100,0,0,1,1,0,0);
---Llama flujo 15101 Busqueda Folio
-insert into isys_querys_tx values ('6000',15101,1,8,'Llama Flujo 15101',15101,0,0,1,1,0,0);
-insert into isys_querys_tx values ('6000',17101,1,8,'Llama Flujo 17101',17101,0,0,1,1,0,0);
---Llama flujo 15102 Busqueda Recibidos
-insert into isys_querys_tx values ('6000',15102,1,8,'Llama Flujo 15102',15102,0,0,1,1,0,0);
---Grafico KPI SII
-insert into isys_querys_tx values ('6000',15103,1,8,'Llama Flujo 15103',15103,0,0,1,1,0,0);
---Flujo busqueda RDS
-insert into isys_querys_tx values ('6000',15200,1,8,'Llama Flujo 15200',15200,0,0,1,1,0,0);
---Consulta Estado Reclamo
-insert into isys_querys_tx values ('6000',16106,1,8,'Llama Flujo 16106',16106,0,0,1,1,0,0);
---Llama flujo 14710 Cuadro 1 Emitidos
-insert into isys_querys_tx values ('6000',14710,1,8,'Llama Flujo 14710',14710,0,0,1,1,0,0);
 --Para el dashboardv2
 insert into isys_querys_tx values ('6000',14711,1,8,'Llama flujo 14710',14710,0,0,0,0,30,30);
 insert into isys_querys_tx values ('6000',14715,1,8,'Llama Flujo 14715',14715,0,0,1,1,0,0);
@@ -201,18 +41,6 @@ insert into isys_querys_tx values ('6000',14730,1,8,'Llama Flujo 14730',14730,0,
 insert into isys_querys_tx values ('6000',14810,1,8,'Llama Flujo 14810',14810,0,0,1,1,0,0);
 insert into isys_querys_tx values ('6000',14720,1,8,'Llama Flujo 14720',14720,0,0,1,1,0,0);
 
-/*
---Flujo Reclamo
-insert into isys_querys_tx values ('6000',16100,1,8,'Llama flujo 16100',16100,0,0,1,1,30,30);
-insert into isys_querys_tx values ('6000',16201,1,8,'Llama flujo 16201',16201,0,0,1,1,0,0);
-
---Llama flujo 25100 Busqueda DEC
-insert into isys_querys_tx values ('6000',25100,1,8,'Llama Flujo 25100',25100,0,0,1,1,0,0);
---Llama flujo 25101 Busqueda DEC Codigo DOC
-insert into isys_querys_tx values ('6000',25101,1,8,'Llama Flujo 25101',25101,0,0,1,1,0,0);
---Llama flujo 25106 Reporteria DEC
-insert into isys_querys_tx values ('6000',25106,1,8,'Llama Flujo 25106',25106,0,0,1,1,0,0);
-*/
 CREATE or replace FUNCTION generico10k_6000_test(json) RETURNS json AS $$
 DECLARE
     json1                alias for $1;
@@ -225,7 +53,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
 CREATE or replace FUNCTION log_generico10k_6000(json) RETURNS json AS $$
 DECLARE
     json1                alias for $1;
@@ -237,7 +64,6 @@ BEGIN
     return json2;
 END;
 $$ LANGUAGE plpgsql;
-
 
 CREATE or replace FUNCTION generico10k_6000(json) RETURNS json AS $$
 DECLARE
@@ -323,7 +149,7 @@ BEGIN
 	if not found then
 		json2:=logjson(json2,'Sesion '||sesion1||' No encontrada');
 		return response_requests_6000('666','Su sesión ha expirado, la aplicacion se cerrara','',json2);
-		return response_requests_6000('666','Se ha abierto otra sesion con su usuario, la aplicacion se cerrara','',json2);
+		--return response_requests_6000('666','Se ha abierto otra sesion con su usuario, la aplicacion se cerrara','',json2);
 	end if;
 	update sesion_web_10k set fecha_ultimo_acceso=now() where sesion=sesion1 and now()-coalesce(fecha_ultimo_acceso,'2000-01-01'::timestamp)>interval '5 minutes';
 	rol1:=stSesion.rol;
@@ -478,39 +304,6 @@ BEGIN
 	        end if;
 	end if;
     
-	/*
-	--Validamos el rut de la empresa
-	rut_empresa1:=replace(split_part(get_json('rutCliente',json2),'-',1),'.','');
-	if(length(rut_empresa1)=0)then
-		rut_empresa1:=stSesion.id_empresa;
-		json2:=put_json(json2,'rutCliente',stSesion.id_empresa);
-	else
-		json2:=put_json(json2,'rutCliente',rut_empresa1);
-	end if;
-	*/
-	--Validamos que el rut de la empresa este activo en el maestro de clientes
-	/*
-	select * into stMaster from maestro_clientes where rut_emisor=rut_empresa1::integer;
-	if not found then
-		json2:=logjson(json2,'No existe empresa en maestro de clientes '||stSesion.rut_usuario||' y Empresa '||rut_empresa1);
-		return response_requests_6000('666','Empresa no registrada','',json2);
-	end if;
-	*/
-	/*
-	--Se lee el maestro de clientes segun la aplicaion entrante
-        json2:=lee_maestro_clientes_multiapp(rut_empresa1::integer,stSesion.aplicacion,json2);
-        if (get_json('__exit__',json2)='SI') then
-                return json2;
-        end if;
-	*/
-	--Solo empresas activas
-	/*
-	if (get_json('estado_maestro',json2) in ('BLOQUEADO','BLOQUEADO_QBIS') and stSesion.flag_super_user='NO') then
-		json2:=logjson(json2,'Empresa Bloqueada en maestro_clientes- '||stSesion.rut_usuario||' y Empresa '||rut_empresa1);
-		return response_requests_6000('666','Empresa Bloqueada, llame a Acepta','',json2);
-	end if;
-	*/
-
 	--Si viene la IPCliente desde el php, debe ser igual a la de apertura de la sesion
 	aux1:=get_json('IPCliente',json2);
 	if (length(aux1)>0) then
@@ -532,12 +325,6 @@ BEGIN
 		json2:=put_json(json2,'host_canal',aux1);
 	end if;
 	json2:=put_json(json2,'mail_usuario',stSesion.mail_usuario);
-	--json2:=put_json(json2,'dominio_empresa',stMaster.dominio);
-	--json2:=put_json(json2,'razon_social',replace(stMaster.razon_social,chr(39),' '));
-	--json2:=put_json(json2,'tipo_plan_mc',stMaster.plan);
-	--json2:=put_json(json2,'flag_reporte_impuesto',stMaster.flag_reporte_impuesto);
-	--json2:=put_json(json2,'maestro_total_referencias',stMaster.total_referencias::varchar);	
-	--json2:=put_json(json2,'maestro_flag_excel',stMaster.flag_excel);	
 	--Guardo el rutCliente anterior, por si se esta cambiando
 	json2:=put_json(json2,'rutClienteAnterior',stSesion.id_empresa);
 	json2:=put_json(json2,'aplicacionAnterior',stSesion.aplicacion);
@@ -550,10 +337,6 @@ BEGIN
 	json2:=put_json(json2,'rutUsuario',stSesion.rut_usuario);
 	json2:=put_json(json2,'rut_firma',stSesion.rut_usuario);
 	json2:=put_json(json2,'nombre_usuario',stSesion.nombre);
-	--json2:=put_json(json2,'parametros_config_usuarios',stMaster.flag_parametros_avanzados_usuario);
-	--json2:=put_json(json2,'parametro_muestra_excepciones',stMaster.flag_muestra_excepciones);
-	--json2:=put_json(json2,'parametro_pdf_masivo',stMaster.flag_pdf_masivo);
---	json2:=put_json(json2,'ESCRITORIO',stSesion.json_menu);
 	json2:=logjson(json2,'rutUsuario Sesion='||get_json('rutUsuario',json2));
 	json2:=logjson(json2,'rut_firma Sesion='||get_json('rut_firma',json2));
    else
@@ -565,14 +348,6 @@ BEGIN
 		json2:=put_json(json2,'host_canal',aux1);
 	end if;
    end if;
-/*
-    select * into stSec from define_secuencia_generico10k where tipo_tx=tipo_tx1;
-    if not found then
-	json2:=put_json(json2,'CODIGO_RESPUESTA','2');
-	json2:=put_json(json2,'MENSAJE_RESPUESTA','Servicio '||tipo_tx1||'No Habilitado');
-	return response_requests_6000('2','Servicio '||tipo_tx1||' No Habilitado','',json2);
-    end if;
-*/
     json2:=put_json(json2,'FUNCION_INPUT',stSec.funcion_input);
     json2:=put_json(json2,'FUNCION_RESPUESTA',stSec.funcion_output);
     if (stSec.flag_json='SI' and length(sesion1)>0) then
@@ -593,95 +368,12 @@ BEGIN
 
     --Si no es una base local, vamos a ejecutar a la base que corresponda
     if (stSec.base_datos<>'BASE_1_LOCAL') then
-	/*
-        --Saco la base que corresponda
-        if (stSec.base_datos='BASE_3_WEBIECV') then
-		if (stSec.tipo_data='NEW') then
-                	json2:=logjson(json2,'Ejecuta New Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_3_WEBIECV');
-	                json2:=put_json(json2,'__SECUENCIAOK__','97');
-		else
-                	json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_3_WEBIECV');
-	                json2:=put_json(json2,'__SECUENCIAOK__','95');
-		end if;
-                return json2;
-        end if;
-
-	--Base de Gestor de Folio
-	if (stSec.base_datos='BASE_GESTOR_FOLIOS') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_15_GESTORFOLIOS');
-		json2:=put_json(json2,'__SECUENCIAOK__','125');
-		return json2;
-	end if;
-	--Base de DEC
-	if (stSec.base_datos='BASE_DEC') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_DEC');
-		json2:=put_json(json2,'__SECUENCIAOK__','49');
-		return json2;
-	end if;
-	--API_BASE_IDD_CHILE
-	if (stSec.base_datos='API_BASE_IDD_CHILE') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_DEC');
-		json2:=put_json(json2,'__SECUENCIAOK__','52');
-		return json2;
-	end if;
-	--Base de Bolsa
-	if (stSec.base_datos='BASE_FINANCIAMIENTO') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_FINANCIAMIENTO');
-		json2:=put_json(json2,'__SECUENCIAOK__','500');
-		return json2;
-	end if;
-	*/
 	--Base Send Mail
 	if (stSec.base_datos='BASE_SEND_MAIL') then
 		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_FINANCIAMIENTO');
 		json2:=put_json(json2,'__SECUENCIAOK__','501');
 		return json2;
 	end if;
-	/*
-	--COLASM13
-	if (stSec.base_datos='BASE_COLAS_MOTOR13') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_COLAS_MOTOR13');
-		json2:=put_json(json2,'__SECUENCIAOK__','700');
-		return json2;
-	end if;
-	--COLASM14
-	if (stSec.base_datos='BASE_COLAS_MOTOR14') then
-		json2:=logjson(json2,'Ejecuta Funcion '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en BASE BASE_COLAS_MOTOR14');
-		json2:=put_json(json2,'__SECUENCIAOK__','710');
-		return json2;
-	end if;
-        --Si va a la base replica
-	if (stSec.base_datos='BASE_REPLICA_11') then
-		json2:=logjson(json2,'Base BASE_REPLICA_11');
-		json2:=put_json(json2,'__SECUENCIAOK__','127');
-		return json2;
-        end if;
-	--RME GAC 20160812 Base de LCE
-	--Libros Contables Electronicos en Host 
-        if (stSec.base_datos='BASE_16_LCE') then
-                json2:=logjson(json2,'Ejecuta Funcion= '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_16_LCE');
-                json2:=put_json(json2,'__SECUENCIAOK__','300');
-                return json2;
-        end if;
-        -- GAC 20170213 Base Importer 27
-        if (stSec.base_datos='BASE_27_IMPORTER') then
-                json2:=logjson(json2,'Ejecuta Funcion= '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_16_LCE');
-                json2:=put_json(json2,'__SECUENCIAOK__','400');
-                return json2;
-        end if;
-        --JSE 20170719 BD_ACM.
-       if (stSec.base_datos='BD_ACM') then
-                json2:=logjson(json2,'Ejecuta Funcion= '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BD_ACM');
-                json2:=put_json(json2,'__SECUENCIAOK__','301');
-                return json2;
-        end if;
-	-- NBV 20180309 BASE_WEBPAY
-        if (stSec.base_datos='BASE_WEBPAY') then
-                json2:=logjson(json2,'Ejecuta Funcion= '||stSec.funcion_input||' tipo_tx='||tipo_tx1||' en Base BASE_WEBPAY');
-                json2:=put_json(json2,'__SECUENCIAOK__','551');
-                return json2;
-        end if;
-	*/
     end if;
 
     --EJECUTA FUNCION INPUT
@@ -712,83 +404,6 @@ BEGIN
     json2:=put_json(json2,'__SECUENCIA_TIMEOUT__','15');
     return json2;
 
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE or replace FUNCTION pivote_base_primaria_6000(json) RETURNS json AS $$
-DECLARE
-    json1                alias for $1;
-    json2        json;
-    f1    varchar;
-    segundos1	numeric;
-begin
-    json2:=json1;
-    json2:=logjson(json2,'pivote_base_primaria_6000');
-    f1:=get_json('FUNCION_INPUT',json2);
-    --EJECUTA FUNCION INPUT
-    json2:=logjson(json2,'Ejecuta='||f1);
-    if length(f1)>0 then
-        EXECUTE 'SELECT ' || f1 || '(' || chr(39) || json2 || chr(39) || '::json)' into json2;
-    end if;
-
-    --Si necesita llamar un scrip lo ejecuta
-    if (get_json('LLAMA_SCRIPT',json2)='SI') then
-        json2:=logjson(json2,'Ejecuta Shell='||get_json('SCRIPT',json2));
-        json2:=put_json(json2,'__SECUENCIAOK__','20');
-    end if;
-
-    --Si es un flujo
-    if (get_json('LLAMA_FLUJO',json2)='SI') then
-        json2:=logjson(json2,'Ejecuta Flujo Secuencia='||get_json('__SECUENCIAOK__',json2));
-        return json2;
-    end if;
-
-    --Si algo va mal con este query, el procesador enviara a la secuencia timeout
-   json2:=put_json(json2,'__SECUENCIA_TIMEOUT__','15');
-
-   return json2;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE or replace FUNCTION pivote_base_replica_6000(json) RETURNS json AS $$
-DECLARE
-    json1                alias for $1;
-    json2        json;
-    f1    varchar;
-    segundos1	numeric;
-begin
-    json2:=json1;
-    --Verifico que la base de replica este sincronizada
-    segundos1:=(SELECT CASE WHEN pg_last_xlog_receive_location() = pg_last_xlog_replay_location() THEN 0 ELSE EXTRACT (EPOCH FROM now() - pg_last_xact_replay_timestamp()) END AS log_delay);
-    if (segundos1>60) then
-	--Procesamos en la base primaria
-	json2:=logjson(json2,'pivote_base_replica_6000 Volvemos a primaria '||segundos1::varchar);
-	json2:=put_json(json2,'__SECUENCIAOK__','128');
-        return json2;
-    end if;
-    json2:=logjson(json2,'pivote_base_replica_6000');
-    f1:=get_json('FUNCION_INPUT',json2);
-    --EJECUTA FUNCION INPUT
-    json2:=logjson(json2,'Ejecuta='||f1);
-    if length(f1)>0 then
-        EXECUTE 'SELECT ' || f1 || '(' || chr(39) || json2 || chr(39) || '::json)' into json2;
-    end if;
-/*
-    --Si necesita llamar un scrip lo ejecuta
-    if (get_json('LLAMA_SCRIPT',json2)='SI') then
-        json2:=logjson(json2,'Ejecuta Shell='||get_json('SCRIPT',json2));
-        json2:=put_json(json2,'__SECUENCIAOK__','20');
-    end if;
-
-    --Si es un flujo
-    if (get_json('LLAMA_FLUJO',json2)='SI') then
-        json2:=logjson(json2,'Ejecuta Flujo Secuencia='||get_json('__SECUENCIAOK__',json2));
-        return json2;
-    end if;
-*/
-    --Si algo va mal con este query, el procesador enviara a la secuencia timeout
-   json2:=put_json(json2,'__SECUENCIA_TIMEOUT__','15');
-   return json2;
 END;
 $$ LANGUAGE plpgsql;
 

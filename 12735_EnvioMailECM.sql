@@ -42,6 +42,7 @@ BEGIN
 		xml2:=logapp(xml2,'No se logra castear a json el INPUT ');
 		return pivote_borrado_12735(xml2);
 	END;
+	perform logfile('llamando a send_mail_python2_colas con json3: '||json3::varchar);
 	
 	jsend1:=send_mail_python2_colas(json3::varchar);
         if (get_json('status',jsend1)='OK') then

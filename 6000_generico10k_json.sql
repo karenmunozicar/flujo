@@ -151,6 +151,7 @@ BEGIN
 		return response_requests_6000('666','Su sesión ha expirado, la aplicacion se cerrara','',json2);
 		--return response_requests_6000('666','Se ha abierto otra sesion con su usuario, la aplicacion se cerrara','',json2);
 	end if;
+	--json2=logjson(json2,'stSesion: '||stSesion::varchar);
 	update sesion_web_10k set fecha_ultimo_acceso=now() where sesion=sesion1 and now()-coalesce(fecha_ultimo_acceso,'2000-01-01'::timestamp)>interval '5 minutes';
 	rol1:=stSesion.rol;
 	if (get_json('rutCliente',json2)='' or is_number(replace(split_part(get_json('rutCliente',json2),'-',1),'.','')) is false) then
